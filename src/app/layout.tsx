@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SessionProvider from "@/app/components/providers/SessionProvider";
 
 export const metadata: Metadata = {
-  title: "Kitaspaces - Sign In",
-  description: "Sign in to your Kitaspaces account",
+  title: "Kitaspaces",
+  description: "Kitaspaces App",
 };
 
 export default function RootLayout({
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );

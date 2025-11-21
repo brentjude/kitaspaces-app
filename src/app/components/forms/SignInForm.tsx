@@ -1,22 +1,73 @@
+// Purpose: Client-side sign-in form with validation and NextAuth integration
+// Features: Zod validation, loading states, error handling, role-based redirects
+// Redirects: ADMIN → /admin, USER → /dashboard
 'use client';
 
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { signInSchema, type SignInInput } from '@/lib/validations/zodauth';
 
 export default function SignInForm() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Add your sign-in logic here
-    console.log({ email, password, rememberMe });
-    
-    setTimeout(() => setIsLoading(false), 1000);
+    setError(null);
+    setFieldErrors({});
+
+    // Client-side validation with Zod
+    const result = signInSchema.safeParse({ email, password });
+
+    if (!result.success) {
+      const errors = result.error.flatten().fieldErrors;
+      setFieldErrors({
+        email: errors.email?.[0],
+        password: errors.password?.[0],
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Sign in using NextAuth with hashed password verification
+      const response = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (response?.error) {
+        setError('Invalid email or password');
+        setIsLoading(false);
+        return;
+      }
+
+      // Get session to check user role
+      const sessionResponse = await fetch('/api/auth/session');
+      const session = await sessionResponse.json();
+
+      // Role-based redirect: ADMIN → /admin, USER → /dashboard
+      if (session?.user?.role === 'ADMIN') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
+      
+      router.refresh();
+    } catch (error) {
+      console.error('Sign in error:', error);
+      setError('Something went wrong. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -31,7 +82,14 @@ export default function SignInForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Email Field */}
+        {/* Error Message */}
+        {error && (
+          <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* Email Field with Zod validation */}
         <div>
           <label 
             htmlFor="email" 
@@ -45,12 +103,17 @@ export default function SignInForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-3 py-2.5 border border-foreground/20 rounded-lg bg-background text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-sans text-sm"
+            className={`w-full px-3 py-2.5 border rounded-lg bg-background text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:border-transparent transition-all font-sans text-sm ${
+              fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-foreground/20 focus:ring-primary'
+            }`}
             placeholder="Enter your email"
           />
+          {fieldErrors.email && (
+            <p className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>
+          )}
         </div>
 
-        {/* Password Field */}
+        {/* Password Field with visibility toggle */}
         <div>
           <label 
             htmlFor="password" 
@@ -65,7 +128,9 @@ export default function SignInForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-3 py-2.5 border border-foreground/20 rounded-lg bg-background text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-sans text-sm pr-10"
+              className={`w-full px-3 py-2.5 border rounded-lg bg-background text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:border-transparent transition-all font-sans text-sm pr-10 ${
+                fieldErrors.password ? 'border-red-500 focus:ring-red-500' : 'border-foreground/20 focus:ring-primary'
+              }`}
               placeholder="Enter your password"
             />
             <button
@@ -85,6 +150,9 @@ export default function SignInForm() {
               )}
             </button>
           </div>
+          {fieldErrors.password && (
+            <p className="text-xs text-red-600 mt-1">{fieldErrors.password}</p>
+          )}
         </div>
 
         {/* Remember Me & Forgot Password */}
@@ -99,14 +167,14 @@ export default function SignInForm() {
             <span className="text-sm text-foreground/70 font-sans">Remember me</span>
           </label>
           <a 
-            href="/forgot-password" 
+            href="/auth/forgot-password" 
             className="text-sm text-primary font-medium hover:underline"
           >
             Forgot password?
           </a>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Button with loading state */}
         <button
           type="submit"
           disabled={isLoading}
@@ -125,7 +193,13 @@ export default function SignInForm() {
           )}
         </button>
 
-
+        {/* Sign Up Link */}
+        <p className="text-center text-sm text-foreground/70 mt-6">
+          Don't have an account?{' '}
+          <a href="/auth/signup" className="text-primary font-medium hover:underline">
+            Sign up
+          </a>
+        </p>
       </form>
     </div>
   );

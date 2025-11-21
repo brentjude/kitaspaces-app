@@ -1,9 +1,7 @@
-import SignInForm from "./components/forms/SignInForm";
+// Purpose: Root page - redirects to sign-in page
+// Redirect: All unauthenticated users go to /auth/signin
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <SignInForm />
-    </div>
-  );
+  redirect('/auth/signin');
 }
