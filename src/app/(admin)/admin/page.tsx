@@ -1,5 +1,3 @@
-// Purpose: Main admin dashboard page
-// Features: Overview stats, recent activity, quick actions
 import AdminHeader from "@/app/(admin)/components/AdminHeader";
 import AdminStatsCard from "@/app/(admin)/components/AdminStatsCard";
 
@@ -12,7 +10,7 @@ export default function AdminDashboard() {
       />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <AdminStatsCard
           title="Total Users"
           value="1,234"
@@ -25,12 +23,12 @@ export default function AdminDashboard() {
         />
         
         <AdminStatsCard
-          title="Active Spaces"
-          value="87"
+          title="Upcoming Events"
+          value="28"
           change={{ value: 5, trend: 'up' }}
           icon={
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           }
         />
@@ -45,48 +43,97 @@ export default function AdminDashboard() {
             </svg>
           }
         />
-        
-        <AdminStatsCard
-          title="Pending Tasks"
-          value="24"
-          change={{ value: 3, trend: 'down' }}
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-          }
-        />
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-lg border border-foreground/10 p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          Recent Activity
-        </h2>
-        <div className="space-y-4">
-          {[1, 2, 3, 4, 5].map((item) => (
-            <div
-              key={item}
-              className="flex items-center gap-4 py-3 border-b border-foreground/5 last:border-0"
-            >
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Users */}
+        <div className="bg-white rounded-lg border border-foreground/10 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">
+              Recent Users
+            </h2>
+            <button className="text-xs text-primary hover:text-primary/80 font-medium">
+              View all
+            </button>
+          </div>
+          <div className="space-y-3">
+            {[
+              { name: 'John Doe', email: 'john@example.com', time: '2 mins ago' },
+              { name: 'Jane Smith', email: 'jane@example.com', time: '15 mins ago' },
+              { name: 'Mike Johnson', email: 'mike@example.com', time: '1 hour ago' },
+              { name: 'Sarah Wilson', email: 'sarah@example.com', time: '2 hours ago' },
+              { name: 'Tom Brown', email: 'tom@example.com', time: '3 hours ago' },
+            ].map((user, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-foreground/5 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-semibold text-primary">
+                    {user.name.charAt(0)}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-foreground/60 truncate">
+                    {user.email}
+                  </p>
+                </div>
+                <span className="text-xs text-foreground/50 flex-shrink-0">
+                  {user.time}
+                </span>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">
-                  New user registered
-                </p>
-                <p className="text-xs text-foreground/60">
-                  user@example.com joined the platform
-                </p>
+            ))}
+          </div>
+        </div>
+
+        {/* Upcoming Events */}
+        <div className="bg-white rounded-lg border border-foreground/10 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">
+              Upcoming Events
+            </h2>
+            <button className="text-xs text-primary hover:text-primary/80 font-medium">
+              View all
+            </button>
+          </div>
+          <div className="space-y-3">
+            {[
+              { title: 'Team Meeting', date: 'Today, 2:00 PM', attendees: 12 },
+              { title: 'Product Launch', date: 'Tomorrow, 10:00 AM', attendees: 45 },
+              { title: 'Design Review', date: 'Dec 25, 3:00 PM', attendees: 8 },
+              { title: 'Sprint Planning', date: 'Dec 26, 9:00 AM', attendees: 15 },
+              { title: 'Client Presentation', date: 'Dec 27, 1:00 PM', attendees: 20 },
+            ].map((event, index) => (
+              <div
+                key={index}
+                className="flex items-start gap-3 p-3 rounded-lg hover:bg-foreground/5 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {event.title}
+                  </p>
+                  <p className="text-xs text-foreground/60 mt-0.5">
+                    {event.date}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-foreground/60 flex-shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  {event.attendees}
+                </div>
               </div>
-              <span className="text-xs text-foreground/50">
-                2 mins ago
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
