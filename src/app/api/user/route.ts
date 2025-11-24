@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { compare } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { signInSchema } from '@/lib/validations/auth';
+import { signInSchema } from '@/lib/validations/zodauth';
 
 export async function POST(request: NextRequest) {
   try {
