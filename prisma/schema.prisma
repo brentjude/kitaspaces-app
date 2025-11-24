@@ -15,15 +15,176 @@ enum UserRole {
   ADMIN
 }
 
+enum MembershipStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  PENDING
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  GCASH
+  BANK_TRANSFER
+  CASH
+  CREDIT_CARD
+  OTHER
+}
+
 model User {
+  id            String              @id @default(cuid())
+  email         String              @unique
+  password      String?             // Nullable for non-member registrations
+  name          String
+  role          UserRole            @default(USER)
+  isMember      Boolean             @default(false)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  // Relations
+  memberships       Membership[]
+  eventRegistrations EventRegistration[]
+  payments          Payment[]
+
+  @@index([email])
+  @@index([isMember])
+  @@map("users")
+}
+
+model Membership {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    MembershipStatus @default(PENDING)
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("memberships")
+}
+
+model Event {
+  id            String              @id @default(cuid())
+  title         String
+  description   String              @db.Text
+  date          DateTime
+  startTime     String?             // Format: "HH:MM"
+  endTime       String?             // Format: "HH:MM"
+  location      String?
+  price         Float               @default(0)
+  isFree        Boolean             @default(false)
+  isMemberOnly  Boolean             @default(false)
+  maxAttendees  Int?                // Null means unlimited
+  imageUrl      String?             // Cloudinary image URL
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  // Relations
+  registrations EventRegistration[]
+  freebies      EventFreebie[]
+
+  @@index([date])
+  @@index([isFree])
+  @@index([isMemberOnly])
+  @@map("events")
+}
+
+model EventFreebie {
+  id          String   @id @default(cuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name        String   // e.g., "Coffee", "Snacks", "T-Shirt"
+  description String?
+  quantity    Int      // Available quantity
+  imageUrl    String?  // Cloudinary image URL
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  selections FreebieSelection[]
+
+  @@index([eventId])
+  @@map("event_freebies")
+}
+
+model EventRegistration {
   id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      UserRole @default(USER)
+  userId    String
+  eventId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  // Registration details
+  attendeeName  String?  // For non-members or if different from user name
+  attendeeEmail String?  // For non-members or if different from user email
+  
+  // Payment (if event is not free)
+  paymentId     String?  @unique
+  payment       Payment? @relation(fields: [paymentId], references: [id])
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([email])
-  @@map("users")
+  // Relations
+  freebieSelections FreebieSelection[]
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+  @@map("event_registrations")
+}
+
+model FreebieSelection {
+  id             String            @id @default(cuid())
+  registrationId String
+  freebieId      String
+  registration   EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  freebie        EventFreebie      @relation(fields: [freebieId], references: [id], onDelete: Cascade)
+  quantity       Int               @default(1)
+  createdAt      DateTime          @default(now())
+
+  @@unique([registrationId, freebieId])
+  @@index([registrationId])
+  @@index([freebieId])
+  @@map("freebie_selections")
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Payment details
+  amount            Float
+  paymentMethod     PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  referenceNumber   String?       // Payment reference/transaction ID
+  
+  // Payment proof
+  proofImageUrl     String?       // Cloudinary URL for payment screenshot
+  
+  // Additional details
+  notes             String?       @db.Text
+  
+  // Timestamps
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  eventRegistration EventRegistration?
+
+  @@index([userId])
+  @@index([status])
+  @@index([referenceNumber])
+  @@map("payments")
 }
