@@ -6,9 +6,14 @@ import Link from 'next/link';
 
 interface AdminHeaderProps {
   title: string;
+  action?: {
+    label: string;
+    href: string;
+    icon?: React.ReactNode;
+  };
 }
 
-export default function AdminHeader({ title }: AdminHeaderProps) {
+export default function AdminHeader({ title, action }: AdminHeaderProps) {
   const { data: session } = useSession();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -25,7 +30,7 @@ export default function AdminHeader({ title }: AdminHeaderProps) {
   }, []);
 
   return (
-    <div className="bg-white border-b border-foreground/10 px-8 py-2 mb-8 -mx-8 -mt-8">
+    <div className="bg-white border-b border-foreground/10 px-8 py-4 mb-8 -mx-8 -mt-8">
       <div className="flex items-center justify-between">
         {/* Title */}
         <h1 className="text-2xl font-semibold text-foreground">
@@ -34,16 +39,20 @@ export default function AdminHeader({ title }: AdminHeaderProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          {/* Add Event Button */}
-          <Link
-            href="/admin/events/create"
-            className="flex items-center gap-2 px-4 py-2 bg-button text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Event
-          </Link>
+          {/* Action Button */}
+          {action && (
+            <Link
+              href={action.href}
+              className="flex items-center gap-2 px-4 py-2 bg-button text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm"
+            >
+              {action.icon || (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              )}
+              {action.label}
+            </Link>
+          )}
 
           {/* User Dropdown */}
           <div className="relative" ref={dropdownRef}>

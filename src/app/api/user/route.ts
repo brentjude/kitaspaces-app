@@ -1,76 +1,132 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hash } from 'bcryptjs';
-import { prisma } from '@/lib/prisma';
-import { signUpSchema } from '@/lib/validations/zodauth';
-import { UserRole } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import cloudinary from '@/lib/cloudinary';
+import type { CloudinaryUploadResponse } from '@/types';
 
+/**
+ * POST /api/upload
+ * Upload image to Cloudinary
+ * Requires authentication
+ */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Check authentication
+    const session = await getServerSession(authOptions);
 
-    // Validate input with Zod schema
-    const validatedFields = signUpSchema.safeParse(body);
-
-    if (!validatedFields.success) {
+    if (!session?.user) {
       return NextResponse.json(
-        { 
-          error: 'Invalid input', 
-          details: validatedFields.error.flatten().fieldErrors 
-        },
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const folder = formData.get('folder') as string || 'kitaspaces';
+
+    if (!file) {
+      return NextResponse.json(
+        { success: false, error: 'No file provided' },
         { status: 400 }
       );
     }
 
-    const { email, password, name } = validatedFields.data;
+    // Convert file to base64
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    // Upload to Cloudinary
+    const uploadResult = await cloudinary.uploader.upload(base64String, {
+      folder,
+      resource_type: 'image',
+      transformation: [
+        { width: 1200, height: 630, crop: 'limit' }, // Limit max size
+        { quality: 'auto:good' },
+        { fetch_format: 'auto' },
+      ],
     });
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 400 }
-      );
-    }
+    const response: CloudinaryUploadResponse = {
+      public_id: uploadResult.public_id,
+      version: uploadResult.version,
+      signature: uploadResult.signature,
+      width: uploadResult.width,
+      height: uploadResult.height,
+      format: uploadResult.format,
+      resource_type: uploadResult.resource_type,
+      created_at: uploadResult.created_at,
+      tags: uploadResult.tags || [],
+      bytes: uploadResult.bytes,
+      type: uploadResult.type,
+      etag: uploadResult.etag,
+      placeholder: uploadResult.placeholder || false,
+      url: uploadResult.url,
+      secure_url: uploadResult.secure_url,
+      access_mode: uploadResult.access_mode,
+      original_filename: uploadResult.original_filename,
+    };
 
-    // Validate that name exists
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Name is required' },
-        { status: 400 }
-      );
-    }
-
-    // Hash password with bcrypt
-    const hashedPassword = await hash(password, 10);
-
-    // Create new user in database
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name: name, // Now TypeScript knows it's definitely a string
-        role: UserRole.USER,
-        isMember: false,
-      },
-    });
-
-    // Return user data (exclude password for security)
     return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-    }, { status: 201 });
-
+      success: true,
+      data: response,
+    });
   } catch (error) {
-    console.error('User registration error:', error);
+    console.error('Upload error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        success: false,
+        error: 'Upload failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/upload
+ * Delete image from Cloudinary
+ * Requires authentication
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { publicId } = body;
+
+    if (!publicId) {
+      return NextResponse.json(
+        { success: false, error: 'No public ID provided' },
+        { status: 400 }
+      );
+    }
+
+    // Delete from Cloudinary
+    const result = await cloudinary.uploader.destroy(publicId);
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Delete error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Delete failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

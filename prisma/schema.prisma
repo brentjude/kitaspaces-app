@@ -54,8 +54,19 @@ enum ReferralSource {
   OTHER
 }
 
+enum PerkType {
+  MEETING_ROOM_HOURS
+  PRINTING_CREDITS
+  EVENT_DISCOUNT
+  LOCKER_ACCESS
+  COFFEE_VOUCHERS
+  PARKING_SLOTS
+  GUEST_PASSES
+  CUSTOM
+}
+
 model User {
-  id            String              @id @default(cuid())
+  id            String              @id // Format: YYYYNNN (e.g., 2025001, 2025002)
   email         String              @unique
   password      String?
   name          String
@@ -78,16 +89,64 @@ model User {
   eventRegistrations EventRegistration[]
   payments           Payment[]
   dailyUseRedemptions DailyUseRedemption[]
+  perkUsages         MembershipPerkUsage[]
 
   @@index([email])
   @@index([isMember])
   @@map("users")
 }
 
+model MembershipPlan {
+  id            String   @id @default(cuid())
+  name          String   // e.g., "Basic Monthly", "Premium Monthly", "Daily Pass"
+  description   String?  @db.Text
+  type          MembershipType
+  price         Float
+  durationDays  Int      // 1 for daily, 30 for monthly, etc.
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  perks         MembershipPlanPerk[]
+  memberships   Membership[]
+
+  @@index([type])
+  @@index([isActive])
+  @@map("membership_plans")
+}
+
+model MembershipPlanPerk {
+  id          String   @id @default(cuid())
+  planId      String
+  plan        MembershipPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  
+  perkType    PerkType
+  name        String   // e.g., "Free Meeting Room Hours"
+  description String?  @db.Text
+  quantity    Float    // e.g., 4 for 4 hours, 100 for 100 prints
+  unit        String   // e.g., "hours", "credits", "passes", "percentage"
+  
+  // Optional limits
+  maxPerDay   Float?
+  maxPerWeek  Float?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([planId])
+  @@index([perkType])
+  @@map("membership_plan_perks")
+}
+
 model Membership {
   id            String           @id @default(cuid())
   userId        String
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Membership plan
+  planId        String?
+  plan          MembershipPlan?  @relation(fields: [planId], references: [id])
   
   // Membership details
   type          MembershipType   @default(MONTHLY)
@@ -109,10 +168,40 @@ model Membership {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
+  // Relations
+  perkUsages    MembershipPerkUsage[]
+
   @@index([userId])
+  @@index([planId])
   @@index([status])
   @@index([type])
   @@map("memberships")
+}
+
+model MembershipPerkUsage {
+  id            String      @id @default(cuid())
+  membershipId  String
+  membership    Membership  @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  perkType      PerkType
+  perkName      String
+  quantityUsed  Float       // Amount used
+  unit          String      // e.g., "hours", "credits"
+  
+  usedAt        DateTime    @default(now())
+  notes         String?     @db.Text
+  
+  // Optional: Link to what was used (meeting room booking, print job, etc.)
+  referenceId   String?
+  referenceType String?     // e.g., "MEETING_ROOM_BOOKING", "PRINT_JOB"
+
+  @@index([membershipId])
+  @@index([userId])
+  @@index([perkType])
+  @@index([usedAt])
+  @@map("membership_perk_usages")
 }
 
 model Coupon {

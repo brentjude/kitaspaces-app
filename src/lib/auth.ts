@@ -6,15 +6,18 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signInSchema } from "@/lib/validations/zodauth";
+import { UserRole } from "@/generated/prisma";
 
 export const authOptions: NextAuthOptions = {
   // Use JWT strategy for stateless authentication
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   // Custom sign-in page
   pages: {
     signIn: "/auth/signin",
+    error: "/auth/signin",
   },
   providers: [
     CredentialsProvider({
@@ -64,12 +67,13 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        // Return user object (without password)
+        // Return user object that matches NextAuth User type (including isMember)
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
+          isMember: user.isMember,
         };
       },
     }),
@@ -79,7 +83,10 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
         token.role = user.role;
+        token.isMember = user.isMember;
       }
       return token;
     },
@@ -87,7 +94,10 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.role = token.role as UserRole;
+        session.user.isMember = token.isMember as boolean;
       }
       return session;
     },
