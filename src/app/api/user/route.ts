@@ -1,17 +1,15 @@
-// Purpose: Custom sign-in endpoint with Zod validation
-// Validates: Email and password format before authentication
-// Returns: User data (without password) or error
 import { NextRequest, NextResponse } from 'next/server';
-import { compare } from 'bcryptjs';
+import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { signInSchema } from '@/lib/validations/zodauth';
+import { signUpSchema } from '@/lib/validations/zodauth';
+import { UserRole } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
     // Validate input with Zod schema
-    const validatedFields = signInSchema.safeParse(body);
+    const validatedFields = signUpSchema.safeParse(body);
 
     if (!validatedFields.success) {
       return NextResponse.json(
@@ -23,29 +21,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, password } = validatedFields.data;
+    const { email, password, name } = validatedFields.data;
 
-    // Find user in database
-    const user = await prisma.user.findUnique({
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
-    if (!user) {
+    if (existingUser) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
+        { error: 'User with this email already exists' },
+        { status: 400 }
       );
     }
 
-    // Verify hashed password with bcrypt
-    const isPasswordValid = await compare(password, user.password);
-
-    if (!isPasswordValid) {
+    // Validate that name exists
+    if (!name) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
+        { error: 'Name is required' },
+        { status: 400 }
       );
     }
+
+    // Hash password with bcrypt
+    const hashedPassword = await hash(password, 10);
+
+    // Create new user in database
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name: name, // Now TypeScript knows it's definitely a string
+        role: UserRole.USER,
+        isMember: false,
+      },
+    });
 
     // Return user data (exclude password for security)
     return NextResponse.json({
@@ -55,9 +65,10 @@ export async function POST(request: NextRequest) {
         name: user.name,
         role: user.role,
       },
-    });
+    }, { status: 201 });
+
   } catch (error) {
-    console.error('Sign in error:', error);
+    console.error('User registration error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

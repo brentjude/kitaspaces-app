@@ -45,8 +45,13 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
-        if (!user || !user.password) {
+        if (!user) {
           throw new Error("Invalid credentials");
+        }
+
+        // Check if user has a password (members only can sign in)
+        if (!user.password) {
+          throw new Error("This account cannot sign in. Please contact support or register as a member.");
         }
 
         // Verify hashed password using bcrypt
@@ -81,10 +86,11 @@ export const authOptions: NextAuthOptions = {
     // Add token info to session
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
       }
       return session;
     },
   },
+  secret: process.env.NEXTAUTH_SECRET,
 };
