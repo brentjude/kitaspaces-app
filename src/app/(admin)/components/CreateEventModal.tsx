@@ -467,7 +467,7 @@ export default function CreateEventModal({
         <div>
           <div className="flex items-center justify-between mb-3">
             <label className="block text-sm font-medium text-foreground flex items-center">
-              {/* Coffee Cup Icon */}
+              {/* Coffee Icon */}
               <svg
                 className="w-4 h-4 mr-2 text-primary"
                 fill="none"
@@ -478,7 +478,7 @@ export default function CreateEventModal({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                 />
               </svg>
               Included Freebies
@@ -536,7 +536,7 @@ export default function CreateEventModal({
                 <div className="space-y-3 pr-8">
                   <input
                     type="text"
-                    placeholder="Freebie Name (e.g., Free Coffee)"
+                    placeholder="Freebie Name (e.g., Coffee)"
                     className="block w-full text-sm font-medium text-foreground placeholder-foreground/40 border-none p-0 focus:ring-0"
                     value={item.name}
                     onChange={(e) =>
@@ -545,7 +545,7 @@ export default function CreateEventModal({
                   />
                   <input
                     type="text"
-                    placeholder="Description (e.g., 1 Large Cup - Oat/Almond/Cow)"
+                    placeholder="Options (e.g., Cafe Latte, Americano, Cappuccino)"
                     className="flex-1 bg-foreground/5 border border-foreground/10 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground placeholder-foreground/40 outline-none transition-all"
                     value={item.description}
                     onChange={(e) =>
@@ -554,7 +554,7 @@ export default function CreateEventModal({
                   />
                   <div className="flex items-center gap-2">
                     <label className="text-xs font-medium text-foreground/60">
-                      Quantity:
+                      Quantity per person:
                     </label>
                     <input
                       type="number"
@@ -576,7 +576,7 @@ export default function CreateEventModal({
 
             {freebies.length === 0 && (
               <div className="text-center py-8 border-2 border-dashed border-foreground/20 rounded-xl bg-foreground/5">
-                {/* Coffee Cup Icon */}
+                {/* Coffee Icon */}
                 <svg
                   className="w-8 h-8 mx-auto text-foreground/20 mb-2"
                   fill="none"
@@ -587,7 +587,7 @@ export default function CreateEventModal({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
                 <p className="text-sm text-foreground/40 mb-2">
