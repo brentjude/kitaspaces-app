@@ -1,26 +1,24 @@
-import { Suspense } from 'react';
+'use client';
+
+import { Suspense, useState } from 'react';
 import AdminHeader from '../../components/AdminHeader';
 import EventsListClient from './components/EventsListClient';
 
-export const metadata = {
-  title: 'Events Management | Kitaspaces Admin',
-  description: 'Manage events, registrations, and attendees',
-};
-
 export default function EventsPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleEventCreated = () => {
+    // Trigger a refresh of the events list
+    setRefreshKey((prev) => prev + 1);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto">
-        <AdminHeader
-          title="Events Management"
-          action={{
-            label: 'Add Event',
-            href: '/admin/events/create',
-          }}
-        />
+        <AdminHeader title="Events Management" onEventCreated={handleEventCreated} />
 
         <Suspense fallback={<EventsListSkeleton />}>
-          <EventsListClient />
+          <EventsListClient key={refreshKey} />
         </Suspense>
       </div>
     </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useEvents, type EventStatusFilter } from '@/hooks/useEvents';
 import EventsTable from './EventsTable';
 import EventsFilters from './EventsFilter';
@@ -223,15 +222,9 @@ function EmptyState({
           Clear Filters
         </button>
       ) : (
-        <Link
-          href="/admin/events/create"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-button text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Create Event
-        </Link>
+        <p className="text-sm text-foreground/50">
+          Click the "Add Event" button above to create your first event
+        </p>
       )}
     </div>
   );
