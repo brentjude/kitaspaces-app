@@ -86,7 +86,7 @@ function EventTableRow({ event, status }: EventTableRowProps) {
       {/* Event Name */}
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-lg overflow-hidden">
+          <div className="shrink-0 h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-lg overflow-hidden">
             {event.imageUrl ? (
               <img
                 src={event.imageUrl}
