@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Modal from '@/app/components/Modal';
 import ImageUpload from '@/app/components/ImageUpload';
-import type { CloudinaryUploadResponse } from '@/types';
 
 interface Freebie {
   id: string;

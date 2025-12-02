@@ -222,7 +222,7 @@ async function main() {
 
   // Create Coupons
   console.log('\n🎟️  Creating coupons...');
-  const freeCoupon = await prisma.coupon.create({
+  await prisma.coupon.create({
     data: {
       code: 'WELCOME2025',
       description: 'Free first month membership',
@@ -233,8 +233,8 @@ async function main() {
       expiresAt: new Date('2025-12-31'),
     },
   });
-  
-  const discount50 = await prisma.coupon.create({
+
+  await prisma.coupon.create({
     data: {
       code: 'SAVE50',
       description: '50% off monthly membership',
@@ -246,7 +246,7 @@ async function main() {
     },
   });
   console.log(`✅ Created 2 coupons`);
-
+  
   // Create Admin User
   console.log('\n👤 Creating admin user...');
   const hashedAdminPassword = await hash('KITA@boombox2025!', 10);

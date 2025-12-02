@@ -252,6 +252,7 @@ export default function SignInForm() {
               <a
                 href="https://kitaspaces.com"
                 target="_blank"
+                rel="noreferrer"
                 className="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
               >
                 <ArrowTopRightOnSquareIcon className="h-4 w-4 mr-2" />
