@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Modal from '@/app/components/Modal';
 
 interface DeleteEventModalProps {
@@ -9,6 +9,33 @@ interface DeleteEventModalProps {
   onConfirm: () => Promise<void>;
   eventTitle: string;
   eventId: string;
+}
+
+interface EventPax {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface EventRegistration {
+  id: string;
+  userId: string;
+  numberOfPax: number;
+  pax: EventPax[];
+}
+
+interface EventFreebie {
+  id: string;
+  name: string;
+  description: string | null;
+  quantity: number;
+}
+
+interface EventDetailsResponse {
+  id: string;
+  title: string;
+  registrations: EventRegistration[];
+  freebies: EventFreebie[];
 }
 
 export default function DeleteEventModal({
@@ -31,13 +58,7 @@ export default function DeleteEventModal({
   const isConfirmValid = confirmText.toLowerCase() === 'delete';
 
   // Fetch event statistics when modal opens
-  useEffect(() => {
-    if (isOpen && eventId) {
-      fetchEventStats();
-    }
-  }, [isOpen, eventId]);
-
-  const fetchEventStats = async () => {
+  const fetchEventStats = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/admin/events/${eventId}`);
@@ -45,16 +66,16 @@ export default function DeleteEventModal({
       
       const data = await response.json();
       if (data.success && data.data) {
-        const event = data.data;
-        const paxCount = event.registrations?.reduce(
-          (sum: number, reg: any) => sum + (reg.pax?.length || 0),
+        const event = data.data as EventDetailsResponse;
+        const paxCount = event.registrations.reduce(
+          (sum: number, reg: EventRegistration) => sum + (reg.pax?.length || 0),
           0
-        ) || 0;
+        );
         
         setEventStats({
-          registrations: event.registrations?.length || 0,
+          registrations: event.registrations.length,
           pax: paxCount,
-          freebies: event.freebies?.length || 0,
+          freebies: event.freebies.length,
         });
       }
     } catch (err) {
@@ -63,7 +84,13 @@ export default function DeleteEventModal({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    if (isOpen && eventId) {
+      fetchEventStats();
+    }
+  }, [isOpen, eventId, fetchEventStats]);
 
   const handleConfirm = async () => {
     if (!isConfirmValid) {
@@ -397,7 +424,7 @@ export default function DeleteEventModal({
                     />
                   </svg>
                   <span className="break-words">
-                    No registrations found. It's safe to delete this event without
+                    No registrations found. It&apos;s safe to delete this event without
                     affecting any users.
                   </span>
                 </p>
