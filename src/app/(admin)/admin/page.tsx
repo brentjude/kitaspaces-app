@@ -1,11 +1,8 @@
-import AdminHeader from "@/app/(admin)/components/AdminHeader";
 import AdminStatsCard from "@/app/(admin)/components/AdminStatsCard";
 
 export default function AdminDashboard() {
   return (
     <div>
-      <AdminHeader
-        title="Dashboard" />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

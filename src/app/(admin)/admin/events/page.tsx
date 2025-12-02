@@ -1,33 +1,19 @@
-'use client';
-
-import { Suspense, useState } from 'react';
-import AdminHeader from '../../components/AdminHeader';
+import { Suspense } from 'react';
 import EventsListClient from './components/EventsListClient';
 
 export default function EventsPage() {
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const handleEventCreated = () => {
-    // Trigger a refresh of the events list
-    setRefreshKey((prev) => prev + 1);
-  };
-
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto">
-        <AdminHeader title="Events Management" onEventCreated={handleEventCreated} />
-
-        <Suspense fallback={<EventsListSkeleton />}>
-          <EventsListClient key={refreshKey} />
-        </Suspense>
-      </div>
+      <Suspense fallback={<EventsListSkeleton />}>
+        <EventsListClient />
+      </Suspense>
     </div>
   );
 }
 
 function EventsListSkeleton() {
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6">
       {/* Stats Cards Skeleton */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
