@@ -72,7 +72,7 @@ export default function PaymentStatusModal({
       <div className="p-6">
         {/* User Info */}
         <div className="flex items-center mb-6">
-          <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-primary/20 to-orange-100 flex items-center justify-center text-primary font-bold text-lg flex-shrink-0">
+          <div className="h-12 w-12 rounded-full bg-linear-to-tr from-primary/20 to-orange-100 flex items-center justify-center text-primary font-bold text-lg shrink-0">
             {registration.user.name.charAt(0).toUpperCase()}
           </div>
           <div className="ml-3 min-w-0">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEvents, type EventStatusFilter } from '@/hooks/useEvents';
 import EventsTable from './EventsTable';
 import EventsFilters from './EventsFilter';
@@ -16,6 +16,16 @@ export default function EventsListClient() {
     sortBy: 'date',
     sortOrder: 'desc',
   });
+
+  // Listen for event creation
+  useEffect(() => {
+    const handleEventCreated = () => {
+      refetch();
+    };
+
+    window.addEventListener('eventCreated', handleEventCreated);
+    return () => window.removeEventListener('eventCreated', handleEventCreated);
+  }, [refetch]);
 
   // Determine event status based on date
   const getEventStatus = (eventDate: Date): 'upcoming' | 'completed' => {
@@ -63,7 +73,7 @@ export default function EventsListClient() {
   }
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6">
       {/* Statistics Cards */}
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -182,15 +192,17 @@ function StatCard({ label, value, icon, variant = 'default' }: StatCardProps) {
   );
 }
 
+interface EmptyStateProps {
+  searchTerm: string;
+  statusFilter: EventStatusFilter;
+  onClearFilters: () => void;
+}
+
 function EmptyState({
   searchTerm,
   statusFilter,
   onClearFilters,
-}: {
-  searchTerm: string;
-  statusFilter: EventStatusFilter;
-  onClearFilters: () => void;
-}) {
+}: EmptyStateProps) {
   const hasFilters = searchTerm || statusFilter !== 'all';
 
   return (
@@ -219,6 +231,19 @@ function EmptyState({
           onClick={onClearFilters}
           className="inline-flex items-center gap-2 px-4 py-2 bg-foreground/10 text-foreground rounded-lg text-sm font-medium hover:bg-foreground/20 transition-all"
         >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
           Clear Filters
         </button>
       ) : (
@@ -232,7 +257,7 @@ function EmptyState({
 
 function EventsLoadingSkeleton() {
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6">
       {/* Stats Cards Skeleton */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (

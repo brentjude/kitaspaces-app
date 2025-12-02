@@ -242,7 +242,7 @@ export default function DeleteEventModal({
               <p className="text-sm text-foreground/70">
                 You are about to delete the event:
               </p>
-              <p className="text-base font-medium text-foreground bg-foreground/5 px-4 py-2 rounded-lg break-words">
+              <p className="text-base font-medium text-foreground bg-foreground/5 px-4 py-2 rounded-lg wrap-break-word">
                 {eventTitle}
               </p>
             </div>

@@ -80,6 +80,7 @@ interface EventTableRowProps {
 function EventTableRow({ event, status }: EventTableRowProps) {
   const attendeesCount = event.registrations?.length || 0;
   const maxAttendees = event.maxAttendees;
+  const hasLimit = maxAttendees && maxAttendees > 0;
 
   return (
     <tr className="hover:bg-foreground/5 transition-colors">
@@ -224,11 +225,13 @@ function EventTableRow({ event, status }: EventTableRowProps) {
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm text-foreground">
           {attendeesCount}
-          {maxAttendees && (
+          {hasLimit ? (
             <span className="text-foreground/50"> / {maxAttendees}</span>
+          ) : (
+            <span className="text-foreground/40 text-xs"> / No limit</span>
           )}
         </div>
-        {maxAttendees && (
+        {hasLimit && (
           <div className="mt-1">
             <div className="w-full bg-foreground/10 rounded-full h-1.5">
               <div

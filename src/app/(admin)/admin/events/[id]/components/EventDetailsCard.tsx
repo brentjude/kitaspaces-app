@@ -10,6 +10,7 @@ import {
   PencilSquareIcon,
   UsersIcon,
   ShieldCheckIcon,
+  GiftIcon,
 } from '@heroicons/react/24/outline';
 import EditEventModal from './EditEventModal';
 import type { Event, EventFreebie, EventRegistration } from '@prisma/client';
@@ -38,6 +39,16 @@ export default function EventDetailsCard({
 
   const status = getEventStatus();
 
+  const getAttendeesDisplay = () => {
+    const registrationCount = event.registrations.length;
+    
+    if (!event.maxAttendees || event.maxAttendees === 0) {
+      return `${registrationCount} registered (No limit)`;
+    }
+    
+    return `${registrationCount} / ${event.maxAttendees} attendees`;
+  };
+
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-foreground/10 overflow-hidden h-fit">
@@ -51,7 +62,7 @@ export default function EventDetailsCard({
               className="object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-orange-100 flex items-center justify-center">
+            <div className="w-full h-full bg-linear-to-tr from-primary/20 to-orange-100 flex items-center justify-center">
               <span className="text-4xl font-bold text-primary/30 select-none">
                 KITA
               </span>
@@ -96,6 +107,12 @@ export default function EventDetailsCard({
                     Daily Use Event
                   </span>
                 )}
+                {event.freebies && event.freebies.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                    <GiftIcon className="w-3 h-3" />
+                    {event.freebies.length} {event.freebies.length === 1 ? 'Perk' : 'Perks'}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -117,7 +134,7 @@ export default function EventDetailsCard({
           {/* Event Info */}
           <div className="space-y-3 mb-6">
             <div className="flex items-start gap-3 text-foreground/70">
-              <CalendarIcon className="w-5 h-5 mt-0.5 flex-shrink-0 text-foreground/40" />
+              <CalendarIcon className="w-5 h-5 mt-0.5 shrink-0 text-foreground/40" />
               <span className="text-sm">
                 {format(new Date(event.date), 'EEEE, MMMM d, yyyy')}
               </span>
@@ -125,7 +142,7 @@ export default function EventDetailsCard({
 
             {(event.startTime || event.endTime) && (
               <div className="flex items-start gap-3 text-foreground/70">
-                <ClockIcon className="w-5 h-5 mt-0.5 flex-shrink-0 text-foreground/40" />
+                <ClockIcon className="w-5 h-5 mt-0.5 shrink-0 text-foreground/40" />
                 <span className="text-sm">
                   {event.startTime && format(new Date(`2000-01-01T${event.startTime}`), 'h:mm a')}
                   {event.startTime && event.endTime && ' - '}
@@ -136,19 +153,18 @@ export default function EventDetailsCard({
 
             {event.location && (
               <div className="flex items-start gap-3 text-foreground/70">
-                <MapPinIcon className="w-5 h-5 mt-0.5 flex-shrink-0 text-foreground/40" />
+                <MapPinIcon className="w-5 h-5 mt-0.5 shrink-0 text-foreground/40" />
                 <span className="text-sm">{event.location}</span>
               </div>
             )}
 
-            {event.maxAttendees && event.maxAttendees > 0 && (
-              <div className="flex items-start gap-3 text-foreground/70">
-                <UsersIcon className="w-5 h-5 mt-0.5 flex-shrink-0 text-foreground/40" />
-                <span className="text-sm">
-                  {event.registrations.length} / {event.maxAttendees} attendees
-                </span>
-              </div>
-            )}
+            {/* Always show attendees info */}
+            <div className="flex items-start gap-3 text-foreground/70">
+              <UsersIcon className="w-5 h-5 mt-0.5 shrink-0 text-foreground/40" />
+              <span className="text-sm">
+                {getAttendeesDisplay()}
+              </span>
+            </div>
           </div>
 
           {/* Description */}
@@ -164,28 +180,34 @@ export default function EventDetailsCard({
           {/* Freebies/Perks */}
           {event.freebies && event.freebies.length > 0 && (
             <div className="border-t border-foreground/10 pt-6">
-              <h3 className="text-sm font-semibold text-foreground mb-3">
-                Included Perks
+              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <GiftIcon className="w-4 h-4 text-orange-600" />
+                Included Perks & Freebies
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {event.freebies.map((freebie) => (
                   <div
                     key={freebie.id}
-                    className="bg-orange-50 p-3 rounded-lg border border-orange-100"
+                    className="bg-orange-50 p-4 rounded-lg border border-orange-100 hover:border-orange-200 transition-colors"
                   >
-                    <div className="font-medium text-foreground text-sm">
-                      {freebie.name}
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="font-medium text-foreground text-sm flex-1">
+                        {freebie.name}
+                      </div>
+                      <span className="bg-orange-200 text-orange-900 text-xs font-semibold px-2 py-0.5 rounded-full ml-2">
+                        ×{freebie.quantity}
+                      </span>
                     </div>
                     {freebie.description && (
-                      <div className="text-foreground/60 text-xs mt-0.5">
+                      <div className="text-foreground/60 text-xs mt-1 line-clamp-2">
                         {freebie.description}
                       </div>
                     )}
-                    <div className="text-foreground/50 text-xs mt-1">
-                      Qty: {freebie.quantity}
-                    </div>
                   </div>
                 ))}
+              </div>
+              <div className="mt-3 text-xs text-foreground/50 italic">
+                * Each attendee can select from available perks during registration
               </div>
             </div>
           )}

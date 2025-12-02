@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Modal from '@/app/components/Modal';
 import ImageUpload from '@/app/components/ImageUpload';
 
@@ -22,6 +23,7 @@ export default function CreateEventModal({
   onClose,
   onSuccess,
 }: CreateEventModalProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +39,8 @@ export default function CreateEventModal({
     isFree: true,
     isMemberOnly: false,
     isFreeForMembers: false,
+    isRedemptionEvent: false,
+    redemptionLimit: '1',
     maxAttendees: '',
     imageUrl: '',
   });
@@ -127,6 +131,8 @@ export default function CreateEventModal({
         isFree: formData.isFree,
         isMemberOnly: formData.isMemberOnly,
         isFreeForMembers: formData.isFreeForMembers,
+        isRedemptionEvent: formData.isRedemptionEvent,
+        redemptionLimit: formData.isRedemptionEvent ? parseInt(formData.redemptionLimit) || 1 : null,
         maxAttendees: formData.maxAttendees
           ? parseInt(formData.maxAttendees)
           : null,
@@ -148,7 +154,7 @@ export default function CreateEventModal({
         throw new Error(data.error || 'Failed to create event');
       }
 
-      // Reset form
+      // Reset form only after successful submission
       setFormData({
         title: '',
         description: '',
@@ -160,13 +166,27 @@ export default function CreateEventModal({
         isFree: true,
         isMemberOnly: false,
         isFreeForMembers: false,
+        isRedemptionEvent: false,
+        redemptionLimit: '1',
         maxAttendees: '',
         imageUrl: '',
       });
       setFreebies([]);
+      setError(null);
 
-      onSuccess?.();
+      // Dispatch custom event to notify EventsList
+      window.dispatchEvent(new Event('eventCreated'));
+
+      // Close modal
       onClose();
+
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      // Show success message
+      console.log('Event created successfully:', data.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create event');
     } finally {
@@ -176,6 +196,8 @@ export default function CreateEventModal({
 
   const handleClose = () => {
     if (!isSubmitting) {
+      // Don't reset form when closing - preserve user's input
+      setError(null);
       onClose();
     }
   };
@@ -232,12 +254,12 @@ export default function CreateEventModal({
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
             <svg
-              className="w-5 h-5 flex-shrink-0"
+              className="w-5 h-5 shrink-0"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -284,7 +306,6 @@ export default function CreateEventModal({
               Date <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              {/* Calendar Icon */}
               <svg
                 className="w-4 h-4 absolute left-3 top-3.5 text-foreground/40"
                 fill="none"
@@ -340,7 +361,6 @@ export default function CreateEventModal({
             Location
           </label>
           <div className="relative">
-            {/* Map Pin Icon */}
             <svg
               className="w-4 h-4 absolute left-3 top-3.5 text-foreground/40"
               fill="none"
@@ -381,7 +401,6 @@ export default function CreateEventModal({
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  {/* Currency Icon */}
                   <svg
                     className="w-3.5 h-3.5 text-foreground/40"
                     fill="none"
@@ -459,14 +478,42 @@ export default function CreateEventModal({
                 Free for Members (Paid for Non-Members)
               </span>
             </label>
+
+            <label className="flex items-center cursor-pointer group">
+              <input
+                type="checkbox"
+                name="isRedemptionEvent"
+                className="w-4 h-4 text-primary border-foreground/30 rounded focus:ring-2 focus:ring-primary/20 transition-all"
+                checked={formData.isRedemptionEvent}
+                onChange={handleInputChange}
+              />
+              <span className="ml-3 text-sm font-medium text-foreground group-hover:text-foreground/80 transition-colors">
+                Daily Use Redemption Event
+              </span>
+            </label>
+
+            {formData.isRedemptionEvent && (
+              <div className="ml-7 mt-2">
+                <label className="block text-xs font-medium text-foreground/60 mb-1">
+                  Redemption Limit per User
+                </label>
+                <input
+                  type="number"
+                  name="redemptionLimit"
+                  min="1"
+                  className="w-32 rounded-lg border border-foreground/20 px-3 py-1.5 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  value={formData.redemptionLimit}
+                  onChange={handleInputChange}
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Freebies */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <label className="block text-sm font-medium text-foreground flex items-center">
-              {/* Coffee Icon */}
+            <label className="flex text-sm font-medium text-foreground items-center">
               <svg
                 className="w-4 h-4 mr-2 text-primary"
                 fill="none"
@@ -487,7 +534,6 @@ export default function CreateEventModal({
               onClick={addFreebie}
               className="text-xs flex items-center bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 font-medium transition-colors"
             >
-              {/* Plus Icon */}
               <svg
                 className="w-3.5 h-3.5 mr-1"
                 fill="none"
@@ -516,7 +562,6 @@ export default function CreateEventModal({
                   onClick={() => removeFreebie(item.id)}
                   className="absolute top-3 right-3 text-foreground/30 hover:text-red-500 p-1 transition-colors opacity-0 group-hover:opacity-100"
                 >
-                  {/* Trash Icon */}
                   <svg
                     className="w-4 h-4"
                     fill="none"
@@ -575,7 +620,6 @@ export default function CreateEventModal({
 
             {freebies.length === 0 && (
               <div className="text-center py-8 border-2 border-dashed border-foreground/20 rounded-xl bg-foreground/5">
-                {/* Coffee Icon */}
                 <svg
                   className="w-8 h-8 mx-auto text-foreground/20 mb-2"
                   fill="none"

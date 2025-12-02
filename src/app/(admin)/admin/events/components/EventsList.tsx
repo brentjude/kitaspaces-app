@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import type { EventWithRelations } from '@/types';
 import { type EventStatusFilter } from '@/hooks/useEvents';
@@ -9,11 +9,24 @@ import EventsFilters from './EventsFilter';
 
 interface EventsListProps {
   events: EventWithRelations[];
+  onEventCreated?: () => void;
 }
 
-export default function EventsList({ events }: EventsListProps) {
+export default function EventsList({ events, onEventCreated }: EventsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<EventStatusFilter>('all');
+
+  // Listen for event creation
+  useEffect(() => {
+    const handleEventCreated = () => {
+      if (onEventCreated) {
+        onEventCreated();
+      }
+    };
+
+    window.addEventListener('eventCreated', handleEventCreated);
+    return () => window.removeEventListener('eventCreated', handleEventCreated);
+  }, [onEventCreated]);
 
   // Determine event status based on date
   const getEventStatus = (eventDate: Date): 'upcoming' | 'completed' => {
@@ -135,17 +148,6 @@ export default function EventsList({ events }: EventsListProps) {
               ? 'Try adjusting your search or filters'
               : 'Get started by creating your first event'}
           </p>
-          {!searchTerm && statusFilter === 'all' && (
-            <Link
-              href="/admin/events/create"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-button text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Create Event
-            </Link>
-          )}
         </div>
       )}
     </div>

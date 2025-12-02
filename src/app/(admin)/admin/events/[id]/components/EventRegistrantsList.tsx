@@ -160,7 +160,7 @@ export default function EventRegistrantsList({
     <>
       <div className="bg-white rounded-xl shadow-sm border border-foreground/10 flex flex-col h-full max-h-[800px]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-foreground/10 flex items-center justify-between flex-shrink-0">
+        <div className="px-6 py-4 border-b border-foreground/10 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-bold text-foreground">Registrants</h2>
           <span className="bg-foreground/5 text-foreground/70 px-2.5 py-0.5 rounded-full text-xs font-semibold">
             {event.registrations.length} Total
@@ -168,7 +168,7 @@ export default function EventRegistrantsList({
         </div>
 
         {/* Search Bar */}
-        <div className="p-4 border-b border-foreground/10 bg-gray-50/50 flex-shrink-0">
+        <div className="p-4 border-b border-foreground/10 bg-gray-50/50 shrink-0">
           <div className="relative">
             <MagnifyingGlassIcon className="absolute left-3 top-3 w-4 h-4 text-foreground/40" />
             <input
@@ -241,7 +241,7 @@ export default function EventRegistrantsList({
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-primary/20 to-orange-100 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0">
+                        <div className="h-8 w-8 rounded-full bg-linear-to-tr from-primary/20 to-orange-100 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0">
                           {registration.user.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="ml-3 min-w-0">

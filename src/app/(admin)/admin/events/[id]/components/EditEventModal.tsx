@@ -3,12 +3,16 @@
 import { useState, useEffect } from 'react';
 import Modal from '@/app/components/Modal';
 import ImageUpload from '@/app/components/ImageUpload';
-import type { Event } from '@/generated/prisma';
+import type { Event, EventFreebie } from '@/generated/prisma';
+
+interface EventWithFreebies extends Event {
+  freebies: EventFreebie[];
+}
 
 interface EditEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  event: Event;
+  event: EventWithFreebies;
   hasPaidRegistrations: boolean;
 }
 
@@ -35,6 +39,14 @@ export default function EditEventModal({
     imageUrl: event.imageUrl || '',
   });
 
+  const [freebies, setFreebies] = useState<Array<{
+    id: string;
+    name: string;
+    description?: string;
+    quantity: number;
+    isNew?: boolean;
+  }>>([]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,9 +68,49 @@ export default function EditEventModal({
         maxAttendees: event.maxAttendees || 0,
         imageUrl: event.imageUrl || '',
       });
+
+      setFreebies(
+        event.freebies.map((freebie) => ({
+          id: freebie.id,
+          name: freebie.name,
+          description: freebie.description || '',
+          quantity: freebie.quantity,
+          isNew: false,
+        }))
+      );
+
       setError('');
     }
   }, [isOpen, event]);
+
+  const addFreebie = () => {
+    setFreebies([
+      ...freebies,
+      {
+        id: `new-${Math.random().toString(36).substring(2, 9)}`,
+        name: '',
+        description: '',
+        quantity: 1,
+        isNew: true,
+      },
+    ]);
+  };
+
+  const removeFreebie = (id: string) => {
+    setFreebies(freebies.filter((f) => f.id !== id));
+  };
+
+  const updateFreebie = (
+    id: string,
+    field: 'name' | 'description' | 'quantity',
+    value: string | number
+  ) => {
+    setFreebies(
+      freebies.map((f) =>
+        f.id === id ? { ...f, [field]: value } : f
+      )
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,10 +118,22 @@ export default function EditEventModal({
     setError('');
 
     try {
+      const updateData = {
+        ...formData,
+        freebies: freebies
+          .filter((f) => f.name.trim() !== '')
+          .map((f) => ({
+            id: f.isNew ? undefined : f.id,
+            name: f.name,
+            description: f.description || null,
+            quantity: f.quantity,
+          })),
+      };
+
       const response = await fetch(`/api/admin/events/${event.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(updateData),
       });
 
       if (!response.ok) {
@@ -77,7 +141,6 @@ export default function EditEventModal({
         throw new Error(data.error || 'Failed to update event');
       }
 
-      // Refresh the page to show updated data
       window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update event');
@@ -91,7 +154,7 @@ export default function EditEventModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Edit Event"
-      size="lg"
+      size="xl"
       closeOnOverlayClick={!isSubmitting}
       footer={
         <>
@@ -113,7 +176,7 @@ export default function EditEventModal({
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm border border-red-200">
@@ -126,7 +189,7 @@ export default function EditEventModal({
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
             <div className="flex gap-3">
               <svg
-                className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5"
+                className="w-5 h-5 text-orange-600 shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -377,6 +440,150 @@ export default function EditEventModal({
                 />
               </div>
             )}
+          </div>
+        )}
+
+        {/* Freebies Section */}
+        {!hasPaidRegistrations && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="flex text-sm font-medium text-foreground items-center">
+                <svg
+                  className="w-4 h-4 mr-2 text-orange-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                  />
+                </svg>
+                Included Freebies & Perks
+              </label>
+              <button
+                type="button"
+                onClick={addFreebie}
+                className="text-xs flex items-center bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg hover:bg-orange-200 font-medium transition-colors"
+              >
+                <svg
+                  className="w-3.5 h-3.5 mr-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Add Freebie
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {freebies.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-orange-50 p-4 rounded-xl border border-orange-100 relative group hover:border-orange-200 transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => removeFreebie(item.id)}
+                    className="absolute top-3 right-3 text-orange-400 hover:text-red-500 p-1 transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+
+                  <div className="space-y-3 pr-8">
+                    <input
+                      type="text"
+                      placeholder="Freebie Name (e.g., Coffee, Snacks)"
+                      className="block w-full text-sm font-medium text-foreground placeholder-foreground/40 bg-white border border-orange-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-300 focus:border-orange-400 outline-none"
+                      value={item.name}
+                      onChange={(e) =>
+                        updateFreebie(item.id, 'name', e.target.value)
+                      }
+                    />
+                    <textarea
+                      rows={2}
+                      placeholder="Description or options (e.g., Choose from: Latte, Cappuccino, Americano)"
+                      className="w-full bg-white border border-orange-200 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-orange-300 focus:border-orange-400 text-foreground placeholder-foreground/40 outline-none resize-none"
+                      value={item.description}
+                      onChange={(e) =>
+                        updateFreebie(item.id, 'description', e.target.value)
+                      }
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-medium text-foreground/70">
+                        Quantity per person:
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        className="w-20 bg-white border border-orange-200 rounded-lg text-xs px-3 py-1.5 focus:ring-2 focus:ring-orange-300 focus:border-orange-400 text-foreground outline-none"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          updateFreebie(
+                            item.id,
+                            'quantity',
+                            parseInt(e.target.value) || 1
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {freebies.length === 0 && (
+                <div className="text-center py-8 border-2 border-dashed border-orange-200 rounded-xl bg-orange-50/50">
+                  <svg
+                    className="w-8 h-8 mx-auto text-orange-300 mb-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                    />
+                  </svg>
+                  <p className="text-sm text-foreground/40 mb-2">
+                    No freebies added yet
+                  </p>
+                  <button
+                    type="button"
+                    onClick={addFreebie}
+                    className="text-sm text-orange-600 font-medium hover:underline"
+                  >
+                    Add your first freebie
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-2 text-xs text-foreground/50 italic">
+              * Attendees will be able to select these perks during registration
+            </div>
           </div>
         )}
       </form>
