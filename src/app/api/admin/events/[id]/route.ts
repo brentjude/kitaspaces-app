@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -28,8 +28,12 @@ export async function GET(
       );
     }
 
+    // Await params in Next.js 15
+    const params = await context.params;
+    const eventId = params.id;
+
     const event = await prisma.event.findUnique({
-      where: { id: params.id },
+      where: { id: eventId },
       include: {
         registrations: {
           include: {
@@ -83,7 +87,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -102,11 +106,15 @@ export async function PATCH(
       );
     }
 
+    // Await params in Next.js 15
+    const params = await context.params;
+    const eventId = params.id;
+
     const body = await request.json();
 
     // Check if event exists
     const existingEvent = await prisma.event.findUnique({
-      where: { id: params.id },
+      where: { id: eventId },
     });
 
     if (!existingEvent) {
@@ -118,7 +126,7 @@ export async function PATCH(
 
     // Update event
     const event = await prisma.event.update({
-      where: { id: params.id },
+      where: { id: eventId },
       data: {
         ...(body.title && { title: body.title }),
         ...(body.description && { description: body.description }),
@@ -161,11 +169,11 @@ export async function PATCH(
 
 /**
  * DELETE /api/admin/events/[id]
- * Deletes an event
+ * Deletes an event and all related data
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -184,11 +192,20 @@ export async function DELETE(
       );
     }
 
+    // Await params in Next.js 15
+    const params = await context.params;
+    const eventId = params.id;
+
     // Check if event exists
     const existingEvent = await prisma.event.findUnique({
-      where: { id: params.id },
+      where: { id: eventId },
       include: {
-        registrations: true,
+        registrations: {
+          include: {
+            pax: true,
+          },
+        },
+        freebies: true,
       },
     });
 
@@ -199,33 +216,63 @@ export async function DELETE(
       );
     }
 
-    // Check if event has registrations
-    if (existingEvent.registrations && existingEvent.registrations.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Cannot delete event with existing registrations',
-          message: 'Please cancel all registrations before deleting the event',
+    // Delete in correct order due to foreign key constraints
+    
+    // 1. Delete pax freebies
+    await prisma.paxFreebie.deleteMany({
+      where: {
+        pax: {
+          registration: {
+            eventId: eventId,
+          },
         },
-        { status: 400 }
-      );
-    }
+      },
+    });
 
-    // Delete event (cascade will delete freebies)
+    // 2. Delete event pax
+    await prisma.eventPax.deleteMany({
+      where: {
+        registration: {
+          eventId: eventId,
+        },
+      },
+    });
+
+    // 3. Delete daily use redemptions
+    await prisma.dailyUseRedemption.deleteMany({
+      where: { eventId: eventId },
+    });
+
+    // 4. Delete event registrations
+    await prisma.eventRegistration.deleteMany({
+      where: { eventId: eventId },
+    });
+
+    // 5. Delete event freebies
+    await prisma.eventFreebie.deleteMany({
+      where: { eventId: eventId },
+    });
+
+    // 6. Finally delete the event
     await prisma.event.delete({
-      where: { id: params.id },
+      where: { id: eventId },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Event deleted successfully',
+      message: 'Event and all related data deleted successfully',
+      data: {
+        registrationsDeleted: existingEvent.registrations.length,
+        paxDeleted: existingEvent.registrations.reduce((sum, reg) => sum + reg.pax.length, 0),
+        freebiesDeleted: existingEvent.freebies.length,
+      },
     });
   } catch (error) {
     console.error('Error deleting event:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error',
+        error: 'Failed to delete event',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

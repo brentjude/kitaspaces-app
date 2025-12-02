@@ -266,7 +266,10 @@ function EventTableRow({ event, status }: EventTableRowProps) {
 
       {/* Actions */}
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-        <EventActionsMenu eventId={event.id} />
+        <EventActionsMenu 
+          eventId={event.id} 
+          eventTitle={event.title} 
+        />
       </td>
     </tr>
   );
