@@ -22,6 +22,12 @@ import {
   PaxFreebie as PrismaPaxFreebie,
   DailyUseRedemption as PrismaDailyUseRedemption,
   Payment as PrismaPayment,
+  Customer as PrismaCustomer,
+  CustomerEventRegistration as PrismaCustomerEventRegistration,
+  CustomerEventPax as PrismaCustomerEventPax,
+  CustomerPaxFreebie as PrismaCustomerPaxFreebie,
+  CustomerDailyUseRedemption as PrismaCustomerDailyUseRedemption,
+  CustomerPayment as PrismaCustomerPayment,
 } from '@/generated/prisma';
 
 // ============================================
@@ -82,6 +88,162 @@ export type MembershipPlanCreateInput = {
 };
 
 export type MembershipPlanUpdateInput = Partial<MembershipPlanCreateInput>;
+
+// ============================================
+// CUSTOMER TYPES (Walk-in/Guest customers)
+// ============================================
+
+export type Customer = PrismaCustomer;
+
+export type CustomerWithRelations = PrismaCustomer & {
+  eventRegistrations?: CustomerEventRegistration[];
+  payments?: CustomerPayment[];
+  dailyUseRedemptions?: CustomerDailyUseRedemption[];
+};
+
+export type CustomerCreateInput = {
+  name: string;
+  email?: string;
+  contactNumber?: string;
+  company?: string;
+  userId?: string;
+  notes?: string;
+  referralSource?: ReferralSource;
+};
+
+export type CustomerUpdateInput = Partial<CustomerCreateInput>;
+
+// ============================================
+// CUSTOMER EVENT REGISTRATION TYPES
+// ============================================
+
+export type CustomerEventRegistration = PrismaCustomerEventRegistration;
+
+export type CustomerEventRegistrationWithCustomer = PrismaCustomerEventRegistration & {
+  customer: Customer;
+};
+
+export type CustomerEventRegistrationWithEvent = PrismaCustomerEventRegistration & {
+  event: Event;
+};
+
+export type CustomerEventRegistrationWithRelations = PrismaCustomerEventRegistration & {
+  customer?: Customer;
+  event?: Event;
+  payment?: CustomerPayment | null;
+  pax?: CustomerEventPax[];
+};
+
+export type CustomerEventRegistrationCreateInput = {
+  customerId: string;
+  eventId: string;
+  attendeeName: string;
+  attendeeEmail?: string;
+  attendeePhone?: string;
+  numberOfPax?: number;
+  paymentId?: string;
+};
+
+export type CustomerEventRegistrationUpdateInput = Partial<
+  Omit<CustomerEventRegistrationCreateInput, 'customerId' | 'eventId'>
+>;
+
+// ============================================
+// CUSTOMER EVENT PAX TYPES
+// ============================================
+
+export type CustomerEventPax = PrismaCustomerEventPax;
+
+export type CustomerEventPaxWithRegistration = PrismaCustomerEventPax & {
+  registration: CustomerEventRegistration;
+};
+
+export type CustomerEventPaxWithRelations = PrismaCustomerEventPax & {
+  registration?: CustomerEventRegistration;
+  freebies?: CustomerPaxFreebie[];
+};
+
+export type CustomerEventPaxCreateInput = {
+  registrationId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+};
+
+export type CustomerEventPaxUpdateInput = Partial<
+  Omit<CustomerEventPaxCreateInput, 'registrationId'>
+>;
+
+// ============================================
+// CUSTOMER PAX FREEBIE TYPES
+// ============================================
+
+export type CustomerPaxFreebie = PrismaCustomerPaxFreebie;
+
+export type CustomerPaxFreebieWithRelations = PrismaCustomerPaxFreebie & {
+  pax?: CustomerEventPax;
+  freebie?: EventFreebie;
+};
+
+export type CustomerPaxFreebieCreateInput = {
+  paxId: string;
+  freebieId: string;
+  quantity?: number;
+};
+
+export type CustomerPaxFreebieUpdateInput = Partial<
+  Omit<CustomerPaxFreebieCreateInput, 'paxId' | 'freebieId'>
+>;
+
+// ============================================
+// CUSTOMER DAILY USE REDEMPTION TYPES
+// ============================================
+
+export type CustomerDailyUseRedemption = PrismaCustomerDailyUseRedemption;
+
+export type CustomerDailyUseRedemptionWithCustomer = PrismaCustomerDailyUseRedemption & {
+  customer: Customer;
+};
+
+export type CustomerDailyUseRedemptionCreateInput = {
+  customerId: string;
+  eventId: string;
+  notes?: string;
+};
+
+export type CustomerDailyUseRedemptionUpdateInput = Partial<
+  Omit<CustomerDailyUseRedemptionCreateInput, 'customerId' | 'eventId'>
+>;
+
+// ============================================
+// CUSTOMER PAYMENT TYPES
+// ============================================
+
+export type CustomerPayment = PrismaCustomerPayment;
+
+export type CustomerPaymentWithCustomer = PrismaCustomerPayment & {
+  customer: Customer;
+};
+
+export type CustomerPaymentWithRelations = PrismaCustomerPayment & {
+  customer?: Customer;
+  eventRegistration?: CustomerEventRegistration | null;
+};
+
+export type CustomerPaymentCreateInput = {
+  customerId: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  status?: PaymentStatus;
+  referenceNumber?: string;
+  proofImageUrl?: string;
+  notes?: string;
+  paidAt?: Date;
+};
+
+export type CustomerPaymentUpdateInput = Partial<
+  Omit<CustomerPaymentCreateInput, 'customerId'>
+>;
 
 // ============================================
 // MEMBERSHIP PLAN PERK TYPES

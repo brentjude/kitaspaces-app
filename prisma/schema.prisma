@@ -96,6 +96,34 @@ model User {
   @@map("users")
 }
 
+model Customer {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?
+  contactNumber String?
+  company       String?
+  
+  // Optional link to User if they later sign up
+  userId        String?  @unique
+  
+  // Customer metadata
+  notes         String?  @db.Text
+  referralSource ReferralSource?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  eventRegistrations CustomerEventRegistration[]
+  payments           CustomerPayment[]
+  dailyUseRedemptions CustomerDailyUseRedemption[]
+
+  @@index([email])
+  @@index([contactNumber])
+  @@index([userId])
+  @@map("customers")
+}
+
 model MembershipPlan {
   id            String   @id @default(cuid())
   name          String   // e.g., "Basic Monthly", "Premium Monthly", "Daily Pass"
@@ -249,6 +277,7 @@ model Event {
 
   // Relations
   registrations EventRegistration[]
+  customerRegistrations CustomerEventRegistration[]
   freebies      EventFreebie[]
 
   @@index([date])
@@ -271,6 +300,7 @@ model EventFreebie {
 
   // Relations
   paxFreebies PaxFreebie[]
+  customerPaxFreebies CustomerPaxFreebie[]
 
   @@index([eventId])
   @@map("event_freebies")
@@ -306,6 +336,37 @@ model EventRegistration {
   @@map("event_registrations")
 }
 
+model CustomerEventRegistration {
+  id         String    @id @default(cuid())
+  customerId String
+  eventId    String
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  event      Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  // Primary attendee (registrant)
+  attendeeName  String
+  attendeeEmail String?
+  attendeePhone String?
+  
+  // Number of pax (including primary attendee)
+  numberOfPax   Int      @default(1)
+  
+  // Payment (if event is not free)
+  paymentId     String?  @unique
+  payment       CustomerPayment? @relation(fields: [paymentId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  pax       CustomerEventPax[] // Additional pax details
+
+  @@unique([customerId, eventId])
+  @@index([customerId])
+  @@index([eventId])
+  @@map("customer_event_registrations")
+}
+
 model EventPax {
   id             String            @id @default(cuid())
   registrationId String
@@ -325,6 +386,26 @@ model EventPax {
   @@map("event_pax")
 }
 
+model CustomerEventPax {
+  id             String                     @id @default(cuid())
+  registrationId String
+  registration   CustomerEventRegistration  @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  
+  // Pax details
+  name           String
+  email          String?
+  phone          String?
+  
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  // Relations
+  freebies       CustomerPaxFreebie[]
+
+  @@index([registrationId])
+  @@map("customer_event_pax")
+}
+
 model PaxFreebie {
   id        String       @id @default(cuid())
   paxId     String
@@ -338,6 +419,21 @@ model PaxFreebie {
   @@index([paxId])
   @@index([freebieId])
   @@map("pax_freebies")
+}
+
+model CustomerPaxFreebie {
+  id        String           @id @default(cuid())
+  paxId     String
+  freebieId String
+  pax       CustomerEventPax @relation(fields: [paxId], references: [id], onDelete: Cascade)
+  freebie   EventFreebie     @relation(fields: [freebieId], references: [id], onDelete: Cascade)
+  quantity  Int              @default(1)
+  createdAt DateTime         @default(now())
+
+  @@unique([paxId, freebieId])
+  @@index([paxId])
+  @@index([freebieId])
+  @@map("customer_pax_freebies")
 }
 
 model DailyUseRedemption {
@@ -354,6 +450,22 @@ model DailyUseRedemption {
   @@index([eventId])
   @@index([redeemedAt])
   @@map("daily_use_redemptions")
+}
+
+model CustomerDailyUseRedemption {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  eventId    String
+  
+  // Redemption details
+  redeemedAt DateTime @default(now())
+  notes      String?  @db.Text
+  
+  @@index([customerId])
+  @@index([eventId])
+  @@index([redeemedAt])
+  @@map("customer_daily_use_redemptions")
 }
 
 model Payment {
@@ -386,4 +498,35 @@ model Payment {
   @@index([status])
   @@index([referenceNumber])
   @@map("payments")
+}
+
+model CustomerPayment {
+  id                String                     @id @default(cuid())
+  customerId        String
+  customer          Customer                   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  // Payment details
+  amount            Float
+  paymentMethod     PaymentMethod
+  status            PaymentStatus              @default(PENDING)
+  referenceNumber   String?
+  
+  // Payment proof
+  proofImageUrl     String?
+  
+  // Additional details
+  notes             String?                    @db.Text
+  
+  // Timestamps
+  paidAt            DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  // Relations
+  eventRegistration CustomerEventRegistration?
+
+  @@index([customerId])
+  @@index([status])
+  @@index([referenceNumber])
+  @@map("customer_payments")
 }
