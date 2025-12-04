@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
-import { format } from 'date-fns';
+import { useState } from "react";
+import Image from "next/image";
+import { format } from "date-fns";
 import {
   CalendarIcon,
   MapPinIcon,
@@ -11,9 +11,13 @@ import {
   UsersIcon,
   ShieldCheckIcon,
   GiftIcon,
-} from '@heroicons/react/24/outline';
-import EditEventModal from './EditEventModal';
-import type { Event, EventFreebie, EventRegistration } from '@prisma/client';
+} from "@heroicons/react/24/outline";
+import EditEventModal from "./EditEventModal";
+import type {
+  Event,
+  EventFreebie,
+  EventRegistration,
+} from "@/generated/prisma";
 
 interface EventWithRelations extends Event {
   registrations: EventRegistration[];
@@ -34,18 +38,18 @@ export default function EventDetailsCard({
   const getEventStatus = () => {
     const now = new Date();
     const eventDate = new Date(event.date);
-    return eventDate > now ? 'upcoming' : 'completed';
+    return eventDate > now ? "upcoming" : "completed";
   };
 
   const status = getEventStatus();
 
   const getAttendeesDisplay = () => {
     const registrationCount = event.registrations.length;
-    
+
     if (!event.maxAttendees || event.maxAttendees === 0) {
       return `${registrationCount} registered (No limit)`;
     }
-    
+
     return `${registrationCount} / ${event.maxAttendees} attendees`;
   };
 
@@ -89,9 +93,9 @@ export default function EventDetailsCard({
               <div className="flex flex-wrap gap-2">
                 <span
                   className={`px-2.5 py-0.5 inline-flex text-xs font-semibold rounded-full ${
-                    status === 'upcoming'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
+                    status === "upcoming"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-gray-100 text-gray-800"
                   }`}
                 >
                   {status}
@@ -110,7 +114,8 @@ export default function EventDetailsCard({
                 {event.freebies && event.freebies.length > 0 && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                     <GiftIcon className="w-3 h-3" />
-                    {event.freebies.length} {event.freebies.length === 1 ? 'Perk' : 'Perks'}
+                    {event.freebies.length}{" "}
+                    {event.freebies.length === 1 ? "Perk" : "Perks"}
                   </span>
                 )}
               </div>
@@ -120,7 +125,7 @@ export default function EventDetailsCard({
             <div className="text-right ml-4">
               <div className="text-2xl font-bold text-primary">
                 {event.isFree || event.price === 0
-                  ? 'Free'
+                  ? "Free"
                   : `₱${event.price.toFixed(2)}`}
               </div>
               {event.isFreeForMembers && event.price > 0 && (
@@ -136,7 +141,7 @@ export default function EventDetailsCard({
             <div className="flex items-start gap-3 text-foreground/70">
               <CalendarIcon className="w-5 h-5 mt-0.5 shrink-0 text-foreground/40" />
               <span className="text-sm">
-                {format(new Date(event.date), 'EEEE, MMMM d, yyyy')}
+                {format(new Date(event.date), "EEEE, MMMM d, yyyy")}
               </span>
             </div>
 
@@ -144,9 +149,11 @@ export default function EventDetailsCard({
               <div className="flex items-start gap-3 text-foreground/70">
                 <ClockIcon className="w-5 h-5 mt-0.5 shrink-0 text-foreground/40" />
                 <span className="text-sm">
-                  {event.startTime && format(new Date(`2000-01-01T${event.startTime}`), 'h:mm a')}
-                  {event.startTime && event.endTime && ' - '}
-                  {event.endTime && format(new Date(`2000-01-01T${event.endTime}`), 'h:mm a')}
+                  {event.startTime &&
+                    format(new Date(`2000-01-01T${event.startTime}`), "h:mm a")}
+                  {event.startTime && event.endTime && " - "}
+                  {event.endTime &&
+                    format(new Date(`2000-01-01T${event.endTime}`), "h:mm a")}
                 </span>
               </div>
             )}
@@ -161,9 +168,7 @@ export default function EventDetailsCard({
             {/* Always show attendees info */}
             <div className="flex items-start gap-3 text-foreground/70">
               <UsersIcon className="w-5 h-5 mt-0.5 shrink-0 text-foreground/40" />
-              <span className="text-sm">
-                {getAttendeesDisplay()}
-              </span>
+              <span className="text-sm">{getAttendeesDisplay()}</span>
             </div>
           </div>
 
@@ -173,7 +178,7 @@ export default function EventDetailsCard({
               About this event
             </h3>
             <p className="whitespace-pre-wrap">
-              {event.description || 'No description provided.'}
+              {event.description || "No description provided."}
             </p>
           </div>
 
@@ -207,7 +212,8 @@ export default function EventDetailsCard({
                 ))}
               </div>
               <div className="mt-3 text-xs text-foreground/50 italic">
-                * Each attendee can select from available perks during registration
+                * Each attendee can select from available perks during
+                registration
               </div>
             </div>
           )}
