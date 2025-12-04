@@ -1,19 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 /**
  * GET /api/admin/events
  * Get all events (admin only)
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         freebies: true,
       },
       orderBy: {
-        date: 'desc',
+        date: "desc",
       },
     });
 
@@ -45,12 +45,12 @@ export async function GET(request: NextRequest) {
       data: events,
     });
   } catch (error) {
-    console.error('Error fetching events:', error);
+    console.error("Error fetching events:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch events',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Failed to fetch events",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
@@ -96,7 +96,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Missing required fields: title, description, and date are required',
+          error:
+            "Missing required fields: title, description, and date are required",
         },
         { status: 400 }
       );
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
           isMemberOnly: isMemberOnly ?? false,
           isFreeForMembers: isFreeForMembers ?? false,
           isRedemptionEvent: isRedemptionEvent ?? false,
-          redemptionLimit: isRedemptionEvent ? (redemptionLimit || 1) : null,
+          redemptionLimit: isRedemptionEvent ? redemptionLimit || 1 : null,
           maxAttendees: maxAttendees || null,
           imageUrl: imageUrl || null,
         },
@@ -126,16 +127,18 @@ export async function POST(request: NextRequest) {
 
       // Create freebies if provided
       if (freebies && Array.isArray(freebies) && freebies.length > 0) {
-        const freebieData = freebies.map((freebie: {
-          name: string;
-          description?: string;
-          quantity: number;
-        }) => ({
-          eventId: newEvent.id,
-          name: freebie.name,
-          description: freebie.description || null,
-          quantity: freebie.quantity || 1,
-        }));
+        const freebieData = freebies.map(
+          (freebie: {
+            name: string;
+            description?: string;
+            quantity: number;
+          }) => ({
+            eventId: newEvent.id,
+            name: freebie.name,
+            description: freebie.description || null,
+            quantity: freebie.quantity || 1,
+          })
+        );
 
         await tx.eventFreebie.createMany({
           data: freebieData,
@@ -169,15 +172,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: event,
-      message: 'Event created successfully',
+      message: "Event created successfully",
     });
   } catch (error) {
-    console.error('Error creating event:', error);
+    console.error("Error creating event:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to create event',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Failed to create event",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

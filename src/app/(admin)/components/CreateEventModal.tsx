@@ -1,9 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Modal from '@/app/components/Modal';
-import ImageUpload from '@/app/components/ImageUpload';
+import { useState } from "react";
+import Modal from "@/app/components/Modal";
+import ImageUpload from "@/app/components/ImageUpload";
 
 interface Freebie {
   id: string;
@@ -23,26 +22,25 @@ export default function CreateEventModal({
   onClose,
   onSuccess,
 }: CreateEventModalProps) {
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-    location: '',
-    price: '0',
+    title: "",
+    description: "",
+    date: "",
+    startTime: "",
+    endTime: "",
+    location: "",
+    price: "0",
     isFree: true,
     isMemberOnly: false,
     isFreeForMembers: false,
     isRedemptionEvent: false,
-    redemptionLimit: '1',
-    maxAttendees: '',
-    imageUrl: '',
+    redemptionLimit: "1",
+    maxAttendees: "",
+    imageUrl: "",
   });
 
   const [freebies, setFreebies] = useState<Freebie[]>([]);
@@ -52,7 +50,7 @@ export default function CreateEventModal({
   ) => {
     const { name, value, type } = e.target;
 
-    if (type === 'checkbox') {
+    if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData((prev) => ({
         ...prev,
@@ -66,7 +64,7 @@ export default function CreateEventModal({
     }
 
     // Auto-update isFree based on price
-    if (name === 'price') {
+    if (name === "price") {
       const priceValue = parseFloat(value);
       setFormData((prev) => ({
         ...prev,
@@ -87,8 +85,8 @@ export default function CreateEventModal({
       ...freebies,
       {
         id: Math.random().toString(36).substring(2, 9),
-        name: '',
-        description: '',
+        name: "",
+        description: "",
         quantity: 1,
       },
     ]);
@@ -98,7 +96,11 @@ export default function CreateEventModal({
     setFreebies(freebies.filter((f) => f.id !== id));
   };
 
-  const updateFreebie = (id: string, field: keyof Freebie, value: string | number) => {
+  const updateFreebie = (
+    id: string,
+    field: keyof Freebie,
+    value: string | number
+  ) => {
     setFreebies(
       freebies.map((f) => (f.id === id ? { ...f, [field]: value } : f))
     );
@@ -112,7 +114,7 @@ export default function CreateEventModal({
     try {
       // Validate required fields
       if (!formData.title || !formData.description || !formData.date) {
-        throw new Error('Please fill in all required fields');
+        throw new Error("Please fill in all required fields");
       }
 
       // Combine date and time
@@ -132,18 +134,20 @@ export default function CreateEventModal({
         isMemberOnly: formData.isMemberOnly,
         isFreeForMembers: formData.isFreeForMembers,
         isRedemptionEvent: formData.isRedemptionEvent,
-        redemptionLimit: formData.isRedemptionEvent ? parseInt(formData.redemptionLimit) || 1 : null,
+        redemptionLimit: formData.isRedemptionEvent
+          ? parseInt(formData.redemptionLimit) || 1
+          : null,
         maxAttendees: formData.maxAttendees
           ? parseInt(formData.maxAttendees)
           : null,
         imageUrl: formData.imageUrl || null,
-        freebies: freebies.filter((f) => f.name.trim() !== ''),
+        freebies: freebies.filter((f) => f.name.trim() !== ""),
       };
 
-      const response = await fetch('/api/admin/events', {
-        method: 'POST',
+      const response = await fetch("/api/admin/events", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(eventData),
       });
@@ -151,31 +155,31 @@ export default function CreateEventModal({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create event');
+        throw new Error(data.error || "Failed to create event");
       }
 
       // Reset form only after successful submission
       setFormData({
-        title: '',
-        description: '',
-        date: '',
-        startTime: '',
-        endTime: '',
-        location: '',
-        price: '0',
+        title: "",
+        description: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        location: "",
+        price: "0",
         isFree: true,
         isMemberOnly: false,
         isFreeForMembers: false,
         isRedemptionEvent: false,
-        redemptionLimit: '1',
-        maxAttendees: '',
-        imageUrl: '',
+        redemptionLimit: "1",
+        maxAttendees: "",
+        imageUrl: "",
       });
       setFreebies([]);
       setError(null);
 
       // Dispatch custom event to notify EventsList
-      window.dispatchEvent(new Event('eventCreated'));
+      window.dispatchEvent(new Event("eventCreated"));
 
       // Close modal
       onClose();
@@ -184,11 +188,8 @@ export default function CreateEventModal({
       if (onSuccess) {
         onSuccess();
       }
-
-      // Show success message
-      console.log('Event created successfully:', data.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create event');
+      setError(err instanceof Error ? err.message : "Failed to create event");
     } finally {
       setIsSubmitting(false);
     }
@@ -248,13 +249,16 @@ export default function CreateEventModal({
                 Creating...
               </>
             ) : (
-              'Create Event'
+              "Create Event"
             )}
           </button>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+      <form
+        onSubmit={handleSubmit}
+        className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto"
+      >
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
@@ -427,7 +431,7 @@ export default function CreateEventModal({
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                   <span className="text-xs font-medium text-foreground/50">
-                    {parseFloat(formData.price) === 0 ? 'Free' : 'PHP'}
+                    {parseFloat(formData.price) === 0 ? "Free" : "PHP"}
                   </span>
                 </div>
               </div>
@@ -584,7 +588,7 @@ export default function CreateEventModal({
                     className="block w-full text-sm font-medium text-foreground placeholder-foreground/40 border-none p-0 focus:ring-0"
                     value={item.name}
                     onChange={(e) =>
-                      updateFreebie(item.id, 'name', e.target.value)
+                      updateFreebie(item.id, "name", e.target.value)
                     }
                   />
                   <input
@@ -593,7 +597,7 @@ export default function CreateEventModal({
                     className="flex-1 bg-foreground/5 border border-foreground/10 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground placeholder-foreground/40 outline-none transition-all"
                     value={item.description}
                     onChange={(e) =>
-                      updateFreebie(item.id, 'description', e.target.value)
+                      updateFreebie(item.id, "description", e.target.value)
                     }
                   />
                   <div className="flex items-center gap-2">
@@ -608,7 +612,7 @@ export default function CreateEventModal({
                       onChange={(e) =>
                         updateFreebie(
                           item.id,
-                          'quantity',
+                          "quantity",
                           parseInt(e.target.value) || 1
                         )
                       }

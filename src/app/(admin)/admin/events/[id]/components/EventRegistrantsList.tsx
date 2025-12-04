@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   MagnifyingGlassIcon,
   UserPlusIcon,
   EllipsisVerticalIcon,
-} from '@heroicons/react/24/outline';
-import PaymentStatusModal from './PaymentStatusModal';
-import type { EventRegistration, User, Payment } from '@/generated/prisma';
+} from "@heroicons/react/24/outline";
+import PaymentStatusModal from "./PaymentStatusModal";
+import type { EventRegistration, Payment } from "@/generated/prisma";
 
 interface UserSelect {
   id: string;
@@ -36,7 +36,7 @@ export default function EventRegistrantsList({
   event,
   allUsers,
 }: EventRegistrantsListProps) {
-  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userSearchTerm, setUserSearchTerm] = useState("");
   const [selectedRegistration, setSelectedRegistration] =
     useState<RegistrationWithUser | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -54,25 +54,28 @@ export default function EventRegistrantsList({
   const handleAddRegistrant = async (user: UserSelect) => {
     setIsAdding(true);
     try {
-      const response = await fetch(`/api/admin/events/${event.id}/registrations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          numberOfPax: 1,
-        }),
-      });
+      const response = await fetch(
+        `/api/admin/events/${event.id}/registrations`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user.id,
+            numberOfPax: 1,
+          }),
+        }
+      );
 
-      if (!response.ok) throw new Error('Failed to add registrant');
+      if (!response.ok) throw new Error("Failed to add registrant");
 
       // Refresh the page to show updated data
       window.location.reload();
     } catch (error) {
-      console.error('Error adding registrant:', error);
-      alert('Failed to add registrant');
+      console.error("Error adding registrant:", error);
+      alert("Failed to add registrant");
     } finally {
       setIsAdding(false);
-      setUserSearchTerm('');
+      setUserSearchTerm("");
     }
   };
 
@@ -91,11 +94,7 @@ export default function EventRegistrantsList({
     if (!registration.payment) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
-          <svg
-            className="w-3 h-3 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
               cx="12"
@@ -115,7 +114,7 @@ export default function EventRegistrantsList({
       );
     }
 
-    if (registration.payment.status === 'COMPLETED') {
+    if (registration.payment.status === "COMPLETED") {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -132,11 +131,7 @@ export default function EventRegistrantsList({
 
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
-        <svg
-          className="w-3 h-3 animate-spin"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
           <circle
             className="opacity-25"
             cx="12"
@@ -241,7 +236,7 @@ export default function EventRegistrantsList({
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-linear-to-tr from-primary/20 to-orange-100 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0">
+                        <div className="h-8 w-8 rounded-full bg-linear-to-tr from-primary/20 to-orange-100 flex items-center justify-center text-primary font-bold text-xs shrink-0">
                           {registration.user.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="ml-3 min-w-0">

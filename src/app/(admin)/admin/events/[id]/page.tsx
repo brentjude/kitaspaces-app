@@ -1,11 +1,12 @@
-import { notFound, redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import Link from 'next/link';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import EventDetailsCard from './components/EventDetailsCard';
-import EventRegistrantsList from './components/EventRegistrantsList';
+import { notFound, redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import EventDetailsCard from "./components/EventDetailsCard";
+import EventRegistrantsList from "./components/EventRegistrantsList";
+import AdminHeader from "@/app/(admin)/components/AdminHeader";
 
 interface EventDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -30,7 +31,7 @@ async function getEventDetails(eventId: string) {
           payment: true,
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
       },
       freebies: {
@@ -51,7 +52,7 @@ async function getEventDetails(eventId: string) {
 async function getAllUsers() {
   const users = await prisma.user.findMany({
     where: {
-      role: 'USER',
+      role: "USER",
     },
     select: {
       id: true,
@@ -60,18 +61,20 @@ async function getAllUsers() {
       isMember: true,
     },
     orderBy: {
-      name: 'asc',
+      name: "asc",
     },
   });
 
   return users;
 }
 
-export default async function EventDetailsPage({ params }: EventDetailsPageProps) {
+export default async function EventDetailsPage({
+  params,
+}: EventDetailsPageProps) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || session.user.role !== 'ADMIN') {
-    redirect('/auth/signin');
+  if (!session?.user || session.user.role !== "ADMIN") {
+    redirect("/auth/signin");
   }
 
   const resolvedParams = await params;
@@ -85,34 +88,35 @@ export default async function EventDetailsPage({ params }: EventDetailsPageProps
 
   // Check if event has paid registrations
   const hasPaidRegistrations = event.registrations.some(
-    (reg) => reg.payment && reg.payment.status === 'COMPLETED'
+    (reg) => reg.payment && reg.payment.status === "COMPLETED"
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Back Button */}
-        <Link
-          href="/admin/events"
-          className="inline-flex items-center gap-2 text-sm font-medium text-foreground/60 hover:text-primary transition-colors"
-        >
-          <ArrowLeftIcon className="w-4 h-4" />
-          Back to Events
-        </Link>
+    <div className="min-h-screen bg-background">
+      <AdminHeader title="Event Details" showAddButton={false} />
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column: Event Details */}
-          <EventDetailsCard
-            event={event}
-            hasPaidRegistrations={hasPaidRegistrations}
-          />
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Back Button */}
+          <Link
+            href="/admin/events"
+            className="inline-flex items-center gap-2 text-sm font-medium text-foreground/60 hover:text-primary transition-colors"
+          >
+            <ArrowLeftIcon className="w-4 h-4" />
+            Back to Events
+          </Link>
 
-          {/* Right Column: Registrants List */}
-          <EventRegistrantsList
-            event={event}
-            allUsers={allUsers}
-          />
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Left Column: Event Details */}
+            <EventDetailsCard
+              event={event}
+              hasPaidRegistrations={hasPaidRegistrations}
+            />
+
+            {/* Right Column: Registrants List */}
+            <EventRegistrantsList event={event} allUsers={allUsers} />
+          </div>
         </div>
       </div>
     </div>
