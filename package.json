@@ -23,11 +23,11 @@
     "cloudinary": "^2.8.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
-    "next": "16.0.3",
+    "next": "^16.0.7",
     "next-auth": "^4.24.13",
     "pg": "^8.16.3",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -40,7 +40,7 @@
     "@types/react-dom": "^19",
     "baseline-browser-mapping": "^2.8.32",
     "eslint": "^9.39.1",
-    "eslint-config-next": "^16.0.3",
+    "eslint-config-next": "^16.0.7",
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.5.0",
     "prisma": "^7.0.0",
