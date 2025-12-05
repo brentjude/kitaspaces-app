@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import EventDetailsCard from "./components/EventDetailsCard";
 import EventRegistrantsList from "./components/EventRegistrantsList";
-import AdminHeader from "@/app/(admin)/components/AdminHeader";
 
 interface EventDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -93,7 +92,6 @@ export default async function EventDetailsPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminHeader title="Event Details" showAddButton={false} />
 
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">

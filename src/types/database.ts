@@ -749,3 +749,40 @@ export {
   ReferralSource,
   PerkType,
 };
+
+// ============================================
+// CALENDAR TYPES
+// ============================================
+
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  date: Date;
+  startTime?: string | null;
+  endTime?: string | null;
+  location?: string | null;
+  isFree: boolean;
+  isMemberOnly: boolean;
+  isRedemptionEvent: boolean;
+  registrationCount: number;
+  maxAttendees?: number | null;
+};
+
+export type CalendarDay = {
+  date: Date;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  events: CalendarEvent[];
+};
+
+export type CalendarMonth = {
+  year: number;
+  month: number;
+  days: CalendarDay[];
+};
+
+export type CalendarFilters = {
+  showFreeOnly?: boolean;
+  showMemberOnly?: boolean;
+  showRedemptionOnly?: boolean;
+};
