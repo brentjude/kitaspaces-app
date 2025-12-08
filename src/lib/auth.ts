@@ -24,7 +24,7 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -54,7 +54,9 @@ export const authOptions: NextAuthOptions = {
 
         // Check if user has a password (members only can sign in)
         if (!user.password) {
-          throw new Error("This account cannot sign in. Please contact support or register as a member.");
+          throw new Error(
+            "This account cannot sign in. Please contact support or register as a member."
+          );
         }
 
         // Verify hashed password using bcrypt

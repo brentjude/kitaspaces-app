@@ -8,9 +8,6 @@ const protectedPaths = ["/admin", "/dashboard", "/profile"];
 // Paths that should redirect authenticated users
 const authPaths = ["/auth/signin", "/auth/signup"];
 
-// Public paths that don't require authentication
-const publicPaths = ["/", "/events", "/about", "/contact"];
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -78,9 +75,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public files (public folder)
-     * - api routes (handled separately)
+     * - public files (images, etc.)
+     * - API routes (except /api/auth)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
