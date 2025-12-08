@@ -371,68 +371,6 @@ export type CouponValidation = {
   finalAmount?: number;
 };
 
-// ============================================
-// EVENT TYPES
-// ============================================
-
-export type Event = PrismaEvent;
-
-export type EventWithFreebies = PrismaEvent & {
-  freebies: EventFreebie[];
-};
-
-export type EventWithRegistrations = PrismaEvent & {
-  registrations: EventRegistration[];
-};
-
-export type EventWithRelations = PrismaEvent & {
-  registrations?: EventRegistration[];
-  freebies?: EventFreebie[];
-};
-
-export type EventCreateInput = {
-  title: string;
-  description: string;
-  date: Date;
-  startTime?: string;
-  endTime?: string;
-  location?: string;
-  price?: number;
-  isFree?: boolean;
-  isMemberOnly?: boolean;
-  isFreeForMembers?: boolean;
-  isRedemptionEvent?: boolean;
-  redemptionLimit?: number;
-  maxAttendees?: number;
-  imageUrl?: string;
-};
-
-export type EventUpdateInput = Partial<EventCreateInput>;
-
-// ============================================
-// EVENT FREEBIE TYPES
-// ============================================
-
-export type EventFreebie = PrismaEventFreebie;
-
-export type EventFreebieWithEvent = PrismaEventFreebie & {
-  event: Event;
-};
-
-export type EventFreebieWithRelations = PrismaEventFreebie & {
-  event?: Event;
-  paxFreebies?: PaxFreebie[];
-};
-
-export type EventFreebieCreateInput = {
-  eventId: string;
-  name: string;
-  description?: string;
-  quantity: number;
-  imageUrl?: string;
-};
-
-export type EventFreebieUpdateInput = Partial<Omit<EventFreebieCreateInput, 'eventId'>>;
 
 // ============================================
 // EVENT REGISTRATION TYPES
@@ -644,15 +582,6 @@ export type MembershipFilters = {
   userId?: string;
 };
 
-export type EventFilters = {
-  isFree?: boolean;
-  isMemberOnly?: boolean;
-  isRedemptionEvent?: boolean;
-  dateFrom?: Date;
-  dateTo?: Date;
-  search?: string; // Search by title
-};
-
 export type PaymentFilters = {
   status?: PaymentStatus;
   paymentMethod?: PaymentMethod;
@@ -752,45 +681,7 @@ export {
 };
 
 // ============================================
-// CALENDAR TYPES
-// ============================================
-
-export type CalendarEvent = {
-  id: string;
-  title: string;
-  date: Date;
-  startTime?: string | null;
-  endTime?: string | null;
-  location?: string | null;
-  isFree: boolean;
-  isMemberOnly: boolean;
-  isRedemptionEvent: boolean;
-  registrationCount: number;
-  maxAttendees?: number | null;
-};
-
-export type CalendarDay = {
-  date: Date;
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  events: CalendarEvent[];
-};
-
-export type CalendarMonth = {
-  year: number;
-  month: number;
-  days: CalendarDay[];
-};
-
-export type CalendarFilters = {
-  showFreeOnly?: boolean;
-  showMemberOnly?: boolean;
-  showRedemptionOnly?: boolean;
-};
-
-
-// ============================================
-// EVENT CATEGORY TYPES (add before EVENT TYPES section)
+// EVENT CATEGORY TYPES
 // ============================================
 
 export type EventCategory = PrismaEventCategory;
@@ -810,8 +701,35 @@ export type EventCategoryCreateInput = {
 
 export type EventCategoryUpdateInput = Partial<EventCategoryCreateInput>;
 
+
 // ============================================
-// EVENT TYPES (update existing section)
+// EVENT FREEBIE TYPES
+// ============================================
+
+export type EventFreebie = PrismaEventFreebie;
+
+export type EventFreebieWithEvent = PrismaEventFreebie & {
+  event: Event;
+};
+
+export type EventFreebieWithRelations = PrismaEventFreebie & {
+  event?: Event;
+  paxFreebies?: PaxFreebie[];
+};
+
+export type EventFreebieCreateInput = {
+  eventId: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  imageUrl?: string;
+};
+
+export type EventFreebieUpdateInput = Partial<Omit<EventFreebieCreateInput, 'eventId'>>;
+
+
+// ============================================
+// EVENT TYPES
 // ============================================
 
 export type Event = PrismaEvent;

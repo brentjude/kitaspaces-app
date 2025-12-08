@@ -61,6 +61,7 @@ async function main() {
   await prisma.eventRegistration.deleteMany();
   await prisma.eventFreebie.deleteMany();
   await prisma.event.deleteMany();
+  await prisma.eventCategory.deleteMany();
   await prisma.membership.deleteMany();
   await prisma.membershipPlanPerk.deleteMany();
   await prisma.membershipPlan.deleteMany();
@@ -253,53 +254,53 @@ async function main() {
   });
   console.log(`✅ Created 2 coupons`);
 
-// Create Event Categories
-console.log('\n🏷️  Creating event categories...');
-await prisma.eventCategory.create({
-  data: {
-    name: 'Workshop',
-    slug: 'workshop',
-    description: 'Educational and skill-building workshops',
-    color: '#3B82F6', // Blue
-    icon: '🎓',
-    isActive: true,
-  },
-});
+  // Create Event Categories
+  console.log('\n🏷️  Creating event categories...');
+  const workshopCategory = await prisma.eventCategory.create({
+    data: {
+      name: 'Workshop',
+      slug: 'workshop',
+      description: 'Educational and skill-building workshops',
+      color: '#3B82F6', // Blue
+      icon: '🎓',
+      isActive: true,
+    },
+  });
 
-await prisma.eventCategory.create({
-  data: {
-    name: 'Networking',
-    slug: 'networking',
-    description: 'Community networking and social events',
-    color: '#10B981', // Green
-    icon: '🤝',
-    isActive: true,
-  },
-});
+  const networkingCategory = await prisma.eventCategory.create({
+    data: {
+      name: 'Networking',
+      slug: 'networking',
+      description: 'Community networking and social events',
+      color: '#10B981', // Green
+      icon: '🤝',
+      isActive: true,
+    },
+  });
 
-  await prisma.eventCategory.create({
-  data: {
-    name: 'Daily Perks',
-    slug: 'daily-perks',
-    description: 'Daily redemption perks for members',
-    color: '#F59E0B', // Orange
-    icon: '🎁',
-    isActive: true,
-  },
-});
+  const dailyPerksCategory = await prisma.eventCategory.create({
+    data: {
+      name: 'Daily Perks',
+      slug: 'daily-perks',
+      description: 'Daily redemption perks for members',
+      color: '#F59E0B', // Orange
+      icon: '🎁',
+      isActive: true,
+    },
+  });
 
-await prisma.eventCategory.create({
-  data: {
-    name: 'Social',
-    slug: 'social',
-    description: 'Fun social gatherings and activities',
-    color: '#EC4899', // Pink
-    icon: '🎉',
-    isActive: true,
-  },
-});
+  const socialCategory = await prisma.eventCategory.create({
+    data: {
+      name: 'Social',
+      slug: 'social',
+      description: 'Fun social gatherings and activities',
+      color: '#EC4899', // Pink
+      icon: '🎉',
+      isActive: true,
+    },
+  });
 
-console.log(`✅ Created 4 event categories`);
+  console.log(`✅ Created 4 event categories`);
 
   // Create Admin User
   console.log('\n👤 Creating admin user...');
@@ -582,7 +583,7 @@ console.log(`✅ Created 4 event categories`);
       isMemberOnly: true,
       isRedemptionEvent: true,
       redemptionLimit: 1,
-      categoryId: dailyUseCategory.id,
+      categoryId: dailyPerksCategory.id,
     },
   });
   
@@ -609,7 +610,7 @@ console.log(`✅ Created 4 event categories`);
       isMemberOnly: false,
       isFreeForMembers: true,
       maxAttendees: 50,
-      categoryId: dailyUseCategory.id,
+      categoryId: workshopCategory.id,
     },
   });
 
@@ -635,7 +636,7 @@ console.log(`✅ Created 4 event categories`);
       isFree: true,
       isMemberOnly: false,
       maxAttendees: 100,
-      categoryId: dailyUseCategory.id,
+      categoryId: networkingCategory.id,
     },
   });
 
@@ -705,7 +706,7 @@ console.log(`✅ Created 4 event categories`);
   console.log(`✅ Guest ${guestCustomers[0].name} registered for ${networkingEvent.title}`);
 
   // Guest 2 registers for workshop (paid event) with payment
-  await prisma.customerPayment.create({
+  const guestPayment = await prisma.customerPayment.create({
     data: {
       customerId: guestCustomers[1].id,
       amount: workshop.price,
@@ -716,7 +717,7 @@ console.log(`✅ Created 4 event categories`);
     },
   });
 
-  await prisma.customerEventRegistration.create({
+  const guestReg2 = await prisma.customerEventRegistration.create({
     data: {
       customerId: guestCustomers[1].id,
       eventId: workshop.id,

@@ -102,19 +102,30 @@ export async function GET(request: NextRequest): Promise<NextResponse<CustomerAp
 
     const skip = (page - 1) * limit;
 
-    // Build where clause for search - properly typed function
-    const buildSearchWhere = <T extends { name?: unknown; email?: unknown; company?: unknown }>(
-      searchTerm: string
-    ): Partial<T> => {
+    // Helper function to build search where clause for User
+    const buildUserSearchWhere = (searchTerm: string): Prisma.UserWhereInput => {
       if (!searchTerm) return {};
-      
+
       return {
         OR: [
           { name: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
           { email: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
           { company: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
         ],
-      } as Partial<T>;
+      };
+    };
+
+    // Helper function to build search where clause for Customer
+    const buildCustomerSearchWhere = (searchTerm: string): Prisma.CustomerWhereInput => {
+      if (!searchTerm) return {};
+
+      return {
+        OR: [
+          { name: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+          { email: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+          { company: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+        ],
+      };
     };
 
     let users: TransformedUser[] = [];
@@ -125,7 +136,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CustomerAp
     // Fetch registered users if filter allows
     if (filter === 'all' || filter === 'registered') {
       const userWhere: Prisma.UserWhereInput = {
-        ...buildSearchWhere<Prisma.UserWhereInput>(search),
+        ...buildUserSearchWhere(search),
         role: 'USER', // Only fetch non-admin users
       };
 
@@ -177,7 +188,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CustomerAp
     // Fetch guest customers if filter allows
     if (filter === 'all' || filter === 'guest') {
       const customerWhere: Prisma.CustomerWhereInput = {
-        ...buildSearchWhere<Prisma.CustomerWhereInput>(search),
+        ...buildCustomerSearchWhere(search),
       };
 
       const [fetchedCustomers, customerCount] = await Promise.all([
