@@ -8,7 +8,7 @@ const protectedPaths = ["/admin", "/dashboard", "/profile"];
 // Paths that should redirect authenticated users
 const authPaths = ["/auth/signin", "/auth/signup"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Get the token from the request
