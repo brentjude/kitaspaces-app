@@ -897,3 +897,62 @@ export type CalendarFilters = {
 // Add API response types for categories
 export type EventCategoryResponse = ApiResponse<EventCategory>;
 export type EventCategoriesResponse = ApiResponse<EventCategory[]>;
+
+// ============================================
+// CUSTOMER API TYPES (add to CUSTOMER TYPES section)
+// ============================================
+
+export type TransformedUser = {
+  id: string;
+  name: string;
+  email: string | null;
+  company: string | null;
+  contactNumber: string | null;
+  isRegistered: true;
+  isMember: boolean;
+  referralSource: string | null;
+  joinedDate: Date;
+  eventRegistrations: number;
+  totalPayments: number;
+  type: 'user';
+};
+
+export type TransformedCustomer = {
+  id: string;
+  name: string;
+  email: string | null;
+  company: string | null;
+  contactNumber: string | null;
+  isRegistered: false;
+  isMember: false;
+  referralSource: string | null;
+  joinedDate: Date;
+  eventRegistrations: number;
+  totalPayments: number;
+  type: 'customer';
+  linkedUserId: string | null;
+};
+
+export type CombinedCustomerData = TransformedUser | TransformedCustomer;
+
+export type CustomerListApiResponse = ApiResponse<{
+  customers: CombinedCustomerData[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  stats: {
+    totalUsers: number;
+    totalCustomers: number;
+    totalCombined: number;
+  };
+}>;
+
+export type CustomerQueryParams = {
+  search?: string;
+  filter?: 'all' | 'registered' | 'guest';
+  page?: number;
+  limit?: number;
+};

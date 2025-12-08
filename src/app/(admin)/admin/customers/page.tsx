@@ -1,57 +1,46 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { redirect } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { PlusIcon } from '@heroicons/react/24/outline';
+import { CombinedCustomerData } from '@/types/database';
+import { fetchCustomers } from '@/lib/api/customers';
 import CustomerFilters from './components/CustomerFilters';
 import CustomersTable from './components/CustomersTable';
 
-interface Customer {
-  id: string;
-  name: string;
-  email: string | null;
-  company: string | null;
-  contactNumber: string | null;
-  isRegistered: boolean;
-  isMember: boolean;
-  referralSource: string | null;
-  joinedDate: Date;
-  eventRegistrations: number;
-  totalPayments: number;
-  type: 'user' | 'customer';
-  linkedUserId?: string | null;
-}
+type CustomerStats = {
+  totalUsers: number;
+  totalCustomers: number;
+  totalCombined: number;
+};
 
 export default function CustomersPage() {
   const { data: session, status } = useSession();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CombinedCustomerData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'registered' | 'guest'>('all');
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<CustomerStats>({
     totalUsers: 0,
     totalCustomers: 0,
     totalCombined: 0,
   });
 
-  const fetchCustomers = useCallback(async () => {
+  const loadCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        ...(searchTerm && { search: searchTerm }),
+      const response = await fetchCustomers({
+        search: searchTerm,
         filter: filterType,
       });
 
-      const response = await fetch(`/api/admin/customers?${params}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setCustomers(data.data.customers);
-        setStats(data.data.stats);
+      if (response.success && response.data) {
+        setCustomers(response.data.customers);
+        setStats(response.data.stats);
       } else {
-        console.error('Failed to fetch customers:', data.error);
+        console.error('Failed to fetch customers:', response.error);
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -62,9 +51,9 @@ export default function CustomersPage() {
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
-      fetchCustomers();
+      loadCustomers();
     }
-  }, [fetchCustomers, status, session]);
+  }, [loadCustomers, status, session]);
 
   if (status === 'loading') {
     return (

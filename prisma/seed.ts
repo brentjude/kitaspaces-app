@@ -255,7 +255,7 @@ async function main() {
 
 // Create Event Categories
 console.log('\n🏷️  Creating event categories...');
-const workshopCategory = await prisma.eventCategory.create({
+await prisma.eventCategory.create({
   data: {
     name: 'Workshop',
     slug: 'workshop',
@@ -266,7 +266,7 @@ const workshopCategory = await prisma.eventCategory.create({
   },
 });
 
-const networkingCategory = await prisma.eventCategory.create({
+await prisma.eventCategory.create({
   data: {
     name: 'Networking',
     slug: 'networking',
@@ -277,7 +277,7 @@ const networkingCategory = await prisma.eventCategory.create({
   },
 });
 
-  const dailyUseCategory = await prisma.eventCategory.create({
+  await prisma.eventCategory.create({
   data: {
     name: 'Daily Perks',
     slug: 'daily-perks',
@@ -288,7 +288,7 @@ const networkingCategory = await prisma.eventCategory.create({
   },
 });
 
-const socialCategory = await prisma.eventCategory.create({
+await prisma.eventCategory.create({
   data: {
     name: 'Social',
     slug: 'social',
@@ -692,7 +692,7 @@ console.log(`✅ Created 4 event categories`);
   console.log('\n👤 Creating guest customer event registrations...');
   
   // Guest 1 registers for networking event (free event)
-  const guestReg1 = await prisma.customerEventRegistration.create({
+  await prisma.customerEventRegistration.create({
     data: {
       customerId: guestCustomers[0].id,
       eventId: networkingEvent.id,
@@ -705,7 +705,7 @@ console.log(`✅ Created 4 event categories`);
   console.log(`✅ Guest ${guestCustomers[0].name} registered for ${networkingEvent.title}`);
 
   // Guest 2 registers for workshop (paid event) with payment
-  const guestPayment = await prisma.customerPayment.create({
+  await prisma.customerPayment.create({
     data: {
       customerId: guestCustomers[1].id,
       amount: workshop.price,
@@ -716,7 +716,7 @@ console.log(`✅ Created 4 event categories`);
     },
   });
 
-  const guestReg2 = await prisma.customerEventRegistration.create({
+  await prisma.customerEventRegistration.create({
     data: {
       customerId: guestCustomers[1].id,
       eventId: workshop.id,
@@ -764,7 +764,7 @@ console.log(`✅ Created 4 event categories`);
     },
   });
 
-  const guestPax2 = await prisma.customerEventPax.create({
+  await prisma.customerEventPax.create({
     data: {
       registrationId: guestReg3.id,
       name: 'Team Member A',
@@ -772,7 +772,7 @@ console.log(`✅ Created 4 event categories`);
     },
   });
 
-  const guestPax3 = await prisma.customerEventPax.create({
+  await prisma.customerEventPax.create({
     data: {
       registrationId: guestReg3.id,
       name: 'Team Member B',

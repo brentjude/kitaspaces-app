@@ -18,7 +18,65 @@ import { Prisma } from '@/generated/prisma';
  * @note This endpoint requires ADMIN authentication
  * @note Registered users are from User model, guests are from Customer model
  */
-export async function GET(request: NextRequest) {
+
+// Type for transformed user data
+type TransformedUser = {
+  id: string;
+  name: string;
+  email: string | null;
+  company: string | null;
+  contactNumber: string | null;
+  isRegistered: true;
+  isMember: boolean;
+  referralSource: string | null;
+  joinedDate: Date;
+  eventRegistrations: number;
+  totalPayments: number;
+  type: 'user';
+};
+
+// Type for transformed customer data
+type TransformedCustomer = {
+  id: string;
+  name: string;
+  email: string | null;
+  company: string | null;
+  contactNumber: string | null;
+  isRegistered: false;
+  isMember: false;
+  referralSource: string | null;
+  joinedDate: Date;
+  eventRegistrations: number;
+  totalPayments: number;
+  type: 'customer';
+  linkedUserId: string | null;
+};
+
+// Combined type for API response
+type CombinedCustomerData = TransformedUser | TransformedCustomer;
+
+// Type for API response
+type CustomerApiResponse = {
+  success: boolean;
+  data?: {
+    customers: CombinedCustomerData[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+    stats: {
+      totalUsers: number;
+      totalCustomers: number;
+      totalCombined: number;
+    };
+  };
+  error?: string;
+  message?: string;
+};
+
+export async function GET(request: NextRequest): Promise<NextResponse<CustomerApiResponse>> {
   try {
     const session = await getServerSession(authOptions);
 
@@ -44,8 +102,10 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Build where clause for search
-    const buildSearchWhere = (searchTerm: string) => {
+    // Build where clause for search - properly typed function
+    const buildSearchWhere = <T extends { name?: unknown; email?: unknown; company?: unknown }>(
+      searchTerm: string
+    ): Partial<T> => {
       if (!searchTerm) return {};
       
       return {
@@ -54,22 +114,22 @@ export async function GET(request: NextRequest) {
           { email: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
           { company: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
         ],
-      };
+      } as Partial<T>;
     };
 
-    let users: any[] = [];
-    let customers: any[] = [];
+    let users: TransformedUser[] = [];
+    let customers: TransformedCustomer[] = [];
     let totalUsers = 0;
     let totalCustomers = 0;
 
     // Fetch registered users if filter allows
     if (filter === 'all' || filter === 'registered') {
       const userWhere: Prisma.UserWhereInput = {
-        ...buildSearchWhere(search),
+        ...buildSearchWhere<Prisma.UserWhereInput>(search),
         role: 'USER', // Only fetch non-admin users
       };
 
-      [users, totalUsers] = await Promise.all([
+      const [fetchedUsers, userCount] = await Promise.all([
         prisma.user.findMany({
           where: userWhere,
           select: {
@@ -95,8 +155,10 @@ export async function GET(request: NextRequest) {
         prisma.user.count({ where: userWhere }),
       ]);
 
-      // Transform users
-      users = users.map(user => ({
+      totalUsers = userCount;
+
+      // Transform users with proper typing
+      users = fetchedUsers.map((user): TransformedUser => ({
         id: user.id,
         name: user.name,
         email: user.email,
@@ -108,17 +170,17 @@ export async function GET(request: NextRequest) {
         joinedDate: user.createdAt,
         eventRegistrations: user._count.eventRegistrations,
         totalPayments: user._count.payments,
-        type: 'user' as const,
+        type: 'user',
       }));
     }
 
     // Fetch guest customers if filter allows
     if (filter === 'all' || filter === 'guest') {
       const customerWhere: Prisma.CustomerWhereInput = {
-        ...buildSearchWhere(search),
+        ...buildSearchWhere<Prisma.CustomerWhereInput>(search),
       };
 
-      [customers, totalCustomers] = await Promise.all([
+      const [fetchedCustomers, customerCount] = await Promise.all([
         prisma.customer.findMany({
           where: customerWhere,
           select: {
@@ -144,8 +206,10 @@ export async function GET(request: NextRequest) {
         prisma.customer.count({ where: customerWhere }),
       ]);
 
-      // Transform customers
-      customers = customers.map(customer => ({
+      totalCustomers = customerCount;
+
+      // Transform customers with proper typing
+      customers = fetchedCustomers.map((customer): TransformedCustomer => ({
         id: customer.id,
         name: customer.name,
         email: customer.email,
@@ -157,13 +221,13 @@ export async function GET(request: NextRequest) {
         joinedDate: customer.createdAt,
         eventRegistrations: customer._count.eventRegistrations,
         totalPayments: customer._count.payments,
-        type: 'customer' as const,
+        type: 'customer',
         linkedUserId: customer.userId,
       }));
     }
 
-    // Combine and sort by date
-    const combined = [...users, ...customers].sort((a, b) => 
+    // Combine and sort by date - properly typed
+    const combined: CombinedCustomerData[] = [...users, ...customers].sort((a, b) => 
       new Date(b.joinedDate).getTime() - new Date(a.joinedDate).getTime()
     );
 
