@@ -253,6 +253,25 @@ model Coupon {
   @@map("coupons")
 }
 
+model EventCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "Workshop", "Networking", "Social", "Training"
+  slug        String   @unique // URL-friendly version
+  description String?  @db.Text
+  color       String?  // Hex color for UI display (e.g., "#FF5733")
+  icon        String?  // Icon name or emoji
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  events      Event[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("event_categories")
+}
+
 model Event {
   id            String              @id @default(cuid())
   title         String
@@ -265,6 +284,10 @@ model Event {
   isFree        Boolean             @default(false)
   isMemberOnly  Boolean             @default(false)
   isFreeForMembers Boolean          @default(false) // Free for members but paid for non-members
+  
+  // Event category
+  categoryId    String?
+  category      EventCategory?      @relation(fields: [categoryId], references: [id])
   
   // Daily use redemption events (e.g., Free Matcha Mondays)
   isRedemptionEvent Boolean          @default(false)
@@ -284,6 +307,7 @@ model Event {
   @@index([isFree])
   @@index([isMemberOnly])
   @@index([isRedemptionEvent])
+  @@index([categoryId])
   @@map("events")
 }
 

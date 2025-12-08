@@ -28,6 +28,7 @@ import {
   CustomerPaxFreebie as PrismaCustomerPaxFreebie,
   CustomerDailyUseRedemption as PrismaCustomerDailyUseRedemption,
   CustomerPayment as PrismaCustomerPayment,
+  EventCategory as PrismaEventCategory,
 } from '@/generated/prisma';
 
 // ============================================
@@ -786,3 +787,113 @@ export type CalendarFilters = {
   showMemberOnly?: boolean;
   showRedemptionOnly?: boolean;
 };
+
+
+// ============================================
+// EVENT CATEGORY TYPES (add before EVENT TYPES section)
+// ============================================
+
+export type EventCategory = PrismaEventCategory;
+
+export type EventCategoryWithEvents = PrismaEventCategory & {
+  events: Event[];
+};
+
+export type EventCategoryCreateInput = {
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive?: boolean;
+};
+
+export type EventCategoryUpdateInput = Partial<EventCategoryCreateInput>;
+
+// ============================================
+// EVENT TYPES (update existing section)
+// ============================================
+
+export type Event = PrismaEvent;
+
+export type EventWithCategory = PrismaEvent & {
+  category?: EventCategory | null;
+};
+
+export type EventWithFreebies = PrismaEvent & {
+  freebies: EventFreebie[];
+};
+
+export type EventWithRegistrations = PrismaEvent & {
+  registrations: EventRegistration[];
+};
+
+export type EventWithRelations = PrismaEvent & {
+  category?: EventCategory | null;
+  registrations?: EventRegistration[];
+  customerRegistrations?: CustomerEventRegistration[];
+  freebies?: EventFreebie[];
+};
+
+export type EventCreateInput = {
+  title: string;
+  description: string;
+  date: Date;
+  startTime?: string;
+  endTime?: string;
+  location?: string;
+  price?: number;
+  isFree?: boolean;
+  isMemberOnly?: boolean;
+  isFreeForMembers?: boolean;
+  categoryId?: string; // Added
+  isRedemptionEvent?: boolean;
+  redemptionLimit?: number;
+  maxAttendees?: number;
+  imageUrl?: string;
+};
+
+export type EventUpdateInput = Partial<EventCreateInput>;
+
+// Update EventFilters to include category
+export type EventFilters = {
+  isFree?: boolean;
+  isMemberOnly?: boolean;
+  isRedemptionEvent?: boolean;
+  categoryId?: string; // Added
+  dateFrom?: Date;
+  dateTo?: Date;
+  search?: string; // Search by title
+};
+
+// ============================================
+// CALENDAR TYPES (update existing section)
+// ============================================
+
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  date: Date;
+  startTime?: string | null;
+  endTime?: string | null;
+  location?: string | null;
+  isFree: boolean;
+  isMemberOnly: boolean;
+  isRedemptionEvent: boolean;
+  categoryId?: string | null; // Added
+  categoryName?: string | null; // Added
+  categoryColor?: string | null; // Added
+  registrationCount: number;
+  maxAttendees?: number | null;
+};
+
+export type CalendarFilters = {
+  showFreeOnly?: boolean;
+  showMemberOnly?: boolean;
+  showRedemptionOnly?: boolean;
+  categoryId?: string; // Added
+};
+
+// Add API response types for categories
+export type EventCategoryResponse = ApiResponse<EventCategory>;
+export type EventCategoriesResponse = ApiResponse<EventCategory[]>;

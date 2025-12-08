@@ -7,6 +7,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   EllipsisHorizontalIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import { ShieldCheckIcon } from '@heroicons/react/24/solid';
 import Link from 'next/link';
@@ -39,13 +40,24 @@ export default function CustomerTableRow({ customer }: CustomerTableRowProps) {
     .toUpperCase()
     .slice(0, 2);
 
+  // Determine if this is a guest customer (no user account)
+  const isGuest = customer.type === 'customer' && !customer.linkedUserId;
+
   return (
     <tr className="hover:bg-foreground/5 transition-colors">
       {/* Customer Name */}
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 border border-orange-200 flex items-center justify-center text-primary font-bold text-sm">
-            {initials}
+          <div className={`flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br ${
+            isGuest 
+              ? 'from-gray-100 to-gray-50 border-gray-200' 
+              : 'from-orange-100 to-orange-50 border-orange-200'
+          } border flex items-center justify-center text-primary font-bold text-sm`}>
+            {isGuest ? (
+              <UserIcon className="w-5 h-5 text-gray-500" />
+            ) : (
+              initials
+            )}
           </div>
           <div className="ml-4">
             <div className="flex items-center gap-2">
@@ -55,6 +67,12 @@ export default function CustomerTableRow({ customer }: CustomerTableRowProps) {
               >
                 {customer.name}
               </Link>
+              {isGuest && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                  <UserIcon className="w-3 h-3 mr-1" />
+                  Guest
+                </span>
+              )}
               {customer.isMember && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                   <ShieldCheckIcon className="w-3 h-3 mr-1" />
@@ -102,9 +120,9 @@ export default function CustomerTableRow({ customer }: CustomerTableRowProps) {
         )}
       </td>
 
-      {/* Is Registered */}
+      {/* Is Registered (Has User Account) */}
       <td className="px-6 py-4 whitespace-nowrap">
-        {customer.isRegistered ? (
+        {customer.isRegistered || customer.linkedUserId ? (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
             <CheckCircleIcon className="w-3 h-3 mr-1" />
             Yes
@@ -112,7 +130,7 @@ export default function CustomerTableRow({ customer }: CustomerTableRowProps) {
         ) : (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
             <XCircleIcon className="w-3 h-3 mr-1" />
-            No
+            Guest
           </span>
         )}
       </td>
