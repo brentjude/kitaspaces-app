@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { generateEventSlug } from '@/lib/utils/slug';
 
 /**
  * GET /api/admin/events/[id]
@@ -28,13 +29,12 @@ export async function GET(
       );
     }
 
-    // Await params in Next.js 15
-    const params = await context.params;
-    const eventId = params.id;
+    const { id: eventId } = await context.params;
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       include: {
+        category: true,
         registrations: {
           include: {
             user: {
@@ -83,7 +83,7 @@ export async function GET(
 
 /**
  * PATCH /api/admin/events/[id]
- * Updates an event
+ * Updates an event (regenerates slug if title changes)
  */
 export async function PATCH(
   request: NextRequest,
@@ -106,10 +106,7 @@ export async function PATCH(
       );
     }
 
-    // Await params in Next.js 15
-    const params = await context.params;
-    const eventId = params.id;
-
+    const { id: eventId } = await context.params;
     const body = await request.json();
 
     // Check if event exists
@@ -124,26 +121,35 @@ export async function PATCH(
       );
     }
 
+    // Prepare update data
+    const updateData: any = {};
+    
+    if (body.title !== undefined) {
+      updateData.title = body.title;
+      // Regenerate slug if title changes
+      updateData.slug = generateEventSlug(body.title, eventId);
+    }
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.date !== undefined) updateData.date = new Date(body.date);
+    if (body.startTime !== undefined) updateData.startTime = body.startTime;
+    if (body.endTime !== undefined) updateData.endTime = body.endTime;
+    if (body.location !== undefined) updateData.location = body.location;
+    if (body.price !== undefined) updateData.price = body.price;
+    if (body.isFree !== undefined) updateData.isFree = body.isFree;
+    if (body.isMemberOnly !== undefined) updateData.isMemberOnly = body.isMemberOnly;
+    if (body.isFreeForMembers !== undefined) updateData.isFreeForMembers = body.isFreeForMembers;
+    if (body.categoryId !== undefined) updateData.categoryId = body.categoryId;
+    if (body.isRedemptionEvent !== undefined) updateData.isRedemptionEvent = body.isRedemptionEvent;
+    if (body.redemptionLimit !== undefined) updateData.redemptionLimit = body.redemptionLimit;
+    if (body.maxAttendees !== undefined) updateData.maxAttendees = body.maxAttendees;
+    if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
+
     // Update event
     const event = await prisma.event.update({
       where: { id: eventId },
-      data: {
-        ...(body.title && { title: body.title }),
-        ...(body.description && { description: body.description }),
-        ...(body.date && { date: new Date(body.date) }),
-        ...(body.startTime !== undefined && { startTime: body.startTime }),
-        ...(body.endTime !== undefined && { endTime: body.endTime }),
-        ...(body.location !== undefined && { location: body.location }),
-        ...(body.price !== undefined && { price: body.price }),
-        ...(body.isFree !== undefined && { isFree: body.isFree }),
-        ...(body.isMemberOnly !== undefined && { isMemberOnly: body.isMemberOnly }),
-        ...(body.isFreeForMembers !== undefined && { isFreeForMembers: body.isFreeForMembers }),
-        ...(body.isRedemptionEvent !== undefined && { isRedemptionEvent: body.isRedemptionEvent }),
-        ...(body.redemptionLimit !== undefined && { redemptionLimit: body.redemptionLimit }),
-        ...(body.maxAttendees !== undefined && { maxAttendees: body.maxAttendees }),
-        ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
-      },
+      data: updateData,
       include: {
+        category: true,
         registrations: true,
         freebies: true,
       },
@@ -192,9 +198,7 @@ export async function DELETE(
       );
     }
 
-    // Await params in Next.js 15
-    const params = await context.params;
-    const eventId = params.id;
+    const { id: eventId } = await context.params;
 
     // Check if event exists
     const existingEvent = await prisma.event.findUnique({
@@ -205,6 +209,7 @@ export async function DELETE(
             pax: true,
           },
         },
+        customerRegistrations: true,
         freebies: true,
       },
     });
@@ -229,7 +234,18 @@ export async function DELETE(
       },
     });
 
-    // 2. Delete event pax
+    // 2. Delete customer pax freebies
+    await prisma.customerPaxFreebie.deleteMany({
+      where: {
+        pax: {
+          registration: {
+            eventId: eventId,
+          },
+        },
+      },
+    });
+
+    // 3. Delete event pax
     await prisma.eventPax.deleteMany({
       where: {
         registration: {
@@ -238,22 +254,41 @@ export async function DELETE(
       },
     });
 
-    // 3. Delete daily use redemptions
+    // 4. Delete customer event pax
+    await prisma.customerEventPax.deleteMany({
+      where: {
+        registration: {
+          eventId: eventId,
+        },
+      },
+    });
+
+    // 5. Delete daily use redemptions
     await prisma.dailyUseRedemption.deleteMany({
       where: { eventId: eventId },
     });
 
-    // 4. Delete event registrations
+    // 6. Delete customer daily use redemptions
+    await prisma.customerDailyUseRedemption.deleteMany({
+      where: { eventId: eventId },
+    });
+
+    // 7. Delete event registrations
     await prisma.eventRegistration.deleteMany({
       where: { eventId: eventId },
     });
 
-    // 5. Delete event freebies
+    // 8. Delete customer event registrations
+    await prisma.customerEventRegistration.deleteMany({
+      where: { eventId: eventId },
+    });
+
+    // 9. Delete event freebies
     await prisma.eventFreebie.deleteMany({
       where: { eventId: eventId },
     });
 
-    // 6. Finally delete the event
+    // 10. Finally delete the event
     await prisma.event.delete({
       where: { id: eventId },
     });
@@ -263,6 +298,7 @@ export async function DELETE(
       message: 'Event and all related data deleted successfully',
       data: {
         registrationsDeleted: existingEvent.registrations.length,
+        customerRegistrationsDeleted: existingEvent.customerRegistrations.length,
         paxDeleted: existingEvent.registrations.reduce((sum, reg) => sum + reg.pax.length, 0),
         freebiesDeleted: existingEvent.freebies.length,
       },

@@ -275,6 +275,7 @@ model EventCategory {
 model Event {
   id            String              @id @default(cuid())
   title         String
+  slug          String              @unique // Add this line
   description   String              @db.Text
   date          DateTime
   startTime     String?
@@ -283,15 +284,15 @@ model Event {
   price         Float               @default(0)
   isFree        Boolean             @default(false)
   isMemberOnly  Boolean             @default(false)
-  isFreeForMembers Boolean          @default(false) // Free for members but paid for non-members
+  isFreeForMembers Boolean          @default(false)
   
   // Event category
   categoryId    String?
   category      EventCategory?      @relation(fields: [categoryId], references: [id])
   
-  // Daily use redemption events (e.g., Free Matcha Mondays)
+  // Daily use redemption events
   isRedemptionEvent Boolean          @default(false)
-  redemptionLimit   Int?             // Max redemptions per user
+  redemptionLimit   Int?
   
   maxAttendees  Int?
   imageUrl      String?
@@ -308,6 +309,7 @@ model Event {
   @@index([isMemberOnly])
   @@index([isRedemptionEvent])
   @@index([categoryId])
+  @@index([slug]) // Add this line
   @@map("events")
 }
 

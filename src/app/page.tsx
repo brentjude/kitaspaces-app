@@ -8,6 +8,7 @@ import HeroSection from "@/app/components/HeroSection";
 import EventCard from "@/app/components/EventCard";
 import { CalendarIcon } from "@heroicons/react/24/outline";
 import type { EventWithRelations } from "@/types";
+import { generateEventSlug } from "@/lib/utils/slug";
 
 export default function HomePage() {
   const router = useRouter();
@@ -34,8 +35,10 @@ export default function HomePage() {
     }
   };
 
-  const handleEventClick = (eventId: string) => {
-    router.push(`/events/${eventId}`);
+  const handleEventClick = (eventId: string, eventTitle: string) => {
+    // Generate slug from title and ID
+    const slug = generateEventSlug(eventTitle, eventId);
+    router.push(`/events/${slug}`);
   };
 
   const handleLoginClick = () => {
@@ -45,7 +48,18 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <PublicHeader currentUser={null} onLoginClick={handleLoginClick} />
+        <PublicHeader 
+          currentUser={
+            session?.user
+              ? {
+                  name: session.user.name || "",
+                  email: session.user.email || "",
+                  role: session.user.role,
+                }
+              : null
+          }
+          onLoginClick={handleLoginClick}
+        />
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
@@ -59,7 +73,15 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
       <PublicHeader
-        currentUser={session?.user || null}
+        currentUser={
+          session?.user
+            ? {
+                name: session.user.name || "",
+                email: session.user.email || "",
+                role: session.user.role,
+              }
+            : null
+        }
         onLoginClick={handleLoginClick}
       />
 

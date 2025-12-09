@@ -5,23 +5,54 @@ import {
   ClockIcon,
   MapPinIcon,
   ArrowRightIcon,
-  StarIcon,
+  GiftIcon,
 } from "@heroicons/react/24/outline";
 import type { EventWithRelations } from "@/types";
 import Image from "next/image";
 
 interface EventCardProps {
-  event: EventWithRelations & { registrationCount?: number };
-  onClick: (id: string) => void;
+  event: EventWithRelations & { 
+    registrationCount?: number;
+    category?: {
+      id: string;
+      name: string;
+      color: string | null;
+      icon: string | null;
+    } | null;
+    freebies?: Array<{
+      id: string;
+      name: string;
+      description?: string | null;
+    }>;
+  };
+  onClick: (id: string, title: string) => void; // Updated signature
 }
 
 export default function EventCard({ event, onClick }: EventCardProps) {
   const isCompleted = new Date(event.date) < new Date();
   const isFree = event.price === 0 || event.isFree;
+  const hasFreebies = event.freebies && event.freebies.length > 0;
+
+  const getCategoryColor = (color: string | null) => {
+    if (!color) return 'bg-gray-100 text-gray-800';
+    
+    const colorMap: Record<string, string> = {
+      '#3B82F6': 'bg-blue-100 text-blue-800',
+      '#10B981': 'bg-green-100 text-green-800',
+      '#F59E0B': 'bg-orange-100 text-orange-800',
+      '#EC4899': 'bg-pink-100 text-pink-800',
+      '#8B5CF6': 'bg-purple-100 text-purple-800',
+      '#EF4444': 'bg-red-100 text-red-800',
+      '#6366F1': 'bg-indigo-100 text-indigo-800',
+      '#6B7280': 'bg-gray-100 text-gray-800',
+    };
+
+    return colorMap[color] || 'bg-gray-100 text-gray-800';
+  };
 
   return (
     <div
-      onClick={() => onClick(event.id)}
+      onClick={() => onClick(event.id, event.title)}
       className="group bg-white rounded-2xl border border-foreground/10 shadow-sm hover:shadow-xl hover:border-primary/20 transition-all duration-300 overflow-hidden flex flex-col h-full cursor-pointer"
     >
       {/* Image Section */}
@@ -37,7 +68,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
                 e.currentTarget.style.display = "none";
               }}
             />
-            <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent opacity-60" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60" />
           </div>
         ) : (
           <>
@@ -46,14 +77,8 @@ export default function EventCard({ event, onClick }: EventCardProps) {
           </>
         )}
 
-        {/* Badges */}
-        <div className="absolute top-4 right-4 flex space-x-2">
-          {event.isFreeForMembers && (
-            <span className="px-2.5 py-1 text-[10px] font-bold rounded-full shadow-sm backdrop-blur-md bg-white/90 text-blue-600 flex items-center">
-              <StarIcon className="w-3 h-3 mr-1 fill-blue-600" />
-              Member Perk
-            </span>
-          )}
+        {/* Status Badge Only */}
+        <div className="absolute top-4 right-4">
           <span
             className={`px-3 py-1 text-xs font-bold rounded-full shadow-sm backdrop-blur-md ${
               isCompleted
@@ -81,13 +106,27 @@ export default function EventCard({ event, onClick }: EventCardProps) {
 
       {/* Content Section */}
       <div className="p-6 flex-1 flex flex-col">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors leading-tight">
-            {event.title}
-          </h3>
-        </div>
+        {/* Category Badge Above Title */}
+        {event.category && (
+          <div className="mb-2">
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(
+                event.category.color
+              )}`}
+            >
+              {event.category.icon && <span className="mr-1">{event.category.icon}</span>}
+              {event.category.name}
+            </span>
+          </div>
+        )}
 
-        <p className="text-foreground/60 text-sm mb-6 line-clamp-2 flex-1 leading-relaxed">
+        {/* Title */}
+        <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors leading-tight mb-2">
+          {event.title}
+        </h3>
+
+        {/* Description */}
+        <p className="text-foreground/60 text-sm mb-4 line-clamp-2 flex-1 leading-relaxed">
           {event.description ||
             "Join us for this amazing experience at KITA Spaces."}
         </p>
@@ -102,20 +141,49 @@ export default function EventCard({ event, onClick }: EventCardProps) {
                 minute: "2-digit",
               })}
           </div>
+          
           <div className="flex items-center text-sm text-foreground/60">
             <MapPinIcon className="w-4 h-4 mr-2.5 text-foreground/40" />
             {event.location || "KITA Spaces"}
           </div>
-          {!isFree && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground/60">
-                Price per person
-              </span>
-              <span className="text-lg font-bold text-primary">
-                ${event.price}
-              </span>
+
+          {/* Freebies */}
+          {hasFreebies && (
+            <div className="flex items-start text-sm text-foreground/60">
+              <GiftIcon className="w-4 h-4 mr-2.5 text-foreground/40 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span className="font-medium text-primary">
+                  {event.freebies!.length} {event.freebies!.length === 1 ? 'Freebie' : 'Freebies'} Included
+                </span>
+                <p className="text-xs text-foreground/50 mt-0.5 line-clamp-1">
+                  {event.freebies!.map(f => f.name).join(', ')}
+                </p>
+              </div>
             </div>
           )}
+
+          {/* Price or Free for Members Badge */}
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-sm font-medium text-foreground/60">
+              Price per person
+            </span>
+            {isFree ? (
+              <span className="text-lg font-bold text-green-600">
+                Free
+              </span>
+            ) : (
+              <div className="flex flex-col items-end">
+                <span className="text-lg font-bold text-primary">
+                  ₱{event.price}
+                </span>
+                {event.isFreeForMembers && (
+                  <span className="text-[10px] text-blue-600 font-semibold">
+                    Free for members
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* CTA Button */}

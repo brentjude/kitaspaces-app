@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Modal from "@/app/components/Modal";
 import ImageUpload from "@/app/components/ImageUpload";
 
@@ -9,6 +9,14 @@ interface Freebie {
   name: string;
   description?: string;
   quantity: number;
+}
+
+interface EventCategory {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+  icon: string | null;
 }
 
 interface CreateEventModalProps {
@@ -24,6 +32,8 @@ export default function CreateEventModal({
 }: CreateEventModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<EventCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -41,12 +51,36 @@ export default function CreateEventModal({
     redemptionLimit: "1",
     maxAttendees: "",
     imageUrl: "",
+    categoryId: "",
   });
 
   const [freebies, setFreebies] = useState<Freebie[]>([]);
 
+  // Fetch categories when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const response = await fetch('/api/admin/settings/categories');
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setCategories(data.data.filter((cat: EventCategory) => cat.isActive !== false));
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
 
@@ -133,6 +167,7 @@ export default function CreateEventModal({
         isFree: formData.isFree,
         isMemberOnly: formData.isMemberOnly,
         isFreeForMembers: formData.isFreeForMembers,
+        categoryId: formData.categoryId || null,
         isRedemptionEvent: formData.isRedemptionEvent,
         redemptionLimit: formData.isRedemptionEvent
           ? parseInt(formData.redemptionLimit) || 1
@@ -141,8 +176,16 @@ export default function CreateEventModal({
           ? parseInt(formData.maxAttendees)
           : null,
         imageUrl: formData.imageUrl || null,
-        freebies: freebies.filter((f) => f.name.trim() !== ""),
+        freebies: freebies
+          .filter((f) => f.name.trim() !== "")
+          .map((f) => ({
+            name: f.name,
+            description: f.description || null,
+            quantity: f.quantity,
+          })),
       };
+
+      console.log('📤 Submitting event data:', eventData);
 
       const response = await fetch("/api/admin/events", {
         method: "POST",
@@ -153,9 +196,12 @@ export default function CreateEventModal({
       });
 
       const data = await response.json();
+      console.log('📥 Server response:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create event");
+        throw new Error(
+          data.details || data.error || `HTTP ${response.status}: Failed to create event`
+        );
       }
 
       // Reset form only after successful submission
@@ -174,6 +220,7 @@ export default function CreateEventModal({
         redemptionLimit: "1",
         maxAttendees: "",
         imageUrl: "",
+        categoryId: "",
       });
       setFreebies([]);
       setError(null);
@@ -189,6 +236,7 @@ export default function CreateEventModal({
         onSuccess();
       }
     } catch (err) {
+      console.error('❌ Error submitting event:', err);
       setError(err instanceof Error ? err.message : "Failed to create event");
     } finally {
       setIsSubmitting(false);
@@ -201,6 +249,23 @@ export default function CreateEventModal({
       setError(null);
       onClose();
     }
+  };
+
+  const getCategoryColor = (color: string | null) => {
+    if (!color) return 'bg-gray-100 text-gray-800';
+    
+    const colorMap: Record<string, string> = {
+      '#3B82F6': 'bg-blue-100 text-blue-800',
+      '#10B981': 'bg-green-100 text-green-800',
+      '#F59E0B': 'bg-orange-100 text-orange-800',
+      '#EC4899': 'bg-pink-100 text-pink-800',
+      '#8B5CF6': 'bg-purple-100 text-purple-800',
+      '#EF4444': 'bg-red-100 text-red-800',
+      '#6366F1': 'bg-indigo-100 text-indigo-800',
+      '#6B7280': 'bg-gray-100 text-gray-800',
+    };
+
+    return colorMap[color] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -277,20 +342,90 @@ export default function CreateEventModal({
           </div>
         )}
 
-        {/* Event Title */}
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            Event Title <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="title"
-            required
-            className="w-full rounded-lg border border-foreground/20 px-4 py-2.5 text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-            placeholder="e.g., Summer Networking Mixer"
-            value={formData.title}
-            onChange={handleInputChange}
-          />
+        {/* Event Title and Category */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Event Title */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Event Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="title"
+              required
+              className="w-full rounded-lg border border-foreground/20 px-4 py-2.5 text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              placeholder="e.g., Summer Networking Mixer"
+              value={formData.title}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Category
+            </label>
+            <div className="relative">
+              <svg
+                className="w-4 h-4 absolute left-3 top-3.5 text-foreground/40 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                />
+              </svg>
+              <select
+                name="categoryId"
+                value={formData.categoryId}
+                onChange={handleInputChange}
+                disabled={loadingCategories}
+                className="w-full rounded-lg border border-foreground/20 pl-10 pr-4 py-2.5 text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all appearance-none bg-white disabled:bg-foreground/5 disabled:cursor-not-allowed"
+              >
+                <option value="">
+                  {loadingCategories ? 'Loading...' : 'Select a category (optional)'}
+                </option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.icon ? `${category.icon} ` : ''}{category.name}
+                  </option>
+                ))}
+              </select>
+              <svg
+                className="w-4 h-4 absolute right-3 top-3.5 text-foreground/40 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+            {formData.categoryId && categories.find(c => c.id === formData.categoryId) && (
+              <div className="mt-2">
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(
+                    categories.find(c => c.id === formData.categoryId)?.color || null
+                  )}`}
+                >
+                  {categories.find(c => c.id === formData.categoryId)?.icon && (
+                    <span className="mr-1">
+                      {categories.find(c => c.id === formData.categoryId)?.icon}
+                    </span>
+                  )}
+                  {categories.find(c => c.id === formData.categoryId)?.name}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Cover Photo */}
