@@ -4,6 +4,33 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateEventSlug } from '@/lib/utils/slug';
 
+// Type definitions for request body
+interface FreebieInput {
+  name: string;
+  description?: string | null;
+  quantity: number;
+  imageUrl?: string | null;
+}
+
+interface CreateEventBody {
+  title: string;
+  description: string;
+  date: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  location?: string | null;
+  price: number | string;
+  isFree?: boolean;
+  isMemberOnly?: boolean;
+  isFreeForMembers?: boolean;
+  categoryId?: string | null;
+  isRedemptionEvent?: boolean;
+  redemptionLimit?: number | string | null;
+  maxAttendees?: number | string | null;
+  imageUrl?: string | null;
+  freebies?: FreebieInput[];
+}
+
 /**
  * POST /api/admin/events
  * Creates a new event with auto-generated slug
@@ -16,8 +43,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    console.log('📥 Received event data:', body);
+    const body = await request.json() as CreateEventBody;
 
     const {
       title,
@@ -66,8 +92,6 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-
-      console.log('✅ Category validated:', categoryExists.name);
     }
 
     // Parse date
@@ -77,7 +101,7 @@ export async function POST(request: Request) {
       if (isNaN(eventDate.getTime())) {
         throw new Error('Invalid date format');
       }
-    } catch (error) {
+    } catch (_error) {
       return NextResponse.json(
         { 
           success: false, 
@@ -88,7 +112,14 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('📅 Creating event:', title);
+    // Parse numeric values
+    const parsedPrice = typeof price === 'string' ? parseFloat(price) : price;
+    const parsedRedemptionLimit = redemptionLimit 
+      ? (typeof redemptionLimit === 'string' ? parseInt(redemptionLimit, 10) : redemptionLimit)
+      : null;
+    const parsedMaxAttendees = maxAttendees
+      ? (typeof maxAttendees === 'string' ? parseInt(maxAttendees, 10) : maxAttendees)
+      : null;
 
     // Create event first without slug
     const event = await prisma.event.create({
@@ -100,23 +131,20 @@ export async function POST(request: Request) {
         startTime: startTime || null,
         endTime: endTime || null,
         location: location || null,
-        price: parseFloat(price) || 0,
-        isFree: isFree ?? (parseFloat(price) === 0),
+        price: parsedPrice || 0,
+        isFree: isFree ?? (parsedPrice === 0),
         isMemberOnly: isMemberOnly || false,
         isFreeForMembers: isFreeForMembers || false,
         categoryId: categoryId || null,
         isRedemptionEvent: isRedemptionEvent || false,
-        redemptionLimit: isRedemptionEvent ? (parseInt(redemptionLimit) || 1) : null,
-        maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
+        redemptionLimit: isRedemptionEvent ? (parsedRedemptionLimit || 1) : null,
+        maxAttendees: parsedMaxAttendees,
         imageUrl: imageUrl || null,
       },
     });
 
-    console.log('✅ Event created with ID:', event.id);
-
     // Generate slug with event ID and update
     const slug = generateEventSlug(title, event.id);
-    console.log('🔗 Generated slug:', slug);
 
     const updatedEvent = await prisma.event.update({
       where: { id: event.id },
@@ -126,23 +154,19 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log('✅ Event updated with slug');
-
     // Create freebies if provided
     if (freebies.length > 0) {
-      console.log(`🎁 Creating ${freebies.length} freebies`);
-      
       await prisma.eventFreebie.createMany({
-        data: freebies.map((freebie: any) => ({
+        data: freebies.map((freebie: FreebieInput) => ({
           eventId: updatedEvent.id,
           name: freebie.name,
           description: freebie.description || null,
-          quantity: parseInt(freebie.quantity) || 1,
+          quantity: typeof freebie.quantity === 'string' 
+            ? parseInt(freebie.quantity, 10) 
+            : freebie.quantity || 1,
           imageUrl: freebie.imageUrl || null,
         })),
       });
-
-      console.log('✅ Freebies created');
     }
 
     // Fetch complete event with freebies
@@ -154,22 +178,14 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log('✅ Event creation complete:', completeEvent?.title);
-
     return NextResponse.json({
       success: true,
       data: completeEvent,
       message: 'Event created successfully',
     });
   } catch (error) {
-    console.error('❌ Error creating event:', error);
+    console.error('Error creating event:', error);
     
-    // Detailed error logging
-    if (error instanceof Error) {
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
-
     return NextResponse.json(
       {
         success: false,
@@ -185,7 +201,7 @@ export async function POST(request: Request) {
  * GET /api/admin/events
  * Fetches all events for admin
  */
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 

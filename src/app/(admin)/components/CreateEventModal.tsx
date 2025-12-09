@@ -17,6 +17,7 @@ interface EventCategory {
   slug: string;
   color: string | null;
   icon: string | null;
+  isActive?: boolean; // Make it optional
 }
 
 interface CreateEventModalProps {
@@ -70,7 +71,10 @@ export default function CreateEventModal({
       const data = await response.json();
       
       if (data.success && data.data) {
-        setCategories(data.data.filter((cat: EventCategory) => cat.isActive !== false));
+        // Filter only active categories
+        setCategories(
+          data.data.filter((cat: EventCategory) => cat.isActive !== false)
+        );
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -185,8 +189,6 @@ export default function CreateEventModal({
           })),
       };
 
-      console.log('📤 Submitting event data:', eventData);
-
       const response = await fetch("/api/admin/events", {
         method: "POST",
         headers: {
@@ -196,7 +198,6 @@ export default function CreateEventModal({
       });
 
       const data = await response.json();
-      console.log('📥 Server response:', data);
 
       if (!response.ok) {
         throw new Error(
@@ -236,7 +237,7 @@ export default function CreateEventModal({
         onSuccess();
       }
     } catch (err) {
-      console.error('❌ Error submitting event:', err);
+      console.error('Error submitting event:', err);
       setError(err instanceof Error ? err.message : "Failed to create event");
     } finally {
       setIsSubmitting(false);
@@ -324,7 +325,7 @@ export default function CreateEventModal({
         onSubmit={handleSubmit}
         className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto"
       >
-        {/* Error Message */}
+       {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
             <svg

@@ -4,6 +4,25 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateEventSlug } from '@/lib/utils/slug';
 
+// Type definition for update request body
+interface UpdateEventBody {
+  title?: string;
+  description?: string;
+  date?: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  location?: string | null;
+  price?: number;
+  isFree?: boolean;
+  isMemberOnly?: boolean;
+  isFreeForMembers?: boolean;
+  categoryId?: string | null;
+  isRedemptionEvent?: boolean;
+  redemptionLimit?: number | null;
+  maxAttendees?: number | null;
+  imageUrl?: string | null;
+}
+
 /**
  * GET /api/admin/events/[id]
  * Fetches a single event by ID with all relations
@@ -69,7 +88,6 @@ export async function GET(
       data: event,
     });
   } catch (error) {
-    console.error('Error fetching event:', error);
     return NextResponse.json(
       {
         success: false,
@@ -107,7 +125,7 @@ export async function PATCH(
     }
 
     const { id: eventId } = await context.params;
-    const body = await request.json();
+    const body = await request.json() as UpdateEventBody;
 
     // Check if event exists
     const existingEvent = await prisma.event.findUnique({
@@ -121,28 +139,75 @@ export async function PATCH(
       );
     }
 
-    // Prepare update data
-    const updateData: any = {};
+    // Build update data object with proper typing
+    interface EventUpdateData {
+      title?: string;
+      slug?: string;
+      description?: string;
+      date?: Date;
+      startTime?: string | null;
+      endTime?: string | null;
+      location?: string | null;
+      price?: number;
+      isFree?: boolean;
+      isMemberOnly?: boolean;
+      isFreeForMembers?: boolean;
+      categoryId?: string | null;
+      isRedemptionEvent?: boolean;
+      redemptionLimit?: number | null;
+      maxAttendees?: number | null;
+      imageUrl?: string | null;
+    }
+
+    const updateData: EventUpdateData = {};
     
     if (body.title !== undefined) {
       updateData.title = body.title;
       // Regenerate slug if title changes
       updateData.slug = generateEventSlug(body.title, eventId);
     }
-    if (body.description !== undefined) updateData.description = body.description;
-    if (body.date !== undefined) updateData.date = new Date(body.date);
-    if (body.startTime !== undefined) updateData.startTime = body.startTime;
-    if (body.endTime !== undefined) updateData.endTime = body.endTime;
-    if (body.location !== undefined) updateData.location = body.location;
-    if (body.price !== undefined) updateData.price = body.price;
-    if (body.isFree !== undefined) updateData.isFree = body.isFree;
-    if (body.isMemberOnly !== undefined) updateData.isMemberOnly = body.isMemberOnly;
-    if (body.isFreeForMembers !== undefined) updateData.isFreeForMembers = body.isFreeForMembers;
-    if (body.categoryId !== undefined) updateData.categoryId = body.categoryId;
-    if (body.isRedemptionEvent !== undefined) updateData.isRedemptionEvent = body.isRedemptionEvent;
-    if (body.redemptionLimit !== undefined) updateData.redemptionLimit = body.redemptionLimit;
-    if (body.maxAttendees !== undefined) updateData.maxAttendees = body.maxAttendees;
-    if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
+    if (body.description !== undefined) {
+      updateData.description = body.description;
+    }
+    if (body.date !== undefined) {
+      updateData.date = new Date(body.date);
+    }
+    if (body.startTime !== undefined) {
+      updateData.startTime = body.startTime;
+    }
+    if (body.endTime !== undefined) {
+      updateData.endTime = body.endTime;
+    }
+    if (body.location !== undefined) {
+      updateData.location = body.location;
+    }
+    if (body.price !== undefined) {
+      updateData.price = body.price;
+    }
+    if (body.isFree !== undefined) {
+      updateData.isFree = body.isFree;
+    }
+    if (body.isMemberOnly !== undefined) {
+      updateData.isMemberOnly = body.isMemberOnly;
+    }
+    if (body.isFreeForMembers !== undefined) {
+      updateData.isFreeForMembers = body.isFreeForMembers;
+    }
+    if (body.categoryId !== undefined) {
+      updateData.categoryId = body.categoryId;
+    }
+    if (body.isRedemptionEvent !== undefined) {
+      updateData.isRedemptionEvent = body.isRedemptionEvent;
+    }
+    if (body.redemptionLimit !== undefined) {
+      updateData.redemptionLimit = body.redemptionLimit;
+    }
+    if (body.maxAttendees !== undefined) {
+      updateData.maxAttendees = body.maxAttendees;
+    }
+    if (body.imageUrl !== undefined) {
+      updateData.imageUrl = body.imageUrl;
+    }
 
     // Update event
     const event = await prisma.event.update({
@@ -161,7 +226,6 @@ export async function PATCH(
       message: 'Event updated successfully',
     });
   } catch (error) {
-    console.error('Error updating event:', error);
     return NextResponse.json(
       {
         success: false,
@@ -304,7 +368,6 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting event:', error);
     return NextResponse.json(
       {
         success: false,

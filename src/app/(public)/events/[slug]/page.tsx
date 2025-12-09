@@ -12,16 +12,23 @@ import {
   CheckCircleIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/outline';
-import { Event, EventCategory, EventFreebie } from '@/types/database';
+import { Event, EventCategory } from '@/types/database';
 import { fetchPublicEventBySlug } from '@/lib/api/public';
 import PublicHeader from '@/app/components/Header';
 import Image from 'next/image';
 import Link from 'next/link';
 
+// Use the same type as defined in the API client
 type PublicEvent = Event & {
   category?: EventCategory | null;
-  freebies?: EventFreebie[];
   registrationCount?: number;
+  freebies?: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    quantity: number;
+    imageUrl: string | null;
+  }>;
 };
 
 export default function EventDetailPage() {

@@ -32,23 +32,6 @@ export default function EventsSearchBar({
     onCategoryChange(categoryId === 'all' ? '' : categoryId);
   };
 
-  const getCategoryColor = (color: string | null) => {
-    if (!color) return 'bg-gray-100 text-gray-800';
-    
-    // Map hex colors to Tailwind classes
-    const colorMap: Record<string, string> = {
-      '#3B82F6': 'bg-blue-100 text-blue-800',
-      '#10B981': 'bg-green-100 text-green-800',
-      '#F59E0B': 'bg-orange-100 text-orange-800',
-      '#EC4899': 'bg-pink-100 text-pink-800',
-      '#8B5CF6': 'bg-purple-100 text-purple-800',
-      '#EF4444': 'bg-red-100 text-red-800',
-      '#6366F1': 'bg-indigo-100 text-indigo-800',
-      '#6B7280': 'bg-gray-100 text-gray-800',
-    };
-
-    return colorMap[color] || 'bg-gray-100 text-gray-800';
-  };
 
   return (
     <div className="bg-foreground/5 rounded-xl p-4 border border-foreground/10">
