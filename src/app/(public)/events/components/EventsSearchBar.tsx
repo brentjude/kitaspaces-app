@@ -50,7 +50,7 @@ export default function EventsSearchBar({
 
         {/* Category Filter */}
         <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 items-center scrollbar-hide">
-          <FunnelIcon className="w-5 h-5 text-foreground/40 mr-1 flex-shrink-0" />
+          <FunnelIcon className="w-5 h-5 text-foreground/40 mr-1 shrink-0" />
           
           <button
             onClick={() => handleCategoryChange('all')}

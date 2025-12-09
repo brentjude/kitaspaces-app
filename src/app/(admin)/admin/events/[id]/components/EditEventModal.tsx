@@ -693,6 +693,7 @@ export default function EditEventModal({
                     />
                   </svg>
                   Included Freebies
+                  <span className="ml-2 text-xs text-foreground/50 font-normal">(per person)</span>
                 </label>
                 <button
                   type="button"
@@ -745,7 +746,7 @@ export default function EditEventModal({
                     <div className="space-y-3 pr-8">
                       <input
                         type="text"
-                        placeholder="Freebie Name (e.g., Coffee)"
+                        placeholder="Freebie Name (e.g., Coffee, T-Shirt, Lunch Box)"
                         className="block w-full text-sm font-medium text-foreground placeholder-foreground/40 border-none p-0 focus:ring-0"
                         value={item.name}
                         onChange={(e) =>
@@ -754,21 +755,34 @@ export default function EditEventModal({
                       />
                       <input
                         type="text"
-                        placeholder="Options (e.g., Cafe Latte, Americano, Cappuccino)"
+                        placeholder="Options/Description (e.g., Latte, Americano, Cappuccino)"
                         className="flex-1 bg-foreground/5 border border-foreground/10 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground placeholder-foreground/40 outline-none transition-all"
                         value={item.description}
                         onChange={(e) =>
                           updateFreebie(item.id, 'description', e.target.value)
                         }
                       />
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-medium text-foreground/60">
+                      <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2">
+                        <svg
+                          className="w-4 h-4 text-orange-600 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                        <label className="text-xs font-medium text-orange-800 flex-1">
                           Quantity per person:
                         </label>
                         <input
                           type="number"
                           min="1"
-                          className="w-20 bg-foreground/5 border border-foreground/10 rounded-lg text-xs px-3 py-1.5 focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground outline-none transition-all"
+                          className="w-20 bg-white border border-orange-200 rounded-lg text-xs px-3 py-1.5 focus:ring-2 focus:ring-orange-300 focus:border-orange-400 text-foreground outline-none transition-all text-center font-semibold"
                           value={item.quantity}
                           onChange={(e) =>
                             updateFreebie(
@@ -779,6 +793,27 @@ export default function EditEventModal({
                           }
                         />
                       </div>
+                      {formData.maxAttendees > 0 && (
+                        <div className="flex items-center gap-2 text-xs text-foreground/50">
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                            />
+                          </svg>
+                          <span>
+                            Total needed: {item.quantity * formData.maxAttendees} 
+                            {' '}(for {formData.maxAttendees} attendees)
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -800,6 +835,9 @@ export default function EditEventModal({
                     </svg>
                     <p className="text-sm text-foreground/40 mb-2">
                       No freebies added yet
+                    </p>
+                    <p className="text-xs text-foreground/30 mb-3">
+                      Freebies are given to each attendee (e.g., 1 coffee per person)
                     </p>
                     <button
                       type="button"

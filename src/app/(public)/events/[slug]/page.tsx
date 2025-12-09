@@ -72,7 +72,7 @@ export default function EventDetailPage() {
   const handleReserveSpot = () => {
     if (!event) return;
     // Navigate to registration page
-    router.push(`/events/${slug}/register`);
+    router.push(`/events/${slug}/registration`);
   };
 
   if (loading) {
@@ -183,7 +183,7 @@ export default function EventDetailPage() {
                 className="object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-primary to-orange-200 flex items-center justify-center">
+              <div className="w-full h-full bg-linear-to-br from-primary to-orange-200 flex items-center justify-center">
                 <span className="text-6xl font-bold text-white/30">KITA</span>
               </div>
             )}
@@ -273,7 +273,7 @@ export default function EventDetailPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {event.freebies.map((freebie) => (
                       <div key={freebie.id} className="flex items-start">
-                        <CheckCircleIcon className="w-5 h-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                        <CheckCircleIcon className="w-5 h-5 text-primary mt-0.5 mr-2 shrink-0" />
                         <div>
                           <p className="font-semibold text-foreground">{freebie.name}</p>
                           {freebie.description && (
@@ -308,20 +308,25 @@ export default function EventDetailPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleReserveSpot}
-                  disabled={isCompleted}
-                  className="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-orange-200 transition-transform active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 bg-primary hover:bg-primary/90"
-                >
-                  {isCompleted ? (
-                    'Event Ended'
-                  ) : (
-                    <>
-                      Reserve Your Spot
-                      <ArrowRightIcon className="w-5 h-5 ml-2" />
-                    </>
-                  )}
-                </button>
+               <button
+                onClick={handleReserveSpot}
+                disabled={isCompleted}
+                className="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-orange-200 transition-transform active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 bg-primary hover:bg-primary/90"
+              >
+                {isCompleted ? (
+                  'Event Ended'
+                ) : event.isRedemptionEvent ? (
+                  <>
+                    Redeem Now
+                    <ArrowRightIcon className="w-5 h-5 ml-2" />
+                  </>
+                ) : (
+                  <>
+                    Reserve Your Spot
+                    <ArrowRightIcon className="w-5 h-5 ml-2" />
+                  </>
+                )}
+              </button>
 
                 {!isCompleted && (
                   <p className="text-center text-xs text-foreground/40 mt-4">

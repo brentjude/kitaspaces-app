@@ -503,6 +503,11 @@ model Payment {
   amount            Float
   paymentMethod     PaymentMethod
   status            PaymentStatus @default(PENDING)
+  
+  // Internal payment reference (ev_kita2025_001)
+  paymentReference  String?       @unique
+  
+  // User's payment reference (GCash/Bank reference number)
   referenceNumber   String?
   
   // Payment proof
@@ -522,6 +527,7 @@ model Payment {
 
   @@index([userId])
   @@index([status])
+  @@index([paymentReference])
   @@index([referenceNumber])
   @@map("payments")
 }
@@ -535,6 +541,11 @@ model CustomerPayment {
   amount            Float
   paymentMethod     PaymentMethod
   status            PaymentStatus              @default(PENDING)
+  
+  // Internal payment reference (ev_kita2025_001)
+  paymentReference  String?                    @unique
+  
+  // User's payment reference (GCash/Bank reference number)
   referenceNumber   String?
   
   // Payment proof
@@ -553,6 +564,7 @@ model CustomerPayment {
 
   @@index([customerId])
   @@index([status])
+  @@index([paymentReference])
   @@index([referenceNumber])
   @@map("customer_payments")
 }

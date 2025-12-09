@@ -236,7 +236,8 @@ export type CustomerPaymentCreateInput = {
   amount: number;
   paymentMethod: PaymentMethod;
   status?: PaymentStatus;
-  referenceNumber?: string;
+  paymentReference?: string; // Internal reference (ev_kita2025_001)
+  referenceNumber?: string; // User's reference number
   proofImageUrl?: string;
   notes?: string;
   paidAt?: Date;
@@ -485,7 +486,8 @@ export type PaymentCreateInput = {
   amount: number;
   paymentMethod: PaymentMethod;
   status?: PaymentStatus;
-  referenceNumber?: string;
+  paymentReference?: string; // Internal reference (ev_kita2025_001)
+  referenceNumber?: string; // User's reference number
   proofImageUrl?: string;
   notes?: string;
   paidAt?: Date;

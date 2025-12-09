@@ -68,7 +68,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
                 e.currentTarget.style.display = "none";
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent opacity-60" />
           </div>
         ) : (
           <>
@@ -150,7 +150,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
           {/* Freebies */}
           {hasFreebies && (
             <div className="flex items-start text-sm text-foreground/60">
-              <GiftIcon className="w-4 h-4 mr-2.5 text-foreground/40 flex-shrink-0 mt-0.5" />
+              <GiftIcon className="w-4 h-4 mr-2.5 text-foreground/40 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <span className="font-medium text-primary">
                   {event.freebies!.length} {event.freebies!.length === 1 ? 'Freebie' : 'Freebies'} Included
