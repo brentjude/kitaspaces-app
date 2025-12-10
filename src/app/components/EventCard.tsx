@@ -11,7 +11,7 @@ import type { EventWithRelations } from "@/types";
 import Image from "next/image";
 
 interface EventCardProps {
-  event: EventWithRelations & { 
+  event: EventWithRelations & {
     registrationCount?: number;
     category?: {
       id: string;
@@ -34,20 +34,20 @@ export default function EventCard({ event, onClick }: EventCardProps) {
   const hasFreebies = event.freebies && event.freebies.length > 0;
 
   const getCategoryColor = (color: string | null) => {
-    if (!color) return 'bg-gray-100 text-gray-800';
-    
+    if (!color) return "bg-gray-100 text-gray-800";
+
     const colorMap: Record<string, string> = {
-      '#3B82F6': 'bg-blue-100 text-blue-800',
-      '#10B981': 'bg-green-100 text-green-800',
-      '#F59E0B': 'bg-orange-100 text-orange-800',
-      '#EC4899': 'bg-pink-100 text-pink-800',
-      '#8B5CF6': 'bg-purple-100 text-purple-800',
-      '#EF4444': 'bg-red-100 text-red-800',
-      '#6366F1': 'bg-indigo-100 text-indigo-800',
-      '#6B7280': 'bg-gray-100 text-gray-800',
+      "#3B82F6": "bg-blue-100 text-blue-800",
+      "#10B981": "bg-green-100 text-green-800",
+      "#F59E0B": "bg-orange-100 text-orange-800",
+      "#EC4899": "bg-pink-100 text-pink-800",
+      "#8B5CF6": "bg-purple-100 text-purple-800",
+      "#EF4444": "bg-red-100 text-red-800",
+      "#6366F1": "bg-indigo-100 text-indigo-800",
+      "#6B7280": "bg-gray-100 text-gray-800",
     };
 
-    return colorMap[color] || 'bg-gray-100 text-gray-800';
+    return colorMap[color] || "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -106,19 +106,30 @@ export default function EventCard({ event, onClick }: EventCardProps) {
 
       {/* Content Section */}
       <div className="p-6 flex-1 flex flex-col">
-        {/* Category Badge Above Title */}
-        {event.category && (
+        <div className="flex flex-row gap-1">
+          {/* Category Badge Above Title */}
+          {event.category && (
+            <div className="mb-2">
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(
+                  event.category.color
+                )}`}
+              >
+                {event.category.icon && (
+                  <span className="mr-1">{event.category.icon}</span>
+                )}
+                {event.category.name}
+              </span>
+            </div>
+          )}
           <div className="mb-2">
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(
-                event.category.color
-              )}`}
-            >
-              {event.category.icon && <span className="mr-1">{event.category.icon}</span>}
-              {event.category.name}
-            </span>
+            {event.isMemberOnly && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                Members-Only
+              </span>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Title */}
         <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors leading-tight mb-2">
@@ -141,7 +152,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
                 minute: "2-digit",
               })}
           </div>
-          
+
           <div className="flex items-center text-sm text-foreground/60">
             <MapPinIcon className="w-4 h-4 mr-2.5 text-foreground/40" />
             {event.location || "KITA Spaces"}
@@ -153,10 +164,12 @@ export default function EventCard({ event, onClick }: EventCardProps) {
               <GiftIcon className="w-4 h-4 mr-2.5 text-foreground/40 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <span className="font-medium text-primary">
-                  {event.freebies!.length} {event.freebies!.length === 1 ? 'Freebie' : 'Freebies'} Included
+                  {event.freebies!.length}{" "}
+                  {event.freebies!.length === 1 ? "Freebie" : "Freebies"}{" "}
+                  Included
                 </span>
                 <p className="text-xs text-foreground/50 mt-0.5 line-clamp-1">
-                  {event.freebies!.map(f => f.name).join(', ')}
+                  {event.freebies!.map((f) => f.name).join(", ")}
                 </p>
               </div>
             </div>
@@ -168,9 +181,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
               Price per person
             </span>
             {isFree ? (
-              <span className="text-lg font-bold text-green-600">
-                Free
-              </span>
+              <span className="text-lg font-bold text-green-600">Free</span>
             ) : (
               <div className="flex flex-col items-end">
                 <span className="text-lg font-bold text-primary">

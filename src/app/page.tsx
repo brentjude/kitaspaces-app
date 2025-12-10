@@ -48,7 +48,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <PublicHeader 
+        <PublicHeader
           currentUser={
             session?.user
               ? {
@@ -122,9 +122,9 @@ export default function HomePage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-foreground/10 py-12 mt-12">
+      <footer className="bg-linear-to-b from-primary/80 via-primary/70 to-primary/90 py-8 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-foreground/40 text-sm">
+          <p className="text-white text-sm">
             © 2025 KITA Spaces. All rights reserved.
           </p>
         </div>

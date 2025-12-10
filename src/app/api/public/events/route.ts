@@ -1,23 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { Prisma } from '@/generated/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || '';
-    const categoryId = searchParams.get('categoryId') || '';
+    const search = searchParams.get("search") || "";
+    const categoryId = searchParams.get("categoryId") || "";
 
     const where: Prisma.EventWhereInput = {
       AND: [
-        // Only show events that are not member-only or redemption events
-        {
-          OR: [
-            { isMemberOnly: false },
-            { AND: [{ isMemberOnly: true }, { isFreeForMembers: true }] },
-          ],
-        },
-        { isRedemptionEvent: false },
+        // Show all events (commented out filters)
+        // {
+        //   OR: [
+        //     { isMemberOnly: false },
+        //     { AND: [{ isMemberOnly: true }, { isFreeForMembers: true }] },
+        //   ],
+        // },
+        // { isRedemptionEvent: false },
       ],
     };
 
@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { title: { contains: search, mode: Prisma.QueryMode.insensitive } },
-        { description: { contains: search, mode: Prisma.QueryMode.insensitive } },
+        {
+          description: { contains: search, mode: Prisma.QueryMode.insensitive },
+        },
         { location: { contains: search, mode: Prisma.QueryMode.insensitive } },
       ];
     }
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
           select: { id: true },
         },
       },
-      orderBy: { date: 'asc' },
+      orderBy: { date: "asc" },
     });
 
     const eventsWithCount = events.map((event) => ({
@@ -58,12 +60,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: eventsWithCount });
   } catch (error) {
-    console.error('Error fetching public events:', error);
+    console.error("Error fetching public events:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
