@@ -257,6 +257,13 @@ export type CustomerPaymentUpdateInput = Partial<
 
 export type MembershipPlanPerk = PrismaMembershipPlanPerk;
 
+export type MembershipPlanPerk = PrismaMembershipPlanPerk & {
+  daysOfWeek?: string | null;
+  isRecurring?: boolean;
+  validFrom?: string | null;
+  validUntil?: string | null;
+};
+
 export type MembershipPlanPerkWithPlan = PrismaMembershipPlanPerk & {
   plan: MembershipPlan;
 };
@@ -270,6 +277,10 @@ export type MembershipPlanPerkCreateInput = {
   unit: string;
   maxPerDay?: number;
   maxPerWeek?: number;
+  daysOfWeek?: string; // JSON string: '["MONDAY","WEDNESDAY"]'
+  isRecurring?: boolean;
+  validFrom?: string; // "09:00"
+  validUntil?: string; // "17:00"
 };
 
 export type MembershipPlanPerkUpdateInput = Partial<

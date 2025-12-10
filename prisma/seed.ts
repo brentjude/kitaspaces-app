@@ -1,11 +1,11 @@
 // Update the payment creation sections to use paymentReference
 
 import { PrismaClient } from "../src/generated/prisma";
-import { PrismaPg } from '@prisma/adapter-pg';
-import { hash } from 'bcryptjs';
-import 'dotenv/config';
+import { PrismaPg } from "@prisma/adapter-pg";
+import { hash } from "bcryptjs";
+import "dotenv/config";
 
-console.log('🔧 Initializing Prisma adapter...');
+console.log("🔧 Initializing Prisma adapter...");
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
@@ -13,10 +13,10 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({
   adapter,
-  log: ['query', 'info', 'warn', 'error'],
+  log: ["query", "info", "warn", "error"],
 });
 
-console.log('✅ Prisma client initialized');
+console.log("✅ Prisma client initialized");
 
 // Helper function to generate user ID
 async function generateUserId(): Promise<string> {
@@ -30,7 +30,7 @@ async function generateUserId(): Promise<string> {
       },
     },
     orderBy: {
-      id: 'desc',
+      id: "desc",
     },
   });
 
@@ -41,18 +41,18 @@ async function generateUserId(): Promise<string> {
     nextNumber = lastNumber + 1;
   }
 
-  return `${yearPrefix}${nextNumber.toString().padStart(3, '0')}`;
+  return `${yearPrefix}${nextNumber.toString().padStart(3, "0")}`;
 }
 
 // Helper function to generate event slug
 function generateEventSlug(title: string): string {
   const slug = title
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/(^-|-$)/g, '');
-  
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
   // Add random suffix for uniqueness
   const randomSuffix = Math.random().toString(36).substring(2, 8);
   return `${slug}-${randomSuffix}`;
@@ -61,7 +61,7 @@ function generateEventSlug(title: string): string {
 // Helper function to generate payment reference for membership
 async function generateMembershipPaymentReference(): Promise<string> {
   const year = new Date().getFullYear();
-  const prefix = 'mem_kita';
+  const prefix = "mem_kita";
 
   const latestPayment = await prisma.payment.findFirst({
     where: {
@@ -70,7 +70,7 @@ async function generateMembershipPaymentReference(): Promise<string> {
       },
     },
     orderBy: {
-      paymentReference: 'desc',
+      paymentReference: "desc",
     },
   });
 
@@ -83,13 +83,13 @@ async function generateMembershipPaymentReference(): Promise<string> {
     }
   }
 
-  return `${prefix}${year}_${nextNumber.toString().padStart(4, '0')}`;
+  return `${prefix}${year}_${nextNumber.toString().padStart(4, "0")}`;
 }
 
 // Helper function to generate payment reference for events
 async function generateEventPaymentReference(): Promise<string> {
   const year = new Date().getFullYear();
-  const prefix = 'ev_kita';
+  const prefix = "ev_kita";
 
   const latestPayment = await prisma.payment.findFirst({
     where: {
@@ -98,7 +98,7 @@ async function generateEventPaymentReference(): Promise<string> {
       },
     },
     orderBy: {
-      paymentReference: 'desc',
+      paymentReference: "desc",
     },
   });
 
@@ -109,7 +109,7 @@ async function generateEventPaymentReference(): Promise<string> {
       },
     },
     orderBy: {
-      paymentReference: 'desc',
+      paymentReference: "desc",
     },
   });
 
@@ -131,17 +131,17 @@ async function generateEventPaymentReference(): Promise<string> {
     }
   }
 
-  return `${prefix}${year}_${nextNumber.toString().padStart(3, '0')}`;
+  return `${prefix}${year}_${nextNumber.toString().padStart(3, "0")}`;
 }
 
 async function main() {
-  console.log('🌱 Start seeding...');
+  console.log("🌱 Start seeding...");
 
   await prisma.$connect();
-  console.log('✅ Database connection successful');
+  console.log("✅ Database connection successful");
 
   // Clear existing data
-  console.log('\n🗑️  Clearing existing data...');
+  console.log("\n🗑️  Clearing existing data...");
   await prisma.membershipPerkUsage.deleteMany();
   await prisma.customerDailyUseRedemption.deleteMany();
   await prisma.dailyUseRedemption.deleteMany();
@@ -162,16 +162,16 @@ async function main() {
   await prisma.payment.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.user.deleteMany();
-  console.log('✅ Cleared all data');
+  console.log("✅ Cleared all data");
 
   // Create Membership Plans
-  console.log('\n📋 Creating membership plans...');
-  
+  console.log("\n📋 Creating membership plans...");
+
   const basicMonthly = await prisma.membershipPlan.create({
     data: {
-      name: 'Basic Monthly',
-      description: 'Perfect for freelancers and solopreneurs',
-      type: 'MONTHLY',
+      name: "Basic Monthly",
+      description: "Perfect for freelancers and solopreneurs",
+      type: "MONTHLY",
       price: 2000,
       durationDays: 30,
       isActive: true,
@@ -182,36 +182,49 @@ async function main() {
     data: [
       {
         planId: basicMonthly.id,
-        perkType: 'MEETING_ROOM_HOURS',
-        name: 'Free Meeting Room Hours',
-        description: 'Use meeting rooms for free',
+        perkType: "MEETING_ROOM_HOURS",
+        name: "Free Meeting Room Hours",
+        description: "Use meeting rooms for free",
         quantity: 4,
-        unit: 'hours',
+        unit: "hours",
         maxPerDay: 2,
       },
       {
         planId: basicMonthly.id,
-        perkType: 'PRINTING_CREDITS',
-        name: 'Printing Credits',
-        description: 'Free printing for documents',
+        perkType: "PRINTING_CREDITS",
+        name: "Printing Credits",
+        description: "Free printing for documents",
         quantity: 100,
-        unit: 'pages',
+        unit: "pages",
       },
       {
         planId: basicMonthly.id,
-        perkType: 'EVENT_DISCOUNT',
-        name: 'Event Discount',
-        description: 'Discount on paid events',
+        perkType: "EVENT_DISCOUNT",
+        name: "Event Discount",
+        description: "Discount on paid events",
         quantity: 10,
-        unit: 'percentage',
+        unit: "percentage",
       },
       {
         planId: basicMonthly.id,
-        perkType: 'COFFEE_VOUCHERS',
-        name: 'Coffee Vouchers',
-        description: 'Free coffee from the café',
+        perkType: "COFFEE_VOUCHERS",
+        name: "Coffee Vouchers",
+        description: "Free coffee from the café",
         quantity: 5,
-        unit: 'vouchers',
+        unit: "vouchers",
+      },
+      {
+        planId: basicMonthly.id,
+        perkType: "CUSTOM",
+        name: "Free Matcha Monday",
+        description: "Get a free matcha latte every Monday",
+        quantity: 1,
+        unit: "drink",
+        daysOfWeek: JSON.stringify(["MONDAY"]),
+        isRecurring: true,
+        validFrom: "09:00",
+        validUntil: "18:00",
+        maxPerDay: 1,
       },
     ],
   });
@@ -219,9 +232,9 @@ async function main() {
 
   const premiumMonthly = await prisma.membershipPlan.create({
     data: {
-      name: 'Premium Monthly',
-      description: 'For professionals who need more flexibility',
-      type: 'MONTHLY',
+      name: "Premium Monthly",
+      description: "For professionals who need more flexibility",
+      type: "MONTHLY",
       price: 3500,
       durationDays: 30,
       isActive: true,
@@ -232,52 +245,65 @@ async function main() {
     data: [
       {
         planId: premiumMonthly.id,
-        perkType: 'MEETING_ROOM_HOURS',
-        name: 'Free Meeting Room Hours',
-        description: 'Use meeting rooms for free',
+        perkType: "MEETING_ROOM_HOURS",
+        name: "Free Meeting Room Hours",
+        description: "Use meeting rooms for free",
         quantity: 10,
-        unit: 'hours',
+        unit: "hours",
         maxPerDay: 4,
       },
       {
         planId: premiumMonthly.id,
-        perkType: 'PRINTING_CREDITS',
-        name: 'Printing Credits',
-        description: 'Free printing for documents',
+        perkType: "PRINTING_CREDITS",
+        name: "Printing Credits",
+        description: "Free printing for documents",
         quantity: 250,
-        unit: 'pages',
+        unit: "pages",
       },
       {
         planId: premiumMonthly.id,
-        perkType: 'EVENT_DISCOUNT',
-        name: 'Event Discount',
-        description: 'Discount on paid events',
+        perkType: "EVENT_DISCOUNT",
+        name: "Event Discount",
+        description: "Discount on paid events",
         quantity: 20,
-        unit: 'percentage',
+        unit: "percentage",
       },
       {
         planId: premiumMonthly.id,
-        perkType: 'LOCKER_ACCESS',
-        name: 'Locker Access',
-        description: 'Personal locker for storage',
+        perkType: "LOCKER_ACCESS",
+        name: "Locker Access",
+        description: "Personal locker for storage",
         quantity: 1,
-        unit: 'locker',
+        unit: "locker",
       },
       {
         planId: premiumMonthly.id,
-        perkType: 'COFFEE_VOUCHERS',
-        name: 'Coffee Vouchers',
-        description: 'Free coffee from the café',
+        perkType: "COFFEE_VOUCHERS",
+        name: "Coffee Vouchers",
+        description: "Free coffee from the café",
         quantity: 15,
-        unit: 'vouchers',
+        unit: "vouchers",
       },
       {
         planId: premiumMonthly.id,
-        perkType: 'GUEST_PASSES',
-        name: 'Guest Passes',
-        description: 'Bring guests to the space',
+        perkType: "GUEST_PASSES",
+        name: "Guest Passes",
+        description: "Bring guests to the space",
         quantity: 3,
-        unit: 'passes',
+        unit: "passes",
+      },
+      {
+        planId: premiumMonthly.id,
+        perkType: "CUSTOM",
+        name: "Free Matcha Monday",
+        description: "Get a free matcha latte every Monday",
+        quantity: 1,
+        unit: "drink",
+        daysOfWeek: JSON.stringify(["MONDAY"]),
+        isRecurring: true,
+        validFrom: "09:00",
+        validUntil: "18:00",
+        maxPerDay: 1,
       },
     ],
   });
@@ -285,9 +311,9 @@ async function main() {
 
   const dailyPass = await prisma.membershipPlan.create({
     data: {
-      name: 'Daily Pass',
-      description: 'For occasional visitors',
-      type: 'DAILY',
+      name: "Daily Pass",
+      description: "For occasional visitors",
+      type: "DAILY",
       price: 300,
       durationDays: 1,
       isActive: true,
@@ -298,93 +324,106 @@ async function main() {
     data: [
       {
         planId: dailyPass.id,
-        perkType: 'COFFEE_VOUCHERS',
-        name: 'Coffee Voucher',
-        description: 'One free coffee',
+        perkType: "COFFEE_VOUCHERS",
+        name: "Coffee Voucher",
+        description: "One free coffee",
         quantity: 1,
-        unit: 'vouchers',
+        unit: "vouchers",
       },
       {
         planId: dailyPass.id,
-        perkType: 'PRINTING_CREDITS',
-        name: 'Printing Credits',
-        description: 'Free printing for documents',
+        perkType: "PRINTING_CREDITS",
+        name: "Printing Credits",
+        description: "Free printing for documents",
         quantity: 10,
-        unit: 'pages',
+        unit: "pages",
+      },
+      {
+        planId: dailyPass.id,
+        perkType: "CUSTOM",
+        name: "Free Matcha Monday",
+        description: "Get a free matcha latte every Monday",
+        quantity: 1,
+        unit: "drink",
+        daysOfWeek: JSON.stringify(["MONDAY"]),
+        isRecurring: true,
+        validFrom: "09:00",
+        validUntil: "18:00",
+        maxPerDay: 1,
       },
     ],
   });
   console.log(`✅ Created Daily Pass plan with perks`);
 
   // Create Coupons
-  console.log('\n🎟️  Creating coupons...');
+  console.log("\n🎟️  Creating coupons...");
   await prisma.coupon.create({
     data: {
-      code: 'WELCOME2025',
-      description: 'Free first month membership',
-      discountType: 'FREE',
+      code: "WELCOME2025",
+      description: "Free first month membership",
+      discountType: "FREE",
       discountValue: 100,
       maxUses: 50,
       isActive: true,
-      expiresAt: new Date('2025-12-31'),
+      expiresAt: new Date("2025-12-31"),
     },
   });
 
   await prisma.coupon.create({
     data: {
-      code: 'SAVE50',
-      description: '50% off monthly membership',
-      discountType: 'PERCENTAGE',
+      code: "SAVE50",
+      description: "50% off monthly membership",
+      discountType: "PERCENTAGE",
       discountValue: 50,
       maxUses: 100,
       isActive: true,
-      expiresAt: new Date('2025-06-30'),
+      expiresAt: new Date("2025-06-30"),
     },
   });
   console.log(`✅ Created 2 coupons`);
 
   // Create Event Categories
-  console.log('\n🏷️  Creating event categories...');
+  console.log("\n🏷️  Creating event categories...");
   const workshopCategory = await prisma.eventCategory.create({
     data: {
-      name: 'Workshop',
-      slug: 'workshop',
-      description: 'Educational and skill-building workshops',
-      color: '#3B82F6',
-      icon: '🎓',
+      name: "Workshop",
+      slug: "workshop",
+      description: "Educational and skill-building workshops",
+      color: "#3B82F6",
+      icon: "🎓",
       isActive: true,
     },
   });
 
   const networkingCategory = await prisma.eventCategory.create({
     data: {
-      name: 'Networking',
-      slug: 'networking',
-      description: 'Community networking and social events',
-      color: '#10B981',
-      icon: '🤝',
+      name: "Networking",
+      slug: "networking",
+      description: "Community networking and social events",
+      color: "#10B981",
+      icon: "🤝",
       isActive: true,
     },
   });
 
   const dailyPerksCategory = await prisma.eventCategory.create({
     data: {
-      name: 'Daily Perks',
-      slug: 'daily-perks',
-      description: 'Daily redemption perks for members',
-      color: '#F59E0B',
-      icon: '🎁',
+      name: "Daily Perks",
+      slug: "daily-perks",
+      description: "Daily redemption perks for members",
+      color: "#F59E0B",
+      icon: "🎁",
       isActive: true,
     },
   });
 
   const socialCategory = await prisma.eventCategory.create({
     data: {
-      name: 'Social',
-      slug: 'social',
-      description: 'Fun social gatherings and activities',
-      color: '#EC4899',
-      icon: '🎉',
+      name: "Social",
+      slug: "social",
+      description: "Fun social gatherings and activities",
+      color: "#EC4899",
+      icon: "🎉",
       isActive: true,
     },
   });
@@ -392,31 +431,31 @@ async function main() {
   console.log(`✅ Created 4 event categories`);
 
   // Create Admin User
-  console.log('\n👤 Creating admin user...');
-  const hashedAdminPassword = await hash('KITA@boombox2025!', 10);
+  console.log("\n👤 Creating admin user...");
+  const hashedAdminPassword = await hash("KITA@boombox2025!", 10);
   const adminUserId = await generateUserId();
   const adminUser = await prisma.user.create({
     data: {
       id: adminUserId,
-      email: 'kitaadmin@gmail.com',
+      email: "kitaadmin@gmail.com",
       password: hashedAdminPassword,
-      name: 'Kita Admin',
-      nickname: 'Admin',
-      role: 'ADMIN',
+      name: "Kita Admin",
+      nickname: "Admin",
+      role: "ADMIN",
       isMember: true,
-      contactNumber: '+639123456789',
-      referralSource: 'OTHER',
+      contactNumber: "+639123456789",
+      referralSource: "OTHER",
       agreeToNewsletter: true,
     },
   });
   console.log(`✅ Created admin: ${adminUser.email} (ID: ${adminUser.id})`);
 
   // Create Monthly Members
-  console.log('\n👥 Creating monthly members...');
+  console.log("\n👥 Creating monthly members...");
   const monthlyMembers = [];
-  
+
   for (let i = 1; i <= 2; i++) {
-    const hashedPassword = await hash('password123', 10);
+    const hashedPassword = await hash("password123", 10);
     const userId = await generateUserId();
     const user = await prisma.user.create({
       data: {
@@ -425,23 +464,23 @@ async function main() {
         password: hashedPassword,
         name: `Basic Member ${i}`,
         nickname: `BM${i}`,
-        role: 'USER',
+        role: "USER",
         isMember: true,
         company: `Company ${i}`,
         contactNumber: `+63912345678${i}`,
-        birthdate: new Date('1990-01-01'),
-        referralSource: 'SOCIAL_MEDIA',
+        birthdate: new Date("1990-01-01"),
+        referralSource: "SOCIAL_MEDIA",
         agreeToNewsletter: true,
       },
     });
-    
+
     const paymentRef = await generateMembershipPaymentReference();
     const payment = await prisma.payment.create({
       data: {
         userId: user.id,
         amount: basicMonthly.price,
-        paymentMethod: 'GCASH',
-        status: 'COMPLETED',
+        paymentMethod: "GCASH",
+        status: "COMPLETED",
         paymentReference: paymentRef,
         referenceNumber: `GCASH${Date.now()}${i}`,
         paidAt: new Date(),
@@ -452,8 +491,8 @@ async function main() {
       data: {
         userId: user.id,
         planId: basicMonthly.id,
-        type: 'MONTHLY',
-        status: 'ACTIVE',
+        type: "MONTHLY",
+        status: "ACTIVE",
         startDate: new Date(),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         billingAddress: `${i} Main St, Manila, Philippines`,
@@ -465,35 +504,37 @@ async function main() {
       data: {
         membershipId: membership.id,
         userId: user.id,
-        perkType: 'MEETING_ROOM_HOURS',
-        perkName: 'Free Meeting Room Hours',
+        perkType: "MEETING_ROOM_HOURS",
+        perkName: "Free Meeting Room Hours",
         quantityUsed: 2,
-        unit: 'hours',
-        notes: 'Used for client meeting',
-        referenceType: 'MEETING_ROOM_BOOKING',
+        unit: "hours",
+        notes: "Used for client meeting",
+        referenceType: "MEETING_ROOM_BOOKING",
       },
     });
-    
+
     monthlyMembers.push(user);
-    console.log(`✅ Created basic member: ${user.email} (ID: ${user.id}, Payment Ref: ${paymentRef})`);
+    console.log(
+      `✅ Created basic member: ${user.email} (ID: ${user.id}, Payment Ref: ${paymentRef})`
+    );
   }
 
   // Create Premium Member
-  const hashedPassword = await hash('password123', 10);
+  const hashedPassword = await hash("password123", 10);
   const premiumUserId = await generateUserId();
   const premiumUser = await prisma.user.create({
     data: {
       id: premiumUserId,
-      email: 'premiummember@example.com',
+      email: "premiummember@example.com",
       password: hashedPassword,
-      name: 'Premium Member',
-      nickname: 'PM',
-      role: 'USER',
+      name: "Premium Member",
+      nickname: "PM",
+      role: "USER",
       isMember: true,
-      company: 'Premium Corp',
-      contactNumber: '+639123456790',
-      birthdate: new Date('1985-05-15'),
-      referralSource: 'GOOGLE_MAPS',
+      company: "Premium Corp",
+      contactNumber: "+639123456790",
+      birthdate: new Date("1985-05-15"),
+      referralSource: "GOOGLE_MAPS",
       agreeToNewsletter: true,
     },
   });
@@ -503,8 +544,8 @@ async function main() {
     data: {
       userId: premiumUser.id,
       amount: premiumMonthly.price,
-      paymentMethod: 'BANK_TRANSFER',
-      status: 'COMPLETED',
+      paymentMethod: "BANK_TRANSFER",
+      status: "COMPLETED",
       paymentReference: premiumPaymentRef,
       referenceNumber: `BANK${Date.now()}`,
       paidAt: new Date(),
@@ -515,11 +556,11 @@ async function main() {
     data: {
       userId: premiumUser.id,
       planId: premiumMonthly.id,
-      type: 'MONTHLY',
-      status: 'ACTIVE',
+      type: "MONTHLY",
+      status: "ACTIVE",
       startDate: new Date(),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      billingAddress: 'Premium Tower, BGC, Taguig City',
+      billingAddress: "Premium Tower, BGC, Taguig City",
       paymentId: premiumPayment.id,
     },
   });
@@ -529,33 +570,35 @@ async function main() {
       {
         membershipId: premiumMembership.id,
         userId: premiumUser.id,
-        perkType: 'MEETING_ROOM_HOURS',
-        perkName: 'Free Meeting Room Hours',
+        perkType: "MEETING_ROOM_HOURS",
+        perkName: "Free Meeting Room Hours",
         quantityUsed: 5,
-        unit: 'hours',
-        notes: 'Team workshop',
+        unit: "hours",
+        notes: "Team workshop",
       },
       {
         membershipId: premiumMembership.id,
         userId: premiumUser.id,
-        perkType: 'COFFEE_VOUCHERS',
-        perkName: 'Coffee Vouchers',
+        perkType: "COFFEE_VOUCHERS",
+        perkName: "Coffee Vouchers",
         quantityUsed: 3,
-        unit: 'vouchers',
+        unit: "vouchers",
       },
     ],
   });
   monthlyMembers.push(premiumUser);
-  console.log(`✅ Created premium member: ${premiumUser.email} (ID: ${premiumUser.id}, Payment Ref: ${premiumPaymentRef})`);
+  console.log(
+    `✅ Created premium member: ${premiumUser.email} (ID: ${premiumUser.id}, Payment Ref: ${premiumPaymentRef})`
+  );
 
   // Create Daily Members (with today's date)
-  console.log('\n📅 Creating daily members...');
+  console.log("\n📅 Creating daily members...");
   const dailyMembers = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   for (let i = 1; i <= 3; i++) {
-    const hashedPassword = await hash('password123', 10);
+    const hashedPassword = await hash("password123", 10);
     const userId = await generateUserId();
     const user = await prisma.user.create({
       data: {
@@ -563,21 +606,21 @@ async function main() {
         email: `dailymember${i}@example.com`,
         password: hashedPassword,
         name: `Daily Member ${i}`,
-        role: 'USER',
+        role: "USER",
         isMember: true,
         contactNumber: `+63912345680${i}`,
-        referralSource: 'WORD_OF_MOUTH',
+        referralSource: "WORD_OF_MOUTH",
         agreeToNewsletter: false,
       },
     });
-    
+
     const dailyPaymentRef = await generateMembershipPaymentReference();
     const payment = await prisma.payment.create({
       data: {
         userId: user.id,
         amount: dailyPass.price,
-        paymentMethod: 'CASH',
-        status: 'COMPLETED',
+        paymentMethod: "CASH",
+        status: "COMPLETED",
         paymentReference: dailyPaymentRef,
         paidAt: today,
       },
@@ -587,8 +630,8 @@ async function main() {
       data: {
         userId: user.id,
         planId: dailyPass.id,
-        type: 'DAILY',
-        status: 'ACTIVE',
+        type: "DAILY",
+        status: "ACTIVE",
         startDate: today,
         endDate: new Date(today.getTime() + 1 * 24 * 60 * 60 * 1000),
         paymentId: payment.id,
@@ -599,183 +642,240 @@ async function main() {
       data: {
         membershipId: membership.id,
         userId: user.id,
-        perkType: 'COFFEE_VOUCHERS',
-        perkName: 'Coffee Voucher',
+        perkType: "COFFEE_VOUCHERS",
+        perkName: "Coffee Voucher",
         quantityUsed: 1,
-        unit: 'vouchers',
+        unit: "vouchers",
       },
     });
-    
+
     dailyMembers.push(user);
-    console.log(`✅ Created daily member: ${user.email} (ID: ${user.id}, Payment Ref: ${dailyPaymentRef}, Date: ${today.toDateString()})`);
+    console.log(
+      `✅ Created daily member: ${user.email} (ID: ${
+        user.id
+      }, Payment Ref: ${dailyPaymentRef}, Date: ${today.toDateString()})`
+    );
   }
 
   // Create Guest Customers
-  console.log('\n👥 Creating guest customers...');
+  console.log("\n👥 Creating guest customers...");
   const guestCustomers = [];
-  
+
   for (let i = 1; i <= 3; i++) {
     const customer = await prisma.customer.create({
       data: {
         name: `Guest Customer ${i}`,
         email: `guest${i}@example.com`,
         contactNumber: `+63919876543${i}`,
-        company: i === 1 ? 'Startup Inc' : undefined,
-        referralSource: 'SOCIAL_MEDIA',
-        notes: 'Walk-in guest, no user account',
+        company: i === 1 ? "Startup Inc" : undefined,
+        referralSource: "SOCIAL_MEDIA",
+        notes: "Walk-in guest, no user account",
       },
     });
     guestCustomers.push(customer);
-    console.log(`✅ Created guest customer: ${customer.name} (ID: ${customer.id})`);
+    console.log(
+      `✅ Created guest customer: ${customer.name} (ID: ${customer.id})`
+    );
   }
 
   // Create Events
-  console.log('\n📅 Creating events...');
+  console.log("\n📅 Creating events...");
 
-  // 1. Free Matcha Monday (Redemption Event - Today)
-   const matchaMondaySlug = generateEventSlug('Free Matcha Monday');
-    const matchaMonday = await prisma.event.create({
-      data: {
-        title: 'Free Matcha Monday',
-        slug: matchaMondaySlug,
-        description: 'Enjoy a free matcha latte every Monday! Available for daily use and monthly members only.',
-        date: today,
-        startTime: '09:00',
-        endTime: '18:00',
-        location: 'Kitaspaces Café',
-        price: 0,
-        isFree: true,
-        isMemberOnly: true,
-        isRedemptionEvent: true,
-        redemptionLimit: 1,
-        categoryId: dailyPerksCategory.id,
-      },
-    });
+  // 1. Rameniac - Free Ramen Friday (Redemption Event - Today)
+  const ramieniacSlug = generateEventSlug("Rameniac Free Ramen Friday");
+  const rameniac = await prisma.event.create({
+    data: {
+      title: "Rameniac - Free Ramen Friday",
+      slug: ramieniacSlug,
+      description:
+        "Get a free bowl of delicious ramen every Friday! Choose from Tonkotsu, Shoyu, or Miso. Available for KITA Spaces members only.",
+      date: today,
+      startTime: "11:00",
+      endTime: "20:00",
+      location: "Kitaspaces x Rameniac",
+      price: 0,
+      isFree: true,
+      isMemberOnly: true,
+      isRedemptionEvent: true,
+      redemptionLimit: 1,
+      categoryId: dailyPerksCategory.id,
+    },
+  });
 
-    await prisma.eventFreebie.create({
-      data: {
-        eventId: matchaMonday.id,
-        name: 'Matcha Latte',
-        description: 'Premium matcha latte - One per customer',
-        quantity: 1, // Per person
-      },
-    });
-    console.log(`✅ Created redemption event: ${matchaMonday.title} (slug: ${matchaMondaySlug})`);
+  await prisma.eventFreebie.create({
+    data: {
+      eventId: rameniac.id,
+      name: "Ramen Bowl",
+      description:
+        "Choose one: Tonkotsu, Shoyu, or Miso - One bowl per customer",
+      quantity: 1, // Per person
+    },
+  });
+  console.log(
+    `✅ Created redemption event: ${rameniac.title} (slug: ${ramieniacSlug})`
+  );
 
-    // 2. Member-Only Exclusive Workshop
-    const memberWorkshopSlug = generateEventSlug('Member Exclusive Workshop');
-    const memberWorkshop = await prisma.event.create({
-      data: {
-        title: 'Member Exclusive: Digital Marketing Masterclass',
-        slug: memberWorkshopSlug,
-        description: 'Exclusive workshop for KITA Spaces members only. Learn advanced digital marketing strategies from industry experts.',
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        startTime: '14:00',
-        endTime: '17:00',
-        location: 'Kitaspaces Main Hall',
-        price: 0,
-        isFree: true,
-        isMemberOnly: true,
-        maxAttendees: 30,
-        categoryId: workshopCategory.id,
-      },
-    });
+  // 2. Member-Only Exclusive Workshop
+  const memberWorkshopSlug = generateEventSlug("Member Exclusive Workshop");
+  const memberWorkshop = await prisma.event.create({
+    data: {
+      title: "Member Exclusive: Digital Marketing Masterclass",
+      slug: memberWorkshopSlug,
+      description:
+        "Exclusive workshop for KITA Spaces members only. Learn advanced digital marketing strategies from industry experts.",
+      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      startTime: "14:00",
+      endTime: "17:00",
+      location: "Kitaspaces Main Hall",
+      price: 0,
+      isFree: true,
+      isMemberOnly: true,
+      maxAttendees: 30,
+      categoryId: workshopCategory.id,
+    },
+  });
 
-    await prisma.eventFreebie.createMany({
-      data: [
-        { eventId: memberWorkshop.id, name: 'Workshop Materials', description: 'Notebook and pen', quantity: 1 }, // Per person
-        { eventId: memberWorkshop.id, name: 'Certificate', description: 'Digital certificate', quantity: 1 }, // Per person
-      ],
-    });
-    console.log(`✅ Created member-only event: ${memberWorkshop.title} (slug: ${memberWorkshopSlug})`);
+  await prisma.eventFreebie.createMany({
+    data: [
+      {
+        eventId: memberWorkshop.id,
+        name: "Workshop Materials",
+        description: "Notebook and pen",
+        quantity: 1,
+      }, // Per person
+      {
+        eventId: memberWorkshop.id,
+        name: "Certificate",
+        description: "Digital certificate",
+        quantity: 1,
+      }, // Per person
+    ],
+  });
+  console.log(
+    `✅ Created member-only event: ${memberWorkshop.title} (slug: ${memberWorkshopSlug})`
+  );
 
-    // 3. Completely Free Event (Open to All)
-    const freeNetworkingSlug = generateEventSlug('Community Networking Night');
-    const freeNetworking = await prisma.event.create({
-      data: {
-        title: 'Community Networking Night',
-        slug: freeNetworkingSlug,
-        description: 'Free networking event for everyone! Walk-ins welcome. Connect with fellow entrepreneurs, freelancers, and professionals.',
-        date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        startTime: '18:00',
-        endTime: '21:00',
-        location: 'Kitaspaces Lounge',
-        price: 0,
-        isFree: true,
-        isMemberOnly: false,
-        maxAttendees: 100,
-        categoryId: networkingCategory.id,
-      },
-    });
+  // 3. Completely Free Event (Open to All)
+  const freeNetworkingSlug = generateEventSlug("Community Networking Night");
+  const freeNetworking = await prisma.event.create({
+    data: {
+      title: "Community Networking Night",
+      slug: freeNetworkingSlug,
+      description:
+        "Free networking event for everyone! Walk-ins welcome. Connect with fellow entrepreneurs, freelancers, and professionals.",
+      date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      startTime: "18:00",
+      endTime: "21:00",
+      location: "Kitaspaces Lounge",
+      price: 0,
+      isFree: true,
+      isMemberOnly: false,
+      maxAttendees: 100,
+      categoryId: networkingCategory.id,
+    },
+  });
 
-    await prisma.eventFreebie.createMany({
-      data: [
-        { eventId: freeNetworking.id, name: 'Welcome Drink', description: 'Complimentary beverage', quantity: 1 }, // Per person
-        { eventId: freeNetworking.id, name: 'Name Tag', description: 'Personalized name tag', quantity: 1 }, // Per person
-      ],
-    });
-    console.log(`✅ Created free event: ${freeNetworking.title} (slug: ${freeNetworkingSlug})`);
+  await prisma.eventFreebie.createMany({
+    data: [
+      {
+        eventId: freeNetworking.id,
+        name: "Welcome Drink",
+        description: "Complimentary beverage",
+        quantity: 1,
+      }, // Per person
+      {
+        eventId: freeNetworking.id,
+        name: "Name Tag",
+        description: "Personalized name tag",
+        quantity: 1,
+      }, // Per person
+    ],
+  });
+  console.log(
+    `✅ Created free event: ${freeNetworking.title} (slug: ${freeNetworkingSlug})`
+  );
 
-    // 4. Paid Event (Free for Members)
-    const paidWorkshopSlug = generateEventSlug('Team Building Workshop');
-    const paidWorkshop = await prisma.event.create({
-      data: {
-        title: 'Team Building Workshop',
-        slug: paidWorkshopSlug,
-        description: 'Paid workshop but FREE for KITA Spaces members! Bring your team and learn effective collaboration strategies.',
-        date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
-        startTime: '09:00',
-        endTime: '17:00',
-        location: 'Kitaspaces Main Hall',
-        price: 800,
-        isFree: false,
-        isMemberOnly: false,
-        isFreeForMembers: true,
-        maxAttendees: 50,
-        categoryId: workshopCategory.id,
-      },
-    });
+  // 4. Paid Event (Free for Members)
+  const paidWorkshopSlug = generateEventSlug("Team Building Workshop");
+  const paidWorkshop = await prisma.event.create({
+    data: {
+      title: "Team Building Workshop",
+      slug: paidWorkshopSlug,
+      description:
+        "Paid workshop but FREE for KITA Spaces members! Bring your team and learn effective collaboration strategies.",
+      date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+      startTime: "09:00",
+      endTime: "17:00",
+      location: "Kitaspaces Main Hall",
+      price: 800,
+      isFree: false,
+      isMemberOnly: false,
+      isFreeForMembers: true,
+      maxAttendees: 50,
+      categoryId: workshopCategory.id,
+    },
+  });
 
-    await prisma.eventFreebie.createMany({
-      data: [
-        { eventId: paidWorkshop.id, name: 'Lunch Box', description: 'Healthy lunch meal', quantity: 1 }, // Per person
-        { eventId: paidWorkshop.id, name: 'Workshop Kit', description: 'Materials and notebook', quantity: 1 }, // Per person
-        { eventId: paidWorkshop.id, name: 'T-Shirt', description: 'Event t-shirt', quantity: 1 }, // Per person
-      ],
-    });
-    console.log(`✅ Created paid/free-for-members event: ${paidWorkshop.title} (slug: ${paidWorkshopSlug})`);
+  await prisma.eventFreebie.createMany({
+    data: [
+      {
+        eventId: paidWorkshop.id,
+        name: "Lunch Box",
+        description: "Healthy lunch meal",
+        quantity: 1,
+      }, // Per person
+      {
+        eventId: paidWorkshop.id,
+        name: "Workshop Kit",
+        description: "Materials and notebook",
+        quantity: 1,
+      }, // Per person
+      {
+        eventId: paidWorkshop.id,
+        name: "T-Shirt",
+        description: "Event t-shirt",
+        quantity: 1,
+      }, // Per person
+    ],
+  });
+  console.log(
+    `✅ Created paid/free-for-members event: ${paidWorkshop.title} (slug: ${paidWorkshopSlug})`
+  );
 
-    // 5. Coffee Social with Freebie Options
-    const coffeeSocialSlug = generateEventSlug('Morning Coffee Social');
-    const coffeeSocial = await prisma.event.create({
-      data: {
-        title: 'Morning Coffee Social',
-        slug: coffeeSocialSlug,
-        description: 'Start your day right! Join us for a casual coffee morning. Choose your favorite coffee style!',
-        date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-        startTime: '08:00',
-        endTime: '10:00',
-        location: 'Kitaspaces Café',
-        price: 150,
-        isFree: false,
-        isMemberOnly: false,
-        isFreeForMembers: true,
-        maxAttendees: 40,
-        categoryId: socialCategory.id,
-      },
-    });
+  // 5. Coffee Social with Freebie Options
+  const coffeeSocialSlug = generateEventSlug("Morning Coffee Social");
+  const coffeeSocial = await prisma.event.create({
+    data: {
+      title: "Morning Coffee Social",
+      slug: coffeeSocialSlug,
+      description:
+        "Start your day right! Join us for a casual coffee morning. Choose your favorite coffee style!",
+      date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      startTime: "08:00",
+      endTime: "10:00",
+      location: "Kitaspaces Café",
+      price: 150,
+      isFree: false,
+      isMemberOnly: false,
+      isFreeForMembers: true,
+      maxAttendees: 40,
+      categoryId: socialCategory.id,
+    },
+  });
 
-    await prisma.eventFreebie.create({
-      data: {
-        eventId: coffeeSocial.id,
-        name: 'Coffee Choice',
-        description: 'Choose one: Latte, Americano',
-        quantity: 1, // Per person
-      },
-    });
-    console.log(`✅ Created coffee event with options: ${coffeeSocial.title} (slug: ${coffeeSocialSlug})`);
-    // Create User Event Registrations with Payments
-    console.log('\n📝 Creating user event registrations...');
+  await prisma.eventFreebie.create({
+    data: {
+      eventId: coffeeSocial.id,
+      name: "Coffee Choice",
+      description: "Choose one: Latte, Americano",
+      quantity: 1, // Per person
+    },
+  });
+  console.log(
+    `✅ Created coffee event with options: ${coffeeSocial.title} (slug: ${coffeeSocialSlug})`
+  );
+  // Create User Event Registrations with Payments
+  console.log("\n📝 Creating user event registrations...");
 
   // Monthly member registers for paid workshop (free for them)
   const memberReg1 = await prisma.eventRegistration.create({
@@ -799,8 +899,8 @@ async function main() {
   const memberPax2 = await prisma.eventPax.create({
     data: {
       registrationId: memberReg1.id,
-      name: 'John Doe',
-      email: 'john@example.com',
+      name: "John Doe",
+      email: "john@example.com",
     },
   });
 
@@ -816,7 +916,9 @@ async function main() {
       ],
     });
   }
-  console.log(`✅ Member ${monthlyMembers[0].name} registered for ${paidWorkshop.title} (free for members)`);
+  console.log(
+    `✅ Member ${monthlyMembers[0].name} registered for ${paidWorkshop.title} (free for members)`
+  );
 
   // Daily member registers for coffee social with payment
   const dailyEventPaymentRef = await generateEventPaymentReference();
@@ -824,8 +926,8 @@ async function main() {
     data: {
       userId: dailyMembers[0].id,
       amount: coffeeSocial.price,
-      paymentMethod: 'GCASH',
-      status: 'COMPLETED',
+      paymentMethod: "GCASH",
+      status: "COMPLETED",
       paymentReference: dailyEventPaymentRef,
       referenceNumber: `GCASH${Date.now()}`,
       paidAt: new Date(),
@@ -865,10 +967,12 @@ async function main() {
       },
     });
   }
-  console.log(`✅ Daily member ${dailyMembers[0].name} registered for ${coffeeSocial.title} with payment (Ref: ${dailyEventPaymentRef})`);
+  console.log(
+    `✅ Daily member ${dailyMembers[0].name} registered for ${coffeeSocial.title} with payment (Ref: ${dailyEventPaymentRef})`
+  );
 
   // Guest customer registrations with payments
-  console.log('\n👤 Creating guest customer registrations...');
+  console.log("\n👤 Creating guest customer registrations...");
 
   // Guest registers for free networking event
   await prisma.customerEventRegistration.create({
@@ -881,7 +985,9 @@ async function main() {
       numberOfPax: 1,
     },
   });
-  console.log(`✅ Guest ${guestCustomers[0].name} registered for ${freeNetworking.title}`);
+  console.log(
+    `✅ Guest ${guestCustomers[0].name} registered for ${freeNetworking.title}`
+  );
 
   // Guest registers for paid workshop with payment
   const guestEventPaymentRef = await generateEventPaymentReference();
@@ -889,8 +995,8 @@ async function main() {
     data: {
       customerId: guestCustomers[1].id,
       amount: paidWorkshop.price,
-      paymentMethod: 'BANK_TRANSFER',
-      status: 'COMPLETED',
+      paymentMethod: "BANK_TRANSFER",
+      status: "COMPLETED",
       paymentReference: guestEventPaymentRef,
       referenceNumber: `BANK${Date.now()}`,
       paidAt: new Date(),
@@ -928,70 +1034,96 @@ async function main() {
       },
     });
   }
-  console.log(`✅ Guest ${guestCustomers[1].name} registered for ${paidWorkshop.title} with payment (Ref: ${guestEventPaymentRef})`);
+  console.log(
+    `✅ Guest ${guestCustomers[1].name} registered for ${paidWorkshop.title} with payment (Ref: ${guestEventPaymentRef})`
+  );
 
   // Create daily use redemptions
-  console.log('\n🎁 Creating daily use redemptions...');
-  for (const member of dailyMembers.slice(0, 2)) { // Only first 2 daily members redeem
+  console.log("\n🎁 Creating daily use redemptions...");
+  for (const member of dailyMembers.slice(0, 2)) {
+    // Only first 2 daily members redeem
     await prisma.dailyUseRedemption.create({
       data: {
         userId: member.id,
-        eventId: matchaMonday.id,
+        eventId: rameniac.id,
         redeemedAt: today,
-        notes: 'Redeemed Free Matcha Monday',
+        notes: "Redeemed Rameniac Free Ramen Friday - Tonkotsu",
       },
     });
   }
-  console.log(`✅ Created ${2} user redemptions`);
+  console.log(`✅ Created ${2} user redemptions for Rameniac`);
 
-  console.log('\n🎉 Seeding finished successfully!');
-  console.log('\n📊 Summary:');
+  console.log("\n🎉 Seeding finished successfully!");
+  console.log("\n📊 Summary:");
   console.log(`   - Users: ${await prisma.user.count()}`);
   console.log(`   - User ID Format: YYYYNNN (e.g., ${adminUserId})`);
   console.log(`   - Monthly Members: ${monthlyMembers.length}`);
-  console.log(`   - Daily Members: ${dailyMembers.length} (Date: ${today.toDateString()})`);
+  console.log(
+    `   - Daily Members: ${dailyMembers.length} (Date: ${today.toDateString()})`
+  );
   console.log(`   - Guest Customers: ${guestCustomers.length}`);
   console.log(`   - Membership Plans: ${await prisma.membershipPlan.count()}`);
   console.log(`   - Events: ${await prisma.event.count()}`);
-  console.log(`   - User Registrations: ${await prisma.eventRegistration.count()}`);
-  console.log(`   - Guest Registrations: ${await prisma.customerEventRegistration.count()}`);
+  console.log(
+    `   - User Registrations: ${await prisma.eventRegistration.count()}`
+  );
+  console.log(
+    `   - Guest Registrations: ${await prisma.customerEventRegistration.count()}`
+  );
   console.log(`   - User Payments: ${await prisma.payment.count()}`);
   console.log(`   - Guest Payments: ${await prisma.customerPayment.count()}`);
-  console.log(`   - Daily Redemptions: ${await prisma.dailyUseRedemption.count()}`);
-  
-  console.log('\n📅 Events Created:');
-  const events = await prisma.event.findMany({ select: { title: true, slug: true, isMemberOnly: true, isFree: true, isFreeForMembers: true, price: true } });
-  events.forEach(e => {
-    const type = e.isMemberOnly ? '[Members Only]' : e.isFree ? '[Free]' : e.isFreeForMembers ? `[₱${e.price} / Free for Members]` : `[₱${e.price}]`;
+  console.log(
+    `   - Daily Redemptions: ${await prisma.dailyUseRedemption.count()}`
+  );
+
+  console.log("\n📅 Events Created:");
+  const events = await prisma.event.findMany({
+    select: {
+      title: true,
+      slug: true,
+      isMemberOnly: true,
+      isFree: true,
+      isFreeForMembers: true,
+      price: true,
+    },
+  });
+  events.forEach((e) => {
+    const type = e.isMemberOnly
+      ? "[Members Only]"
+      : e.isFree
+      ? "[Free]"
+      : e.isFreeForMembers
+      ? `[₱${e.price} / Free for Members]`
+      : `[₱${e.price}]`;
     console.log(`   - ${e.title} ${type}`);
     console.log(`     Slug: ${e.slug}`);
   });
-  
-  console.log('\n💰 Payment References:');
+
+  console.log("\n💰 Payment References:");
   const samplePayments = await prisma.payment.findMany({
     select: { paymentReference: true, amount: true, notes: true },
     take: 5,
   });
-  
+
   const sampleCustomerPayments = await prisma.customerPayment.findMany({
     select: { paymentReference: true, amount: true, notes: true },
     take: 2,
   });
-  
-  console.log('   User Payments:');
-  samplePayments.forEach(p => {
-    console.log(`   - ${p.paymentReference} (₱${p.amount}) ${p.notes || ''}`);
+
+  console.log("   User Payments:");
+  samplePayments.forEach((p) => {
+    console.log(`   - ${p.paymentReference} (₱${p.amount}) ${p.notes || ""}`);
   });
-  
-  console.log('   Guest Payments:');
-  sampleCustomerPayments.forEach(p => {
-    console.log(`   - ${p.paymentReference} (₱${p.amount}) ${p.notes || ''}`);
+
+  console.log("   Guest Payments:");
+  sampleCustomerPayments.forEach((p) => {
+    console.log(`   - ${p.paymentReference} (₱${p.amount}) ${p.notes || ""}`);
   });
 }
 
 main()
   .catch((e) => {
-    console.error('\n💥 Seeding failed:', e);
+    console.error("\n💥 Seeding failed:", e);
     process.exit(1);
   })
   .finally(async () => {

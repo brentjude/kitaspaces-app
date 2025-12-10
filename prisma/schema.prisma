@@ -154,10 +154,16 @@ model MembershipPlanPerk {
   description String?  @db.Text
   quantity    Float    // e.g., 4 for 4 hours, 100 for 100 prints
   unit        String   // e.g., "hours", "credits", "passes", "percentage"
-  
+
   // Optional limits
   maxPerDay   Float?
   maxPerWeek  Float?
+  
+  // Optional limits
+  daysOfWeek  String?  // JSON array of days: ["MONDAY", "WEDNESDAY", "FRIDAY"]
+  isRecurring Boolean  @default(false) // If true, applies every specified day
+  validFrom   String?  // Time like "09:00"
+  validUntil  String?  // Time like "18:00"
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
