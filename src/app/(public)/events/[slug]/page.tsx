@@ -12,7 +12,6 @@ import {
   CheckCircleIcon,
   ChevronRightIcon,
   LockClosedIcon,
-  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { Event, EventCategory } from "@/types/database";
 import { fetchPublicEventBySlug } from "@/lib/api/public";

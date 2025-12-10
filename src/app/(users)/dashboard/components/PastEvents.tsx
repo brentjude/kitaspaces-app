@@ -1,7 +1,6 @@
-'use client';
+"use client";
 
-import { CalendarIcon } from '@heroicons/react/24/outline';
-import { PastEventRegistration } from '@/types/dashboard';
+import { PastEventRegistration } from "@/types/dashboard";
 
 interface PastEventsProps {
   events: PastEventRegistration[];
@@ -21,7 +20,7 @@ export default function PastEvents({ events }: PastEventsProps) {
             key={registration.registrationId}
             className="flex items-center bg-white p-4 rounded-lg border border-gray-200"
           >
-            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 font-bold text-lg mr-4 flex-shrink-0">
+            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 font-bold text-lg mr-4 shrink-0">
               {new Date(registration.event.date).getDate()}
             </div>
             <div className="flex-1 min-w-0">
@@ -29,12 +28,15 @@ export default function PastEvents({ events }: PastEventsProps) {
                 {registration.event.title}
               </h4>
               <p className="text-sm text-gray-500">
-                {new Date(registration.event.date).toLocaleDateString(undefined, {
-                  weekday: 'short',
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {new Date(registration.event.date).toLocaleDateString(
+                  undefined,
+                  {
+                    weekday: "short",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  }
+                )}
               </p>
             </div>
           </div>
