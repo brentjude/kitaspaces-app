@@ -1,15 +1,23 @@
+// Define payment method as a separate type
+export type PaymentMethod =
+  | "GCASH"
+  | "BANK_TRANSFER"
+  | "CASH"
+  | "CREDIT_CARD"
+  | "FREE";
+
 export interface AttendeeFormData {
   id: string;
   name: string;
   email: string;
-  selectedFreebies: Record<string, string>; // freebieId -> selected option
+  selectedFreebies: Record<string, string>;
 }
 
 export interface RegistrationFormData {
   attendees: AttendeeFormData[];
-  paymentMethod: 'GCASH' | 'BANK_TRANSFER' | 'CASH' | 'CREDIT_CARD' | 'FREE';
+  paymentMethod: PaymentMethod;
   paymentProofUrl?: string;
-  referenceNumber?: string; // User's payment reference (GCash/Bank ref)
+  referenceNumber?: string;
 }
 
 export interface EventRegistrationRequest {
@@ -22,9 +30,9 @@ export interface EventRegistrationRequest {
       selectedOption: string;
     }>;
   }>;
-  paymentMethod?: 'GCASH' | 'BANK_TRANSFER' | 'CASH' | 'CREDIT_CARD';
+  paymentMethod?: PaymentMethod;
   paymentProofUrl?: string;
-  referenceNumber?: string; // User's payment reference
+  referenceNumber?: string;
 }
 
 export interface RedemptionRequest {
@@ -37,9 +45,9 @@ export interface RedemptionRequest {
 
 export interface RegistrationConfirmation {
   registrationIds: string[];
-  paymentReference: string; // Changed from referenceNumber - our internal reference
+  paymentReference: string;
   totalAmount: number;
-  status: 'PENDING' | 'CONFIRMED';
+  status: "PENDING" | "CONFIRMED";
   attendees: Array<{
     name: string;
     email: string;
@@ -50,4 +58,12 @@ export interface RegistrationConfirmation {
     date: string;
     slug: string;
   };
+}
+
+export interface PaymentSettings {
+  bankName: string | null;
+  accountNumber: string | null;
+  accountName: string | null;
+  qrCodeUrl: string | null;
+  qrCodeNumber: string | null;
 }

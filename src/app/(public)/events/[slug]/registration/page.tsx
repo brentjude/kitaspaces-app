@@ -1,13 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import PublicHeader from '@/app/components/Header';
-import { fetchPublicEventBySlug } from '@/lib/api/public';
-import { Event, EventCategory } from '@/types/database';
-import RegistrationSteps from './components/RegistrationSteps';
-import RedemptionForm from './components/RedemptionForm';
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import PublicHeader from "@/app/components/Header";
+import { fetchPublicEventBySlug } from "@/lib/api/public";
+import { Event, EventCategory } from "@/types/database";
+import { PaymentSettings } from "@/types/registration";
+import RegistrationSteps from "./components/RegistrationSteps";
+import RedemptionForm from "./components/RedemptionForm";
 
 type PublicEvent = Event & {
   category?: EventCategory | null;
@@ -26,33 +27,50 @@ export default function EventRegistrationPage() {
   const { data: session } = useSession();
 
   const [event, setEvent] = useState<PublicEvent | null>(null);
+  const [paymentSettings, setPaymentSettings] =
+    useState<PaymentSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadEvent = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
-        const response = await fetchPublicEventBySlug(slug);
-        if (response.success && response.data) {
-          setEvent(response.data);
+        // Load event and payment settings in parallel
+        const [eventResponse, paymentResponse] = await Promise.all([
+          fetchPublicEventBySlug(slug),
+          fetch("/api/public/payment-settings"),
+        ]);
+
+        // Handle event response
+        if (eventResponse.success && eventResponse.data) {
+          setEvent(eventResponse.data);
         } else {
-          setError(response.error || 'Event not found');
+          setError(eventResponse.error || "Event not found");
+        }
+
+        // Handle payment settings response
+        if (paymentResponse.ok) {
+          const paymentData = await paymentResponse.json();
+          if (paymentData.success && paymentData.data) {
+            setPaymentSettings(paymentData.data);
+          }
         }
       } catch (err) {
-        setError('Failed to load event', err);
+        console.error("Error loading data:", err);
+        setError("Failed to load event");
       } finally {
         setLoading(false);
       }
     };
 
     if (slug) {
-      loadEvent();
+      loadData();
     }
   }, [slug]);
 
   const handleLoginClick = () => {
-    router.push('/auth/signin');
+    router.push("/auth/signin");
   };
 
   const handleCancel = () => {
@@ -77,8 +95,8 @@ export default function EventRegistrationPage() {
           currentUser={
             session?.user
               ? {
-                  name: session.user.name || '',
-                  email: session.user.email || '',
+                  name: session.user.name || "",
+                  email: session.user.email || "",
                   role: session.user.role,
                 }
               : null
@@ -89,7 +107,7 @@ export default function EventRegistrationPage() {
           <h1 className="text-2xl font-bold text-foreground mb-4">Error</h1>
           <p className="text-foreground/60 mb-8">{error}</p>
           <button
-            onClick={() => router.push('/events')}
+            onClick={() => router.push("/events")}
             className="inline-flex items-center px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
           >
             Back to Events
@@ -106,12 +124,11 @@ export default function EventRegistrationPage() {
   if (isRedemptionEvent && !session) {
     return (
       <div className="min-h-screen bg-background">
-        <PublicHeader
-          currentUser={null}
-          onLoginClick={handleLoginClick}
-        />
+        <PublicHeader currentUser={null} onLoginClick={handleLoginClick} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Login Required</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-4">
+            Login Required
+          </h1>
           <p className="text-foreground/60 mb-8">
             You need to be logged in to redeem this event.
           </p>
@@ -132,8 +149,8 @@ export default function EventRegistrationPage() {
         currentUser={
           session?.user
             ? {
-                name: session.user.name || '',
-                email: session.user.email || '',
+                name: session.user.name || "",
+                email: session.user.email || "",
                 role: session.user.role,
               }
             : null
@@ -152,6 +169,7 @@ export default function EventRegistrationPage() {
           <RegistrationSteps
             event={event}
             currentUser={session?.user || null}
+            paymentSettings={paymentSettings}
             onCancel={handleCancel}
             onLoginRequest={handleLoginClick}
           />

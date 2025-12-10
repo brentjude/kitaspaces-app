@@ -1,21 +1,24 @@
-'use client';
+"use client";
 
-import { QrCodeIcon, CreditCardIcon, BanknotesIcon } from '@heroicons/react/24/outline';
-import Image from 'next/image';
-import ProofOfPaymentUpload from '@/app/components/ProofOfPaymentUpload';
+import { useState } from "react";
+import {
+  BanknotesIcon,
+  CreditCardIcon,
+  QrCodeIcon,
+  PhotoIcon,
+  CheckCircleIcon,
+} from "@heroicons/react/24/outline";
+import { PaymentSettings } from "@/types/registration";
+import Image from "next/image";
 
 interface PaymentSectionProps {
-  paymentMethod: 'GCASH' | 'BANK_TRANSFER' | 'CASH' | 'CREDIT_CARD';
-  paymentProofUrl: string;
-  referenceNumber: string;
-  paymentSettings: {
-    bankName: string;
-    accountNumber: string;
-    accountHolder: string;
-    gcashNumber: string;
-    qrCodeUrl: string | null;
-  } | null;
-  onPaymentMethodChange: (method: 'GCASH' | 'BANK_TRANSFER' | 'CASH' | 'CREDIT_CARD') => void;
+  paymentMethod: "GCASH" | "BANK_TRANSFER" | "CASH" | "CREDIT_CARD" | "FREE";
+  paymentProofUrl?: string;
+  referenceNumber?: string;
+  paymentSettings: PaymentSettings | null;
+  onPaymentMethodChange: (
+    method: "GCASH" | "BANK_TRANSFER" | "CASH" | "CREDIT_CARD" | "FREE"
+  ) => void;
   onPaymentProofChange: (url: string) => void;
   onReferenceNumberChange: (ref: string) => void;
 }
@@ -29,186 +32,416 @@ export default function PaymentSection({
   onPaymentProofChange,
   onReferenceNumberChange,
 }: PaymentSectionProps) {
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadProgress(0);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "kitaspaces/payment-proofs");
+
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => Math.min(prev + 10, 90));
+      }, 200);
+
+      const response = await fetch("/api/public/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Upload failed");
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        onPaymentProofChange(result.data.secure_url);
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      setUploadError(error instanceof Error ? error.message : "Upload failed");
+      alert(
+        `Upload failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setUploadProgress(0), 1000);
+    }
+  };
+
+  const paymentMethods = [
+    {
+      id: "GCASH" as const,
+      name: "GCash",
+      icon: <QrCodeIcon className="w-6 h-6" />,
+      available:
+        !!paymentSettings?.qrCodeUrl || !!paymentSettings?.qrCodeNumber,
+    },
+    {
+      id: "BANK_TRANSFER" as const,
+      name: "Bank Transfer",
+      icon: <BanknotesIcon className="w-6 h-6" />,
+      available: !!paymentSettings?.bankName,
+    },
+    {
+      id: "CASH" as const,
+      name: "Cash",
+      icon: <BanknotesIcon className="w-6 h-6" />,
+      available: true,
+    },
+    {
+      id: "CREDIT_CARD" as const,
+      name: "Credit Card",
+      icon: <CreditCardIcon className="w-6 h-6" />,
+      available: true,
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Payment Method Selection */}
       <div>
-        <h3 className="text-lg font-bold text-foreground mb-4">Payment Method</h3>
+        <h3 className="text-lg font-bold text-foreground mb-4">
+          Payment Method
+        </h3>
         <div className="grid grid-cols-2 gap-4">
-          <button
-            type="button"
-            onClick={() => onPaymentMethodChange('GCASH')}
-            className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center text-center transition-all ${
-              paymentMethod === 'GCASH'
-                ? 'border-primary bg-orange-50 text-primary'
-                : 'border-foreground/10 hover:border-foreground/20 text-foreground/60'
-            }`}
-          >
-            <QrCodeIcon className="w-6 h-6 mb-2" />
-            <span className="text-sm font-bold">GCash</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onPaymentMethodChange('BANK_TRANSFER')}
-            className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center text-center transition-all ${
-              paymentMethod === 'BANK_TRANSFER'
-                ? 'border-primary bg-orange-50 text-primary'
-                : 'border-foreground/10 hover:border-foreground/20 text-foreground/60'
-            }`}
-          >
-            <CreditCardIcon className="w-6 h-6 mb-2" />
-            <span className="text-sm font-bold">Bank Transfer</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onPaymentMethodChange('CASH')}
-            className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center text-center transition-all ${
-              paymentMethod === 'CASH'
-                ? 'border-primary bg-orange-50 text-primary'
-                : 'border-foreground/10 hover:border-foreground/20 text-foreground/60'
-            }`}
-          >
-            <BanknotesIcon className="w-6 h-6 mb-2" />
-            <span className="text-sm font-bold">Cash</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onPaymentMethodChange('CREDIT_CARD')}
-            className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center text-center transition-all ${
-              paymentMethod === 'CREDIT_CARD'
-                ? 'border-primary bg-orange-50 text-primary'
-                : 'border-foreground/10 hover:border-foreground/20 text-foreground/60'
-            }`}
-          >
-            <CreditCardIcon className="w-6 h-6 mb-2" />
-            <span className="text-sm font-bold">Credit Card</span>
-          </button>
-        </div>
-
-        {/* Payment Instructions */}
-        <div className="mt-4 bg-white border border-foreground/10 rounded-xl p-6">
-          {paymentMethod === 'GCASH' && (
-            <div className="text-center">
-              <div className="w-48 h-48 bg-foreground/5 mx-auto mb-4 flex items-center justify-center border border-foreground/10 rounded-lg overflow-hidden relative">
-                {paymentSettings?.qrCodeUrl ? (
-                  <Image
-                    src={paymentSettings.qrCodeUrl}
-                    alt="GCash QR Code"
-                    fill
-                    className="object-contain p-2"
-                  />
-                ) : (
-                  <QrCodeIcon className="w-24 h-24 text-foreground/20" />
-                )}
+          {paymentMethods.map((method) => (
+            <button
+              key={method.id}
+              type="button"
+              onClick={() => onPaymentMethodChange(method.id)}
+              disabled={!method.available}
+              className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                paymentMethod === method.id
+                  ? "border-primary bg-primary/5"
+                  : "border-foreground/10 hover:border-foreground/20"
+              } ${!method.available ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              <div
+                className={`${
+                  paymentMethod === method.id
+                    ? "text-primary"
+                    : "text-foreground/40"
+                }`}
+              >
+                {method.icon}
               </div>
-              <p className="text-sm text-foreground/60">
-                Scan QR code via GCash app
-              </p>
-              <p className="text-xs text-foreground/40 mt-1">
-                GCash Number: {paymentSettings?.gcashNumber || '0917-123-4567'}
-              </p>
-            </div>
-          )}
-
-          {paymentMethod === 'BANK_TRANSFER' && (
-            <div className="text-left space-y-2">
-              <p className="text-sm text-foreground/60">Transfer to:</p>
-              <div className="p-4 bg-foreground/5 rounded-lg border border-foreground/10">
-                <p className="font-bold text-foreground">
-                  {paymentSettings?.bankName || 'BPI'}
-                </p>
-                <p className="font-mono text-lg text-foreground tracking-wider">
-                  {paymentSettings?.accountNumber || '1234 5678 9012'}
-                </p>
-                <p className="text-sm text-foreground/60">
-                  A/N {paymentSettings?.accountHolder || 'KITA Spaces Inc.'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {paymentMethod === 'CASH' && (
-            <div className="text-center">
-              <BanknotesIcon className="w-16 h-16 text-primary mx-auto mb-3" />
-              <p className="text-sm text-foreground/60">
-                Please bring exact cash amount on the event day
-              </p>
-              <p className="text-xs text-foreground/40 mt-2">
-                Pay at the registration desk before entering
-              </p>
-            </div>
-          )}
-
-          {paymentMethod === 'CREDIT_CARD' && (
-            <div className="text-center">
-              <CreditCardIcon className="w-16 h-16 text-primary mx-auto mb-3" />
-              <p className="text-sm text-foreground/60 font-medium">
-                Pay with Credit/Debit Card at KITA Spaces
-              </p>
-              <p className="text-xs text-foreground/40 mt-2">
-                Visit our location to complete payment via card terminal
-              </p>
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-xs text-blue-800">
-                  Your registration will be confirmed once payment is received.
-                </p>
-              </div>
-            </div>
-          )}
+              <span className="font-medium text-foreground text-sm">
+                {method.name}
+              </span>
+              {paymentMethod === method.id && (
+                <CheckCircleIcon className="w-5 h-5 text-primary" />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Reference Number (for digital payments) */}
-      {(paymentMethod === 'GCASH' || paymentMethod === 'BANK_TRANSFER') && (
+      {/* Payment Instructions */}
+      {showInstructions && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+          <div className="flex items-start justify-between mb-4">
+            <h4 className="font-bold text-foreground">Payment Instructions</h4>
+            <button
+              type="button"
+              onClick={() => setShowInstructions(false)}
+              className="text-foreground/40 hover:text-foreground text-sm"
+            >
+              Hide
+            </button>
+          </div>
+
+          {paymentMethod === "GCASH" && (
+            <div className="space-y-4">
+              {paymentSettings?.qrCodeUrl && (
+                <div className="bg-white rounded-lg p-4">
+                  <p className="text-sm text-foreground/60 mb-3">
+                    Scan this QR code with your GCash app:
+                  </p>
+                  <div className="relative w-48 h-48 mx-auto">
+                    <Image
+                      src={paymentSettings.qrCodeUrl}
+                      alt="GCash QR Code"
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  {paymentSettings.qrCodeNumber && (
+                    <p className="text-center text-sm font-mono text-foreground mt-3">
+                      {paymentSettings.qrCodeNumber}
+                    </p>
+                  )}
+                </div>
+              )}
+              {!paymentSettings?.qrCodeUrl && paymentSettings?.qrCodeNumber && (
+                <div className="space-y-2">
+                  <p className="text-sm text-foreground/60">Send payment to:</p>
+                  <p className="text-lg font-bold text-foreground font-mono">
+                    {paymentSettings.qrCodeNumber}
+                  </p>
+                </div>
+              )}
+              <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/70">
+                <li>Open your GCash app</li>
+                <li>
+                  {paymentSettings?.qrCodeUrl
+                    ? "Scan the QR code above"
+                    : "Send money to the number above"}
+                </li>
+                <li>Complete the payment</li>
+                <li>Take a screenshot of the confirmation</li>
+                <li>Upload the screenshot below</li>
+              </ol>
+            </div>
+          )}
+
+          {paymentMethod === "BANK_TRANSFER" && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-lg p-4 space-y-3">
+                <div>
+                  <p className="text-xs text-foreground/50 uppercase tracking-wide mb-1">
+                    Bank Name
+                  </p>
+                  <p className="font-medium text-foreground">
+                    {paymentSettings?.bankName || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-foreground/50 uppercase tracking-wide mb-1">
+                    Account Number
+                  </p>
+                  <p className="font-bold text-foreground font-mono text-lg">
+                    {paymentSettings?.accountNumber || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-foreground/50 uppercase tracking-wide mb-1">
+                    Account Name
+                  </p>
+                  <p className="font-medium text-foreground">
+                    {paymentSettings?.accountName || "N/A"}
+                  </p>
+                </div>
+              </div>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/70">
+                <li>Transfer to the account details above</li>
+                <li>Save the transaction reference number</li>
+                <li>Take a screenshot of the confirmation</li>
+                <li>Upload the screenshot and enter reference number below</li>
+              </ol>
+            </div>
+          )}
+
+          {paymentMethod === "CASH" && (
+            <div className="space-y-2 text-sm text-foreground/70">
+              <p>
+                You can pay in cash when you arrive at the event venue. Please
+                bring the exact amount if possible.
+              </p>
+              <p className="font-medium text-foreground">
+                No payment proof is required for cash payments.
+              </p>
+              <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <p className="text-xs text-orange-800">
+                  <span className="font-bold">Note:</span> Your registration
+                  will be marked as PENDING until payment is verified at the
+                  venue.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {paymentMethod === "CREDIT_CARD" && (
+            <div className="space-y-2 text-sm text-foreground/70">
+              <p>
+                Pay with your credit or debit card at KITA Spaces before the
+                event.
+              </p>
+              <p className="font-medium text-foreground">
+                Visit our location to complete payment via card terminal.
+              </p>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-xs text-blue-800">
+                  <span className="font-bold">Note:</span> Your registration
+                  will be marked as PENDING until payment is verified.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!showInstructions && (
+        <button
+          type="button"
+          onClick={() => setShowInstructions(true)}
+          className="text-sm text-primary hover:underline"
+        >
+          Show payment instructions
+        </button>
+      )}
+
+      {/* Reference Number Input (for GCash and Bank Transfer) */}
+      {(paymentMethod === "GCASH" || paymentMethod === "BANK_TRANSFER") && (
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
-            Reference Number (Optional)
+            Payment Reference Number *
           </label>
           <input
             type="text"
-            className="w-full rounded-lg border border-foreground/20 px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-            placeholder="Enter reference number from your transaction"
-            value={referenceNumber}
+            value={referenceNumber || ""}
             onChange={(e) => onReferenceNumberChange(e.target.value)}
+            placeholder="Enter your GCash/Bank reference number"
+            className="w-full px-4 py-3 rounded-xl border border-foreground/20 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            required
           />
-          <p className="text-xs text-foreground/40 mt-1">
-            This helps us verify your payment faster
+          <p className="text-xs text-foreground/60 mt-1">
+            This is the reference number from your{" "}
+            {paymentMethod === "GCASH" ? "GCash" : "bank"} transaction
           </p>
         </div>
       )}
 
-      {/* Payment Proof Upload (only for GCASH and BANK_TRANSFER) */}
-      {(paymentMethod === 'GCASH' || paymentMethod === 'BANK_TRANSFER') && (
+      {/* Payment Proof Upload (for GCash and Bank Transfer) */}
+      {(paymentMethod === "GCASH" || paymentMethod === "BANK_TRANSFER") && (
         <div>
-          <ProofOfPaymentUpload
-            value={paymentProofUrl}
-            onChange={onPaymentProofChange}
-            label={
-              <span className="flex items-center gap-2">
-                Payment Proof 
-                <span className="text-red-500">*</span>
-                <span className="text-xs font-normal text-foreground/50">(Required for online payments)</span>
-              </span>
-            }
-            helpText="Screenshot or photo of your payment confirmation"
-            aspectRatio="4/3"
-            maxSize="800x600"
-          />
-          
-          <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-            <p className="text-xs text-blue-800">
-              <span className="font-bold">Tip:</span> Make sure your payment proof is clear and shows:
-            </p>
-            <ul className="text-xs text-blue-700 mt-2 space-y-1 ml-4 list-disc">
-              <li>Transaction date and time</li>
-              <li>Amount paid</li>
-              <li>Reference number</li>
-              <li>Recipient details ({paymentMethod === 'GCASH' ? 'GCash name' : 'Bank account name'})</li>
-            </ul>
-          </div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Payment Proof *
+          </label>
+
+          {uploadError && (
+            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              {uploadError}
+            </div>
+          )}
+
+          {paymentProofUrl ? (
+            <div className="relative">
+              <div className="relative w-full h-64 rounded-xl overflow-hidden border-2 border-green-200">
+                <Image
+                  src={paymentProofUrl}
+                  alt="Payment Proof"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center text-green-600 text-sm font-medium">
+                  <CheckCircleIcon className="w-5 h-5 mr-2" />
+                  Payment proof uploaded
+                </div>
+                <label className="px-4 py-2 bg-foreground/5 text-foreground/70 rounded-lg text-sm font-medium hover:bg-foreground/10 transition-colors cursor-pointer">
+                  Change Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <label
+              className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                isUploading
+                  ? "border-primary bg-primary/5 cursor-not-allowed"
+                  : "border-foreground/20 hover:border-primary/50 hover:bg-primary/5"
+              }`}
+            >
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                {isUploading ? (
+                  <>
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-3" />
+                    <p className="text-sm text-foreground font-medium">
+                      Uploading... {uploadProgress}%
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <PhotoIcon className="w-12 h-12 text-foreground/40 mb-3" />
+                    <p className="mb-2 text-sm text-foreground">
+                      <span className="font-semibold">Click to upload</span> or
+                      drag and drop
+                    </p>
+                    <p className="text-xs text-foreground/60">
+                      PNG, JPG or JPEG (MAX. 5MB)
+                    </p>
+                  </>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="hidden"
+              />
+            </label>
+          )}
+
+          {isUploading && (
+            <div className="mt-3">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {paymentMethod === "CASH" && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800">
+          <p className="font-medium mb-1">💰 Cash Payment</p>
+          <p>
+            You can complete your payment when you arrive at the event. Please
+            bring exact change if possible.
+          </p>
+        </div>
+      )}
+
+      {paymentMethod === "CREDIT_CARD" && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+          <p className="font-medium mb-1">💳 Credit/Debit Card Payment</p>
+          <p>
+            Visit KITA Spaces to complete your payment via our card terminal
+            before the event date.
+          </p>
         </div>
       )}
     </div>

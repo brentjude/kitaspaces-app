@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
-import { Event } from '@/types/database';
-import { RegistrationFormData } from '@/types/registration';
-import AttendeeForm from './AttendeeForm';
-import PaymentSection from './PaymentSection';
-import OrderSummary from './OrderSummary';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { Event } from "@/types/database";
+import { RegistrationFormData, PaymentSettings } from "@/types/registration";
+import AttendeeForm from "./AttendeeForm";
+import PaymentSection from "./PaymentSection";
+import OrderSummary from "./OrderSummary";
 
 interface RegistrationStepsProps {
   event: Event & {
@@ -18,14 +18,13 @@ interface RegistrationStepsProps {
       quantity: number;
     }>;
   };
-  currentUser: { name: string; email: string; role: string } | null;
-  paymentSettings: {
-    bankName: string;
-    accountNumber: string;
-    accountHolder: string;
-    gcashNumber: string;
-    qrCodeUrl: string | null;
+  currentUser: {
+    name: string;
+    email: string;
+    role: string;
+    isMember?: boolean;
   } | null;
+  paymentSettings: PaymentSettings | null;
   onCancel: () => void;
   onLoginRequest: () => void;
 }
@@ -40,30 +39,31 @@ export default function RegistrationSteps({
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const isMember = currentUser?.role === 'USER' && true; // Check if user is member
-  const isFreeEvent = event.price === 0 || (event.isFreeForMembers && isMember);
+  const isMember = currentUser?.isMember || false;
+  const isFreeEvent =
+    event.price === 0 || event.isFree || (event.isFreeForMembers && isMember);
 
   const [formData, setFormData] = useState<RegistrationFormData>({
     attendees: [
       {
-        id: 'main',
-        name: currentUser?.name || '',
-        email: currentUser?.email || '',
+        id: "main",
+        name: currentUser?.name || "",
+        email: currentUser?.email || "",
         selectedFreebies: {},
       },
     ],
-    paymentMethod: isFreeEvent ? 'FREE' : 'CASH', // Changed from 'GCASH' to 'CASH' as default
-    paymentProofUrl: '',
-    referenceNumber: '',
+    paymentMethod: isFreeEvent ? "FREE" : "GCASH",
+    paymentProofUrl: "",
+    referenceNumber: "",
   });
 
   const validateStep1 = (): boolean => {
     // Validate all attendees have name and email
     for (const attendee of formData.attendees) {
       if (!attendee.name.trim() || !attendee.email.trim()) {
-        setError('Please fill in all attendee details');
+        setError("Please fill in all attendee details");
         return false;
       }
 
@@ -74,18 +74,24 @@ export default function RegistrationSteps({
         return false;
       }
 
-      // Validate freebie selections if event has freebies
+      // Validate freebie selections if event has freebies with options
       if (event.freebies && event.freebies.length > 0) {
         for (const freebie of event.freebies) {
-          if (freebie.description && !attendee.selectedFreebies[freebie.id]) {
-            setError(`Please select an option for ${freebie.name} for ${attendee.name}`);
+          if (
+            freebie.description &&
+            freebie.description.includes("Choose") &&
+            !attendee.selectedFreebies[freebie.id]
+          ) {
+            setError(
+              `Please select an option for ${freebie.name} for ${attendee.name}`
+            );
             return false;
           }
         }
       }
     }
 
-    setError('');
+    setError("");
     return true;
   };
 
@@ -97,60 +103,77 @@ export default function RegistrationSteps({
 
   const handleBack = () => {
     setCurrentStep(1);
-    setError('');
+    setError("");
   };
 
   const handleSubmit = async () => {
     // Only require payment proof for GCASH and BANK_TRANSFER
-    if (!isFreeEvent && 
-        (formData.paymentMethod === 'GCASH' || formData.paymentMethod === 'BANK_TRANSFER') && 
-        !formData.paymentProofUrl) {
-        setError('Please upload payment proof for online payments');
-        return;
+    if (
+      !isFreeEvent &&
+      (formData.paymentMethod === "GCASH" ||
+        formData.paymentMethod === "BANK_TRANSFER") &&
+      !formData.paymentProofUrl
+    ) {
+      setError("Please upload payment proof for online payments");
+      return;
+    }
+
+    // Require reference number for GCASH and BANK_TRANSFER
+    if (
+      !isFreeEvent &&
+      (formData.paymentMethod === "GCASH" ||
+        formData.paymentMethod === "BANK_TRANSFER") &&
+      !formData.referenceNumber?.trim()
+    ) {
+      setError("Please enter your payment reference number");
+      return;
     }
 
     setIsSubmitting(true);
-        setError('');
+    setError("");
 
-        try {
-            const response = await fetch(`/api/events/${event.id}/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                eventId: event.id,
-                attendees: formData.attendees.map((attendee) => ({
-                name: attendee.name,
-                email: attendee.email,
-                freebieSelections: Object.entries(attendee.selectedFreebies).map(
-                    ([freebieId, selectedOption]) => ({
-                    freebieId,
-                    selectedOption,
-                    })
-                ),
-                })),
-                paymentMethod: isFreeEvent ? undefined : formData.paymentMethod,
-                paymentProofUrl: formData.paymentProofUrl || undefined,
-                referenceNumber: formData.referenceNumber || undefined,
-            }),
-            });
+    try {
+      const response = await fetch(`/api/events/${event.id}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: event.id,
+          attendees: formData.attendees.map((attendee) => ({
+            name: attendee.name,
+            email: attendee.email,
+            freebieSelections: Object.entries(attendee.selectedFreebies).map(
+              ([freebieId, selectedOption]) => ({
+                freebieId,
+                selectedOption,
+              })
+            ),
+          })),
+          paymentMethod: isFreeEvent ? undefined : formData.paymentMethod,
+          paymentProofUrl: formData.paymentProofUrl || undefined,
+          referenceNumber: formData.referenceNumber || undefined,
+        }),
+      });
 
-            const data = await response.json();
+      const data = await response.json();
 
-            if (!response.ok) {
-            throw new Error(data.error || 'Failed to register');
-            }
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to register");
+      }
 
-            // Store confirmation data in sessionStorage
-            sessionStorage.setItem('registrationConfirmation', JSON.stringify(data.data));
+      // Store confirmation data in sessionStorage
+      sessionStorage.setItem(
+        "registrationConfirmation",
+        JSON.stringify(data.data)
+      );
 
-            // Redirect to confirmation page
-            router.push(`/events/${event.slug}/registration/confirmation`);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Registration failed');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+      // Redirect to confirmation page
+      router.push(`/events/${event.slug}/registration/confirmation`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const calculateTotal = () => {
     if (isFreeEvent) return 0;
@@ -162,7 +185,9 @@ export default function RegistrationSteps({
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-foreground">Secure Your Spot</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            Secure Your Spot
+          </h1>
           <button
             onClick={onCancel}
             className="text-foreground/60 hover:text-foreground flex items-center text-sm font-medium"
@@ -171,7 +196,7 @@ export default function RegistrationSteps({
             Cancel
           </button>
         </div>
-        
+
         <p className="text-foreground/60 text-sm">
           {event.title} • {new Date(event.date).toLocaleDateString()}
         </p>
@@ -181,26 +206,28 @@ export default function RegistrationSteps({
           <div
             className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
               currentStep >= 1
-                ? 'bg-primary text-white'
-                : 'bg-foreground/10 text-foreground/40'
+                ? "bg-primary text-white"
+                : "bg-foreground/10 text-foreground/40"
             }`}
           >
-            {currentStep > 1 ? <CheckIcon className="w-5 h-5" /> : '1'}
+            {currentStep > 1 ? <CheckIcon className="w-5 h-5" /> : "1"}
           </div>
           <span className="ml-3 font-medium text-sm">Attendee Details</span>
-          
+
           <div className="flex-1 h-px bg-foreground/20 mx-4" />
-          
+
           <div
             className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
               currentStep >= 2
-                ? 'bg-primary text-white'
-                : 'bg-foreground/10 text-foreground/40'
+                ? "bg-primary text-white"
+                : "bg-foreground/10 text-foreground/40"
             }`}
           >
             2
           </div>
-          <span className="ml-3 font-medium text-sm text-foreground/60">Payment</span>
+          <span className="ml-3 font-medium text-sm text-foreground/60">
+            {isFreeEvent ? "Confirmation" : "Payment"}
+          </span>
         </div>
       </div>
 
@@ -234,22 +261,29 @@ export default function RegistrationSteps({
               total={calculateTotal()}
             />
 
-            {!isFreeEvent && (
-            <PaymentSection
+            {!isFreeEvent && paymentSettings && (
+              <PaymentSection
                 paymentMethod={formData.paymentMethod}
                 paymentProofUrl={formData.paymentProofUrl}
                 referenceNumber={formData.referenceNumber}
                 paymentSettings={paymentSettings}
                 onPaymentMethodChange={(method) =>
-                setFormData({ ...formData, paymentMethod: method })
+                  setFormData({ ...formData, paymentMethod: method })
                 }
                 onPaymentProofChange={(url) =>
-                setFormData({ ...formData, paymentProofUrl: url })
+                  setFormData({ ...formData, paymentProofUrl: url })
                 }
                 onReferenceNumberChange={(ref) =>
-                setFormData({ ...formData, referenceNumber: ref })
+                  setFormData({ ...formData, referenceNumber: ref })
                 }
-            />
+              />
+            )}
+
+            {!isFreeEvent && !paymentSettings && (
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg text-sm">
+                Payment settings are not configured. Please contact
+                administrator.
+              </div>
             )}
           </div>
         )}
@@ -269,14 +303,19 @@ export default function RegistrationSteps({
 
           <button
             onClick={currentStep === 1 ? handleNext : handleSubmit}
-            disabled={isSubmitting}
+            disabled={
+              isSubmitting ||
+              (currentStep === 2 && !isFreeEvent && !paymentSettings)
+            }
             className="bg-primary hover:bg-primary/90 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting
-              ? 'Processing...'
+              ? "Processing..."
               : currentStep === 1
-              ? 'Proceed to Payment'
-              : 'Confirm Registration'}
+              ? isFreeEvent
+                ? "Review & Confirm"
+                : "Proceed to Payment"
+              : "Confirm Registration"}
           </button>
         </div>
       </div>

@@ -568,3 +568,22 @@ model CustomerPayment {
   @@index([referenceNumber])
   @@map("customer_payments")
 }
+
+model AdminSettings {
+  id            String   @id @default(cuid())
+  
+  // Bank Information
+  bankName      String?
+  accountNumber String?
+  accountName   String?
+  
+  // QR Code for Payments
+  qrCodeUrl     String?
+  qrCodeNumber  String?  // Account number/phone number associated with QR
+  
+  // Only one settings record should exist
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("admin_settings")
+}

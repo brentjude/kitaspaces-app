@@ -1,23 +1,24 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { redirect } from "next/navigation";
 import {
   UserIcon,
   CreditCardIcon,
   TagIcon,
   TicketIcon,
   UsersIcon,
-} from '@heroicons/react/24/outline';
-import GeneralTab from './components/GeneralTab';
-import PaymentsTab from './components/PaymentsTab';
-import EventCategoriesTab from './components/EventCategoriesTab';
-import CouponsTab from './components/CouponsTab';
-import SystemUsersTab from './components/SystemUsersTab';
-import { EventCategory, Coupon } from '@/types/database';
+} from "@heroicons/react/24/outline";
+import GeneralTab from "./components/GeneralTab";
+import PaymentsTab from "./components/PaymentsTab";
+import EventCategoriesTab from "./components/EventCategoriesTab";
+import CouponsTab from "./components/CouponsTab";
+import SystemUsersTab from "./components/SystemUsersTab";
+import { AdminSettings } from "@/types/database";
+import { EventCategory, Coupon } from "@/types/database";
 
-type TabId = 'general' | 'payments' | 'categories' | 'coupons' | 'users';
+type TabId = "general" | "payments" | "categories" | "coupons" | "users";
 
 interface Tab {
   id: TabId;
@@ -26,33 +27,36 @@ interface Tab {
 }
 
 const tabs: Tab[] = [
-  { id: 'general', label: 'General', icon: UserIcon },
-  { id: 'payments', label: 'Payments', icon: CreditCardIcon },
-  { id: 'categories', label: 'Event Categories', icon: TagIcon },
-  { id: 'coupons', label: 'Coupons', icon: TicketIcon },
-  { id: 'users', label: 'System Users', icon: UsersIcon },
+  { id: "general", label: "General", icon: UserIcon },
+  { id: "payments", label: "Payments", icon: CreditCardIcon },
+  { id: "categories", label: "Event Categories", icon: TagIcon },
+  { id: "coupons", label: "Coupons", icon: TicketIcon },
+  { id: "users", label: "System Users", icon: UsersIcon },
 ];
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
-  const [activeTab, setActiveTab] = useState<TabId>('general');
+  const [activeTab, setActiveTab] = useState<TabId>("general");
   const [loading, setLoading] = useState(true);
 
   // General tab data
   const [profile, setProfile] = useState({
-    name: '',
-    email: '',
+    name: "",
+    email: "",
     company: null as string | null,
     contactNumber: null as string | null,
   });
 
-  // Payments tab data
-  const [bankInfo, setBankInfo] = useState({
-    bankName: '',
-    accountNumber: '',
-    accountHolder: '',
+  const [paymentSettings, setPaymentSettings] = useState<AdminSettings>({
+    id: "",
+    bankName: null,
+    accountNumber: null,
+    accountName: null,
+    qrCodeUrl: null,
+    qrCodeNumber: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   });
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
   // Categories and coupons
   const [categories, setCategories] = useState<EventCategory[]>([]);
@@ -65,12 +69,14 @@ export default function SettingsPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [profileRes, categoriesRes, couponsRes, adminsRes] = await Promise.all([
-        fetch('/api/admin/settings/profile'),
-        fetch('/api/admin/settings/categories'),
-        fetch('/api/admin/settings/coupons'),
-        fetch('/api/admin/settings/admins'),
-      ]);
+      const [profileRes, categoriesRes, couponsRes, adminsRes, paymentRes] =
+        await Promise.all([
+          fetch("/api/admin/settings/profile"),
+          fetch("/api/admin/settings/categories"),
+          fetch("/api/admin/settings/coupons"),
+          fetch("/api/admin/settings/admins"),
+          fetch("/api/admin/settings/payments"),
+        ]);
 
       if (profileRes.ok) {
         const data = await profileRes.json();
@@ -104,28 +110,34 @@ export default function SettingsPage() {
           setAdmins(data.data);
         }
       }
+      if (paymentRes.ok) {
+        const data = await paymentRes.json();
+        if (data.success && data.data) {
+          setPaymentSettings(data.data);
+        }
+      }
     } catch (error) {
-      console.error('Error loading settings:', error);
+      console.error("Error loading settings:", error);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
+    if (status === "authenticated" && session?.user?.role === "ADMIN") {
       loadData();
     }
   }, [status, session, loadData]);
 
   // Handlers for General Tab
   const handleUpdateProfile = async (data: Partial<typeof profile>) => {
-    const response = await fetch('/api/admin/settings/profile', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/admin/settings/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) throw new Error('Failed to update profile');
+    if (!response.ok) throw new Error("Failed to update profile");
 
     const result = await response.json();
     if (result.success && result.data) {
@@ -142,41 +154,119 @@ export default function SettingsPage() {
     currentPassword: string;
     newPassword: string;
   }) => {
-    const response = await fetch('/api/admin/settings/password', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/admin/settings/password", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     const result = await response.json();
     if (!result.success) {
-      throw new Error(result.error || 'Failed to update password');
+      throw new Error(result.error || "Failed to update password");
     }
   };
 
-  // Handlers for Payments Tab
-  const handleUpdateBankInfo = async (data: typeof bankInfo) => {
-    // Store in localStorage for now (would be DB in production)
-    localStorage.setItem('bankInfo', JSON.stringify(data));
-    setBankInfo(data);
+  // Add new handlers for payments
+  const handleUpdateBankInfo = async (data: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  }) => {
+    try {
+      const response = await fetch("/api/admin/settings/payments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update bank info");
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        setPaymentSettings(result.data);
+        alert("Bank information updated successfully!");
+      }
+    } catch (error) {
+      console.error("Error updating bank info:", error);
+      throw error;
+    }
   };
 
-  const handleUploadQR = async (file: File): Promise<string> => {
-    // In production, upload to Cloudinary
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const url = reader.result as string;
-        localStorage.setItem('qrCodeUrl', url);
-        resolve(url);
-      };
-      reader.readAsDataURL(file);
-    });
+  const handleUpdateQRInfo = async (qrCodeNumber: string) => {
+    try {
+      const response = await fetch("/api/admin/settings/payments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qrCodeNumber }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update QR info");
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        setPaymentSettings(result.data);
+        alert("QR code number updated successfully!");
+      }
+    } catch (error) {
+      console.error("Error updating QR info:", error);
+      throw error;
+    }
+  };
+
+  const handleUploadQR = async (url: string): Promise<void> => {
+    try {
+      const response = await fetch("/api/admin/settings/payments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qrCodeUrl: url }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save QR URL");
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        setPaymentSettings(result.data);
+        // Don't show alert here, let the component handle success feedback
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error saving QR URL:", error);
+      throw error;
+    }
   };
 
   const handleDeleteQR = async () => {
-    localStorage.removeItem('qrCodeUrl');
-    setQrCodeUrl(null);
+    try {
+      const response = await fetch("/api/admin/settings/payments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qrCodeUrl: null }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete QR");
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        setPaymentSettings(result.data);
+        alert("QR code deleted successfully!");
+      }
+    } catch (error) {
+      console.error("Error deleting QR:", error);
+      throw error;
+    }
   };
 
   // Handlers for Categories Tab
@@ -185,13 +275,13 @@ export default function SettingsPage() {
     color: string;
     icon: string;
   }) => {
-    const response = await fetch('/api/admin/settings/categories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/admin/settings/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) throw new Error('Failed to add category');
+    if (!response.ok) throw new Error("Failed to add category");
 
     const result = await response.json();
     if (result.success && result.data) {
@@ -201,10 +291,10 @@ export default function SettingsPage() {
 
   const handleDeleteCategory = async (id: string) => {
     const response = await fetch(`/api/admin/settings/categories/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
 
-    if (!response.ok) throw new Error('Failed to delete category');
+    if (!response.ok) throw new Error("Failed to delete category");
 
     setCategories(categories.filter((c) => c.id !== id));
   };
@@ -217,13 +307,13 @@ export default function SettingsPage() {
     maxUses: number | null;
     expiresAt: Date | null;
   }) => {
-    const response = await fetch('/api/admin/settings/coupons', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/admin/settings/coupons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) throw new Error('Failed to add coupon');
+    if (!response.ok) throw new Error("Failed to add coupon");
 
     const result = await response.json();
     if (result.success && result.data) {
@@ -233,12 +323,12 @@ export default function SettingsPage() {
 
   const handleToggleCoupon = async (id: string, isActive: boolean) => {
     const response = await fetch(`/api/admin/settings/coupons/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive }),
     });
 
-    if (!response.ok) throw new Error('Failed to toggle coupon');
+    if (!response.ok) throw new Error("Failed to toggle coupon");
 
     const result = await response.json();
     if (result.success && result.data) {
@@ -248,10 +338,10 @@ export default function SettingsPage() {
 
   const handleDeleteCoupon = async (id: string) => {
     const response = await fetch(`/api/admin/settings/coupons/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
 
-    if (!response.ok) throw new Error('Failed to delete coupon');
+    if (!response.ok) throw new Error("Failed to delete coupon");
 
     setCoupons(coupons.filter((c) => c.id !== id));
   };
@@ -262,15 +352,15 @@ export default function SettingsPage() {
     email: string;
     password: string;
   }) => {
-    const response = await fetch('/api/admin/settings/admins', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/admin/settings/admins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const result = await response.json();
-      throw new Error(result.error || 'Failed to add admin');
+      throw new Error(result.error || "Failed to add admin");
     }
 
     const result = await response.json();
@@ -279,20 +369,7 @@ export default function SettingsPage() {
     }
   };
 
-  // Load bank info and QR from localStorage on mount
-  useEffect(() => {
-    const savedBankInfo = localStorage.getItem('bankInfo');
-    const savedQrUrl = localStorage.getItem('qrCodeUrl');
-
-    if (savedBankInfo) {
-      setBankInfo(JSON.parse(savedBankInfo));
-    }
-    if (savedQrUrl) {
-      setQrCodeUrl(savedQrUrl);
-    }
-  }, []);
-
-  if (status === 'loading' || loading) {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -303,8 +380,8 @@ export default function SettingsPage() {
     );
   }
 
-  if (status === 'unauthenticated' || session?.user?.role !== 'ADMIN') {
-    redirect('/auth/signin');
+  if (status === "unauthenticated" || session?.user?.role !== "ADMIN") {
+    redirect("/auth/signin");
   }
 
   return (
@@ -330,8 +407,8 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                     isActive
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground'
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
                   }`}
                 >
                   <Icon className="w-4 h-4 mr-2" />
@@ -343,7 +420,7 @@ export default function SettingsPage() {
 
           {/* Tab Content */}
           <div>
-            {activeTab === 'general' && (
+            {activeTab === "general" && (
               <GeneralTab
                 profile={profile}
                 onUpdateProfile={handleUpdateProfile}
@@ -351,17 +428,23 @@ export default function SettingsPage() {
               />
             )}
 
-            {activeTab === 'payments' && (
+            {activeTab === "payments" && (
               <PaymentsTab
-                bankInfo={bankInfo}
-                qrCodeUrl={qrCodeUrl}
+                bankInfo={{
+                  bankName: paymentSettings.bankName || "",
+                  accountNumber: paymentSettings.accountNumber || "",
+                  accountName: paymentSettings.accountName || "",
+                }}
+                qrCodeUrl={paymentSettings.qrCodeUrl}
+                qrCodeNumber={paymentSettings.qrCodeNumber || ""}
                 onUpdateBankInfo={handleUpdateBankInfo}
+                onUpdateQRInfo={handleUpdateQRInfo}
                 onUploadQR={handleUploadQR}
                 onDeleteQR={handleDeleteQR}
               />
             )}
 
-            {activeTab === 'categories' && (
+            {activeTab === "categories" && (
               <EventCategoriesTab
                 categories={categories}
                 onAddCategory={handleAddCategory}
@@ -369,7 +452,7 @@ export default function SettingsPage() {
               />
             )}
 
-            {activeTab === 'coupons' && (
+            {activeTab === "coupons" && (
               <CouponsTab
                 coupons={coupons}
                 onAddCoupon={handleAddCoupon}
@@ -378,7 +461,7 @@ export default function SettingsPage() {
               />
             )}
 
-            {activeTab === 'users' && (
+            {activeTab === "users" && (
               <SystemUsersTab admins={admins} onAddAdmin={handleAddAdmin} />
             )}
           </div>

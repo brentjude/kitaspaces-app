@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import cloudinary from '@/lib/cloudinary';
-import type { CloudinaryUploadResponse } from '@/types';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import cloudinary from "@/lib/cloudinary";
+import type { CloudinaryUploadResponse } from "@/types";
 
 /**
  * POST /api/upload
@@ -16,26 +16,26 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
     const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const folder = (formData.get('folder') as string) || 'kitaspaces';
+    const file = formData.get("file") as File;
+    const folder = (formData.get("folder") as string) || "kitaspaces";
 
     if (!file) {
       return NextResponse.json(
-        { success: false, error: 'No file provided' },
+        { success: false, error: "No file provided" },
         { status: 400 }
       );
     }
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       return NextResponse.json(
-        { success: false, error: 'Only image files are allowed' },
+        { success: false, error: "Only image files are allowed" },
         { status: 400 }
       );
     }
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { success: false, error: 'File size must be less than 5MB' },
+        { success: false, error: "File size must be less than 5MB" },
         { status: 400 }
       );
     }
@@ -52,16 +52,18 @@ export async function POST(request: NextRequest) {
     // Convert file to base64
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
+    const base64String = `data:${file.type};base64,${buffer.toString(
+      "base64"
+    )}`;
 
     // Upload to Cloudinary
     const uploadResult = await cloudinary.uploader.upload(base64String, {
       folder,
-      resource_type: 'image',
+      resource_type: "image",
       transformation: [
-        { width: 1200, height: 630, crop: 'limit' }, // Limit max size
-        { quality: 'auto:good' },
-        { fetch_format: 'auto' },
+        { width: 1200, height: 630, crop: "limit" }, // Limit max size
+        { quality: "auto:good" },
+        { fetch_format: "auto" },
       ],
     });
 
@@ -81,7 +83,7 @@ export async function POST(request: NextRequest) {
       placeholder: uploadResult.placeholder || false,
       url: uploadResult.url,
       secure_url: uploadResult.secure_url,
-      access_mode: uploadResult.access_mode || 'public',
+      access_mode: uploadResult.access_mode || "public",
       original_filename: uploadResult.original_filename || file.name,
     };
 
@@ -90,12 +92,12 @@ export async function POST(request: NextRequest) {
       data: response,
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error("Upload error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Upload failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Upload failed",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -114,7 +116,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
@@ -124,7 +126,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!publicId) {
       return NextResponse.json(
-        { success: false, error: 'No public ID provided' },
+        { success: false, error: "No public ID provided" },
         { status: 400 }
       );
     }
@@ -137,12 +139,12 @@ export async function DELETE(request: NextRequest) {
       data: result,
     });
   } catch (error) {
-    console.error('Delete error:', error);
+    console.error("Delete error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Delete failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Delete failed",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

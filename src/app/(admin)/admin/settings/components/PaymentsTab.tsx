@@ -1,40 +1,93 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { BuildingOfficeIcon, QrCodeIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { useState } from "react";
+import {
+  BanknotesIcon,
+  QrCodeIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
+import Image from "next/image";
+import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
+
+// Define the type first
+type BankInfoData = {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+};
 
 interface PaymentsTabProps {
-  bankInfo: {
-    bankName: string;
-    accountNumber: string;
-    accountHolder: string;
-  };
+  bankInfo: BankInfoData;
   qrCodeUrl: string | null;
-  onUpdateBankInfo: (data: PaymentsTabProps['bankInfo']) => Promise<void>;
-  onUploadQR: (file: File) => Promise<string>;
+  qrCodeNumber: string;
+  onUpdateBankInfo: (data: BankInfoData) => Promise<void>;
+  onUpdateQRInfo: (qrCodeNumber: string) => Promise<void>;
+  onUploadQR: (url: string) => Promise<void>;
   onDeleteQR: () => Promise<void>;
 }
 
 export default function PaymentsTab({
   bankInfo,
   qrCodeUrl,
+  qrCodeNumber,
   onUpdateBankInfo,
+  onUpdateQRInfo,
   onUploadQR,
   onDeleteQR,
 }: PaymentsTabProps) {
-  const [localBankInfo, setLocalBankInfo] = useState(bankInfo);
-  const [localQrUrl, setLocalQrUrl] = useState(qrCodeUrl);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isEditingBank, setIsEditingBank] = useState(false);
+  const [isEditingQR, setIsEditingQR] = useState(false);
+  const [bankFormData, setBankFormData] = useState(bankInfo);
+  const [qrNumber, setQrNumber] = useState(qrCodeNumber);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = async () => {
-    setIsSaving(true);
+  // Use Cloudinary upload hook
+  const {
+    upload: uploadToCloudinary,
+    isUploading,
+    uploadProgress,
+    error: uploadError,
+  } = useCloudinaryUpload({
+    folder: "kitaspaces/payment-qr",
+    onSuccess: async (data) => {
+      try {
+        await onUploadQR(data.secure_url); // Use secure_url!
+        alert("QR code uploaded successfully!"); // Add success feedback
+      } catch (error) {
+        console.error("Error saving QR URL:", error);
+        alert("Failed to save QR code URL");
+      }
+    },
+    onError: (error) => {
+      alert(`Upload failed: ${error}`);
+    },
+  });
+
+  const handleBankSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
     try {
-      await onUpdateBankInfo(localBankInfo);
+      await onUpdateBankInfo(bankFormData);
+      setIsEditingBank(false);
     } catch (error) {
-      console.error('Error saving bank info:', error);
+      console.error("Error updating bank info:", error);
+      alert("Failed to update bank information");
     } finally {
-      setIsSaving(false);
+      setSaving(false);
+    }
+  };
+
+  const handleQRNumberSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await onUpdateQRInfo(qrNumber);
+      setIsEditingQR(false);
+    } catch (error) {
+      console.error("Error updating QR number:", error);
+      alert("Failed to update QR code number");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -43,183 +96,338 @@ export default function PaymentsTab({
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file");
       return;
     }
 
-    // Validate file size (5MB)
+    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB');
+      alert("File size must be less than 5MB");
       return;
     }
 
-    setIsUploading(true);
-    try {
-      const url = await onUploadQR(file);
-      setLocalQrUrl(url);
-    } catch (error) {
-      console.error('Error uploading QR:', error);
-      alert('Failed to upload QR code');
-    } finally {
-      setIsUploading(false);
-    }
+    // Upload to Cloudinary
+    await uploadToCloudinary(file);
   };
 
   const handleDeleteQR = async () => {
-    if (!confirm('Are you sure you want to remove the QR code?')) return;
+    if (!confirm("Are you sure you want to delete the QR code?")) return;
 
     try {
       await onDeleteQR();
-      setLocalQrUrl(null);
     } catch (error) {
-      console.error('Error deleting QR:', error);
+      console.error("Error deleting QR code:", error);
+      alert("Failed to delete QR code");
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Bank Information */}
-      <div className="bg-white rounded-xl shadow-sm border border-foreground/10 overflow-hidden">
-        <div className="border-b border-foreground/10 bg-foreground/5 px-6 py-4">
-          <h3 className="text-base font-semibold text-foreground flex items-center">
-            <BuildingOfficeIcon className="w-5 h-5 mr-2" />
-            Bank Information
-          </h3>
+      <div className="bg-white rounded-xl shadow-sm border border-foreground/10 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+              <BanknotesIcon className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">
+                Bank Information
+              </h2>
+              <p className="text-sm text-foreground/60">
+                Manage bank transfer details for payments
+              </p>
+            </div>
+          </div>
+          {!isEditingBank && (
+            <button
+              onClick={() => setIsEditingBank(true)}
+              className="px-4 py-2 text-sm font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors"
+            >
+              Edit
+            </button>
+          )}
         </div>
-        <div className="p-6 space-y-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-foreground/70 mb-2">
+
+        {isEditingBank ? (
+          <form onSubmit={handleBankSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Bank Name
               </label>
               <input
                 type="text"
-                className="block w-full rounded-lg border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                placeholder="e.g. BDO, BPI, Metrobank"
-                value={localBankInfo.bankName}
+                value={bankFormData.bankName}
                 onChange={(e) =>
-                  setLocalBankInfo({ ...localBankInfo, bankName: e.target.value })
+                  setBankFormData({ ...bankFormData, bankName: e.target.value })
                 }
+                className="w-full px-4 py-2 rounded-lg border border-foreground/20 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                placeholder="e.g., BDO, BPI, MetroBank"
+                required
               />
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-foreground/70 mb-2">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Account Number
               </label>
               <input
                 type="text"
-                className="block w-full rounded-lg border border-foreground/20 px-4 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                placeholder="0000 0000 0000"
-                value={localBankInfo.accountNumber}
+                value={bankFormData.accountNumber}
                 onChange={(e) =>
-                  setLocalBankInfo({ ...localBankInfo, accountNumber: e.target.value })
+                  setBankFormData({
+                    ...bankFormData,
+                    accountNumber: e.target.value,
+                  })
                 }
+                className="w-full px-4 py-2 rounded-lg border border-foreground/20 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                placeholder="Enter account number"
+                required
               />
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-foreground/70 mb-2">
-                Account Holder Name
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Account Name
               </label>
               <input
                 type="text"
-                className="block w-full rounded-lg border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                placeholder="e.g. KITA Spaces Philippines Inc."
-                value={localBankInfo.accountHolder}
+                value={bankFormData.accountName}
                 onChange={(e) =>
-                  setLocalBankInfo({ ...localBankInfo, accountHolder: e.target.value })
+                  setBankFormData({
+                    ...bankFormData,
+                    accountName: e.target.value,
+                  })
                 }
+                className="w-full px-4 py-2 rounded-lg border border-foreground/20 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                placeholder="Name on account"
+                required
               />
             </div>
-          </div>
 
-          <div className="flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="inline-flex items-center px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition-colors"
-            >
-              {isSaving ? 'Saving...' : 'Save Bank Information'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditingBank(false);
+                  setBankFormData(bankInfo);
+                }}
+                className="px-4 py-2 text-foreground/60 hover:bg-foreground/5 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-3">
+            {bankInfo.bankName ? (
+              <>
+                <div className="flex justify-between py-2 border-b border-foreground/5">
+                  <span className="text-sm text-foreground/60">Bank Name</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {bankInfo.bankName}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-foreground/5">
+                  <span className="text-sm text-foreground/60">
+                    Account Number
+                  </span>
+                  <span className="text-sm font-medium text-foreground font-mono">
+                    {bankInfo.accountNumber}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-sm text-foreground/60">
+                    Account Name
+                  </span>
+                  <span className="text-sm font-medium text-foreground">
+                    {bankInfo.accountName}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-foreground/60 py-4 text-center">
+                No bank information set up yet. Click Edit to add details.
+              </p>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* QR Code Upload */}
-      <div className="bg-white rounded-xl shadow-sm border border-foreground/10 overflow-hidden">
-        <div className="border-b border-foreground/10 bg-foreground/5 px-6 py-4">
-          <h3 className="text-base font-semibold text-foreground flex items-center">
-            <QrCodeIcon className="w-5 h-5 mr-2" />
-            Payment QR Code
-          </h3>
+      {/* QR Code Payment */}
+      <div className="bg-white rounded-xl shadow-sm border border-foreground/10 p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+            <QrCodeIcon className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">
+              QR Code Payment
+            </h2>
+            <p className="text-sm text-foreground/60">
+              Upload QR code for GCash, PayMaya, or bank transfers
+            </p>
+          </div>
         </div>
-        <div className="p-6">
-          <div className="flex flex-col md:flex-row gap-8">
-            {/* Upload Area */}
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-foreground/70 mb-2">
-                Upload QR Code
-              </label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-foreground/20 border-dashed rounded-lg hover:border-primary/50 transition-colors cursor-pointer relative">
-                <div className="space-y-1 text-center">
-                  <ArrowUpTrayIcon className="mx-auto h-12 w-12 text-foreground/40" />
-                  <div className="flex text-sm text-foreground/60 justify-center">
-                    <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none"
-                    >
-                      <span>Upload a file</span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        className="sr-only"
-                        accept="image/*"
-                        onChange={handleFileUpload}
-                        disabled={isUploading}
-                      />
-                    </label>
-                    <p className="pl-1">or drag and drop</p>
-                  </div>
-                  <p className="text-xs text-foreground/50">PNG, JPG, GIF up to 5MB</p>
-                </div>
-              </div>
-              {isUploading && (
-                <div className="mt-2 text-center">
-                  <p className="text-sm text-primary">Uploading...</p>
-                </div>
-              )}
-            </div>
 
-            {/* Current QR Preview */}
-            <div className="w-full md:w-48 flex flex-col items-center">
-              <span className="text-xs font-medium text-foreground/50 mb-2">
-                Current QR Code
-              </span>
-              <div className="w-40 h-40 border border-foreground/20 rounded-lg bg-foreground/5 flex items-center justify-center overflow-hidden">
-                {localQrUrl ? (
-                  <img
-                    src={localQrUrl}
-                    alt="Payment QR Code"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <QrCodeIcon className="w-16 h-16 text-foreground/20" />
-                )}
+        {/* Error Display */}
+        {uploadError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+            {uploadError}
+          </div>
+        )}
+
+        {/* QR Code Number */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-foreground">
+              Account/Phone Number
+            </label>
+            {!isEditingQR && qrCodeNumber && (
+              <button
+                onClick={() => setIsEditingQR(true)}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Edit
+              </button>
+            )}
+          </div>
+
+          {isEditingQR ? (
+            <form onSubmit={handleQRNumberSubmit} className="space-y-3">
+              <input
+                type="text"
+                value={qrNumber}
+                onChange={(e) => setQrNumber(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-foreground/20 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                placeholder="e.g., 09123456789"
+                required
+              />
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingQR(false);
+                    setQrNumber(qrCodeNumber);
+                  }}
+                  className="px-4 py-2 text-foreground/60 hover:bg-foreground/5 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
-              {localQrUrl && (
+            </form>
+          ) : (
+            <div className="text-sm font-medium text-foreground font-mono">
+              {qrCodeNumber || "Not set"}
+            </div>
+          )}
+        </div>
+
+        {/* QR Code Image */}
+        <div>
+          {qrCodeUrl ? (
+            <div className="space-y-4">
+              <div className="relative w-full max-w-xs mx-auto aspect-square rounded-xl overflow-hidden border-2 border-foreground/10">
+                <Image
+                  src={qrCodeUrl}
+                  alt="Payment QR Code"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <div className="flex gap-3 justify-center">
+                <label
+                  className={`px-4 py-2 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20 transition-colors cursor-pointer ${
+                    isUploading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  {isUploading
+                    ? `Uploading... ${uploadProgress}%`
+                    : "Replace QR Code"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                    className="hidden"
+                  />
+                </label>
                 <button
                   onClick={handleDeleteQR}
-                  className="mt-3 inline-flex items-center text-xs text-red-600 hover:text-red-800 transition-colors"
+                  disabled={isUploading}
+                  className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
-                  <TrashIcon className="w-3 h-3 mr-1" />
-                  Remove QR Code
+                  <TrashIcon className="w-4 h-4" />
+                  Delete
                 </button>
+              </div>
+              {isUploading && (
+                <div className="w-full max-w-xs mx-auto">
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
               )}
             </div>
-          </div>
+          ) : (
+            <label
+              className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-foreground/20 rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all ${
+                isUploading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <QrCodeIcon className="w-12 h-12 text-foreground/40 mb-3" />
+                {isUploading ? (
+                  <>
+                    <p className="mb-2 text-sm text-foreground font-semibold">
+                      Uploading... {uploadProgress}%
+                    </p>
+                    <div className="w-48 bg-gray-200 rounded-full h-2 mt-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-2 text-sm text-foreground">
+                      <span className="font-semibold">Click to upload</span> or
+                      drag and drop
+                    </p>
+                    <p className="text-xs text-foreground/60">
+                      PNG, JPG or JPEG (MAX. 5MB)
+                    </p>
+                  </>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="hidden"
+              />
+            </label>
+          )}
         </div>
       </div>
     </div>

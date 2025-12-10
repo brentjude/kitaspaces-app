@@ -1,6 +1,6 @@
 // Purpose: Types for Cloudinary integration
 
-export type CloudinaryUploadResponse = {
+export interface CloudinaryUploadResponse {
   public_id: string;
   version: number;
   signature: string;
@@ -14,17 +14,17 @@ export type CloudinaryUploadResponse = {
   type: string;
   etag: string;
   placeholder: boolean;
-  url: string;
-  secure_url: string;
+  url: string; // HTTP URL
+  secure_url: string; // HTTPS URL (use this one!)
   access_mode: string;
   original_filename: string;
-};
+}
 
 export type CloudinaryUploadOptions = {
   folder?: string;
   public_id?: string;
-  resource_type?: 'image' | 'video' | 'raw' | 'auto';
-  type?: 'upload' | 'private' | 'authenticated';
+  resource_type?: "image" | "video" | "raw" | "auto";
+  type?: "upload" | "private" | "authenticated";
   tags?: string[];
   context?: Record<string, string>;
   transformation?: string;
@@ -32,13 +32,13 @@ export type CloudinaryUploadOptions = {
 };
 
 export type CloudinaryDeleteResponse = {
-  result: 'ok' | 'not found';
+  result: "ok" | "not found";
 };
 
 export type UploadWidgetOptions = {
   cloudName: string;
   uploadPreset: string;
-  sources?: ('local' | 'url' | 'camera' | 'dropbox' | 'google_drive')[];
+  sources?: ("local" | "url" | "camera" | "dropbox" | "google_drive")[];
   multiple?: boolean;
   maxFiles?: number;
   maxFileSize?: number;
@@ -65,6 +65,6 @@ export type UploadWidgetOptions = {
 };
 
 export type UploadWidgetResult = {
-  event: 'success' | 'close' | 'abort';
+  event: "success" | "close" | "abort";
   info: CloudinaryUploadResponse | string;
 };

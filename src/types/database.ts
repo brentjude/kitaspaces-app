@@ -1,12 +1,12 @@
 // Purpose: TypeScript types for all Prisma models
 // Based on: prisma/schema.prisma
 
-import { 
-  UserRole, 
-  MembershipStatus, 
-  MembershipType, 
-  PaymentStatus, 
-  PaymentMethod, 
+import {
+  UserRole,
+  MembershipStatus,
+  MembershipType,
+  PaymentStatus,
+  PaymentMethod,
   ReferralSource,
   PerkType,
   User as PrismaUser,
@@ -29,7 +29,7 @@ import {
   CustomerDailyUseRedemption as PrismaCustomerDailyUseRedemption,
   CustomerPayment as PrismaCustomerPayment,
   EventCategory as PrismaEventCategory,
-} from '@/generated/prisma';
+} from "@/generated/prisma";
 
 // ============================================
 // USER TYPES
@@ -60,9 +60,9 @@ export type UserCreateInput = {
   agreeToNewsletter?: boolean;
 };
 
-export type UserUpdateInput = Partial<Omit<UserCreateInput, 'id' | 'email'>>;
+export type UserUpdateInput = Partial<Omit<UserCreateInput, "id" | "email">>;
 
-export type UserPublic = Omit<User, 'password'>;
+export type UserPublic = Omit<User, "password">;
 
 // ============================================
 // MEMBERSHIP PLAN TYPES
@@ -120,20 +120,23 @@ export type CustomerUpdateInput = Partial<CustomerCreateInput>;
 
 export type CustomerEventRegistration = PrismaCustomerEventRegistration;
 
-export type CustomerEventRegistrationWithCustomer = PrismaCustomerEventRegistration & {
-  customer: Customer;
-};
+export type CustomerEventRegistrationWithCustomer =
+  PrismaCustomerEventRegistration & {
+    customer: Customer;
+  };
 
-export type CustomerEventRegistrationWithEvent = PrismaCustomerEventRegistration & {
-  event: Event;
-};
+export type CustomerEventRegistrationWithEvent =
+  PrismaCustomerEventRegistration & {
+    event: Event;
+  };
 
-export type CustomerEventRegistrationWithRelations = PrismaCustomerEventRegistration & {
-  customer?: Customer;
-  event?: Event;
-  payment?: CustomerPayment | null;
-  pax?: CustomerEventPax[];
-};
+export type CustomerEventRegistrationWithRelations =
+  PrismaCustomerEventRegistration & {
+    customer?: Customer;
+    event?: Event;
+    payment?: CustomerPayment | null;
+    pax?: CustomerEventPax[];
+  };
 
 export type CustomerEventRegistrationCreateInput = {
   customerId: string;
@@ -146,7 +149,7 @@ export type CustomerEventRegistrationCreateInput = {
 };
 
 export type CustomerEventRegistrationUpdateInput = Partial<
-  Omit<CustomerEventRegistrationCreateInput, 'customerId' | 'eventId'>
+  Omit<CustomerEventRegistrationCreateInput, "customerId" | "eventId">
 >;
 
 // ============================================
@@ -172,7 +175,7 @@ export type CustomerEventPaxCreateInput = {
 };
 
 export type CustomerEventPaxUpdateInput = Partial<
-  Omit<CustomerEventPaxCreateInput, 'registrationId'>
+  Omit<CustomerEventPaxCreateInput, "registrationId">
 >;
 
 // ============================================
@@ -193,7 +196,7 @@ export type CustomerPaxFreebieCreateInput = {
 };
 
 export type CustomerPaxFreebieUpdateInput = Partial<
-  Omit<CustomerPaxFreebieCreateInput, 'paxId' | 'freebieId'>
+  Omit<CustomerPaxFreebieCreateInput, "paxId" | "freebieId">
 >;
 
 // ============================================
@@ -202,9 +205,10 @@ export type CustomerPaxFreebieUpdateInput = Partial<
 
 export type CustomerDailyUseRedemption = PrismaCustomerDailyUseRedemption;
 
-export type CustomerDailyUseRedemptionWithCustomer = PrismaCustomerDailyUseRedemption & {
-  customer: Customer;
-};
+export type CustomerDailyUseRedemptionWithCustomer =
+  PrismaCustomerDailyUseRedemption & {
+    customer: Customer;
+  };
 
 export type CustomerDailyUseRedemptionCreateInput = {
   customerId: string;
@@ -213,7 +217,7 @@ export type CustomerDailyUseRedemptionCreateInput = {
 };
 
 export type CustomerDailyUseRedemptionUpdateInput = Partial<
-  Omit<CustomerDailyUseRedemptionCreateInput, 'customerId' | 'eventId'>
+  Omit<CustomerDailyUseRedemptionCreateInput, "customerId" | "eventId">
 >;
 
 // ============================================
@@ -244,7 +248,7 @@ export type CustomerPaymentCreateInput = {
 };
 
 export type CustomerPaymentUpdateInput = Partial<
-  Omit<CustomerPaymentCreateInput, 'customerId'>
+  Omit<CustomerPaymentCreateInput, "customerId">
 >;
 
 // ============================================
@@ -268,7 +272,9 @@ export type MembershipPlanPerkCreateInput = {
   maxPerWeek?: number;
 };
 
-export type MembershipPlanPerkUpdateInput = Partial<Omit<MembershipPlanPerkCreateInput, 'planId'>>;
+export type MembershipPlanPerkUpdateInput = Partial<
+  Omit<MembershipPlanPerkCreateInput, "planId">
+>;
 
 // ============================================
 // MEMBERSHIP TYPES
@@ -304,7 +310,9 @@ export type MembershipCreateInput = {
   couponId?: string;
 };
 
-export type MembershipUpdateInput = Partial<Omit<MembershipCreateInput, 'userId'>>;
+export type MembershipUpdateInput = Partial<
+  Omit<MembershipCreateInput, "userId">
+>;
 
 // ============================================
 // MEMBERSHIP PERK USAGE TYPES
@@ -329,7 +337,9 @@ export type MembershipPerkUsageCreateInput = {
   referenceType?: string;
 };
 
-export type MembershipPerkUsageUpdateInput = Partial<Omit<MembershipPerkUsageCreateInput, 'membershipId' | 'userId'>>;
+export type MembershipPerkUsageUpdateInput = Partial<
+  Omit<MembershipPerkUsageCreateInput, "membershipId" | "userId">
+>;
 
 // Helper type for perk balance tracking
 export type PerkBalance = {
@@ -356,14 +366,14 @@ export type CouponWithMemberships = PrismaCoupon & {
 export type CouponCreateInput = {
   code: string;
   description?: string;
-  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE';
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE";
   discountValue: number;
   maxUses?: number;
   isActive?: boolean;
   expiresAt?: Date;
 };
 
-export type CouponUpdateInput = Partial<Omit<CouponCreateInput, 'code'>>;
+export type CouponUpdateInput = Partial<Omit<CouponCreateInput, "code">>;
 
 export type CouponValidation = {
   isValid: boolean;
@@ -371,7 +381,6 @@ export type CouponValidation = {
   discount?: number;
   finalAmount?: number;
 };
-
 
 // ============================================
 // EVENT REGISTRATION TYPES
@@ -403,7 +412,9 @@ export type EventRegistrationCreateInput = {
   paymentId?: string;
 };
 
-export type EventRegistrationUpdateInput = Partial<Omit<EventRegistrationCreateInput, 'userId' | 'eventId'>>;
+export type EventRegistrationUpdateInput = Partial<
+  Omit<EventRegistrationCreateInput, "userId" | "eventId">
+>;
 
 // ============================================
 // EVENT PAX TYPES
@@ -426,7 +437,9 @@ export type EventPaxCreateInput = {
   email?: string;
 };
 
-export type EventPaxUpdateInput = Partial<Omit<EventPaxCreateInput, 'registrationId'>>;
+export type EventPaxUpdateInput = Partial<
+  Omit<EventPaxCreateInput, "registrationId">
+>;
 
 // ============================================
 // PAX FREEBIE TYPES
@@ -445,7 +458,9 @@ export type PaxFreebieCreateInput = {
   quantity?: number;
 };
 
-export type PaxFreebieUpdateInput = Partial<Omit<PaxFreebieCreateInput, 'paxId' | 'freebieId'>>;
+export type PaxFreebieUpdateInput = Partial<
+  Omit<PaxFreebieCreateInput, "paxId" | "freebieId">
+>;
 
 // ============================================
 // DAILY USE REDEMPTION TYPES
@@ -463,7 +478,9 @@ export type DailyUseRedemptionCreateInput = {
   notes?: string;
 };
 
-export type DailyUseRedemptionUpdateInput = Partial<Omit<DailyUseRedemptionCreateInput, 'userId' | 'eventId'>>;
+export type DailyUseRedemptionUpdateInput = Partial<
+  Omit<DailyUseRedemptionCreateInput, "userId" | "eventId">
+>;
 
 // ============================================
 // PAYMENT TYPES
@@ -493,7 +510,7 @@ export type PaymentCreateInput = {
   paidAt?: Date;
 };
 
-export type PaymentUpdateInput = Partial<Omit<PaymentCreateInput, 'userId'>>;
+export type PaymentUpdateInput = Partial<Omit<PaymentCreateInput, "userId">>;
 
 // ============================================
 // FORM INPUT TYPES
@@ -558,13 +575,17 @@ export type UserResponse = ApiResponse<UserPublic>;
 export type UsersResponse = ApiResponse<PaginatedResponse<UserPublic>>;
 
 export type MembershipResponse = ApiResponse<MembershipWithRelations>;
-export type MembershipsResponse = ApiResponse<PaginatedResponse<MembershipWithRelations>>;
+export type MembershipsResponse = ApiResponse<
+  PaginatedResponse<MembershipWithRelations>
+>;
 
 export type EventResponse = ApiResponse<EventWithRelations>;
 export type EventsResponse = ApiResponse<PaginatedResponse<EventWithRelations>>;
 
 export type PaymentResponse = ApiResponse<PaymentWithRelations>;
-export type PaymentsResponse = ApiResponse<PaginatedResponse<PaymentWithRelations>>;
+export type PaymentsResponse = ApiResponse<
+  PaginatedResponse<PaymentWithRelations>
+>;
 
 // ============================================
 // FILTER & QUERY TYPES
@@ -596,7 +617,7 @@ export type PaginationParams = {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 };
 
 // ============================================
@@ -653,7 +674,7 @@ export type DateRange = {
   to: Date;
 };
 
-export type SortOrder = 'asc' | 'desc';
+export type SortOrder = "asc" | "desc";
 
 export type SelectOption<T = string> = {
   value: T;
@@ -703,7 +724,6 @@ export type EventCategoryCreateInput = {
 
 export type EventCategoryUpdateInput = Partial<EventCategoryCreateInput>;
 
-
 // ============================================
 // EVENT FREEBIE TYPES
 // ============================================
@@ -727,8 +747,9 @@ export type EventFreebieCreateInput = {
   imageUrl?: string;
 };
 
-export type EventFreebieUpdateInput = Partial<Omit<EventFreebieCreateInput, 'eventId'>>;
-
+export type EventFreebieUpdateInput = Partial<
+  Omit<EventFreebieCreateInput, "eventId">
+>;
 
 // ============================================
 // EVENT TYPES
@@ -834,7 +855,7 @@ export type TransformedUser = {
   joinedDate: Date;
   eventRegistrations: number;
   totalPayments: number;
-  type: 'user';
+  type: "user";
 };
 
 export type TransformedCustomer = {
@@ -849,7 +870,7 @@ export type TransformedCustomer = {
   joinedDate: Date;
   eventRegistrations: number;
   totalPayments: number;
-  type: 'customer';
+  type: "customer";
   linkedUserId: string | null;
 };
 
@@ -872,7 +893,28 @@ export type CustomerListApiResponse = ApiResponse<{
 
 export type CustomerQueryParams = {
   search?: string;
-  filter?: 'all' | 'registered' | 'guest';
+  filter?: "all" | "registered" | "guest";
   page?: number;
   limit?: number;
 };
+
+export type AdminSettings = {
+  id: string;
+  bankName: string | null;
+  accountNumber: string | null;
+  accountName: string | null;
+  qrCodeUrl: string | null;
+  qrCodeNumber: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type AdminSettingsUpdateInput = {
+  bankName?: string | null;
+  accountNumber?: string | null;
+  accountName?: string | null;
+  qrCodeUrl?: string | null;
+  qrCodeNumber?: string | null;
+};
+
+export type AdminSettingsResponse = ApiResponse<AdminSettings>;
