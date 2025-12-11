@@ -74,14 +74,14 @@ export default function RegistrationSteps({
         return false;
       }
 
-      // Validate freebie selections if event has freebies with options
+      // Validate freebie selections if event has freebies with options (commas in description)
       if (event.freebies && event.freebies.length > 0) {
         for (const freebie of event.freebies) {
-          if (
-            freebie.description &&
-            freebie.description.includes("Choose") &&
-            !attendee.selectedFreebies[freebie.id]
-          ) {
+          // Check if freebie has options (contains comma in description)
+          const hasOptions =
+            freebie.description && freebie.description.includes(",");
+
+          if (hasOptions && !attendee.selectedFreebies[freebie.id]) {
             setError(
               `Please select an option for ${freebie.name} for ${attendee.name}`
             );

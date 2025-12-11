@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Event } from '@/types/database';
-import { AttendeeFormData } from '@/types/registration';
+import { Event } from "@/types/database";
+import { AttendeeFormData } from "@/types/registration";
 
 interface OrderSummaryProps {
   attendees: AttendeeFormData[];
@@ -28,21 +28,23 @@ export default function OrderSummary({
               </span>
               {Object.keys(attendee.selectedFreebies).length > 0 && (
                 <div className="text-xs text-foreground/40 pl-2 mt-1">
-                  {Object.entries(attendee.selectedFreebies).map(([, option]) => (
-                    <div key={option}>• {option}</div>
-                  ))}
+                  {Object.entries(attendee.selectedFreebies).map(
+                    ([, option]) => (
+                      <div key={option}>• {option}</div>
+                    )
+                  )}
                 </div>
               )}
             </div>
             <span className="font-medium text-foreground">
-              {isFreeEvent ? 'Free' : `₱${event.price}`}
+              {isFreeEvent ? "Free" : `₱${event.price}`}
             </span>
           </div>
         ))}
         <div className="border-t border-foreground/10 pt-3 flex justify-between items-center mt-2">
           <span className="font-bold text-foreground">Total</span>
           <span className="font-bold text-xl text-primary">
-            {isFreeEvent ? 'Free' : `₱${total.toFixed(2)}`}
+            {isFreeEvent ? "Free" : `₱${total.toFixed(2)}`}
           </span>
         </div>
       </div>
@@ -51,7 +53,8 @@ export default function OrderSummary({
       {event.isFreeForMembers && !isFreeEvent && (
         <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
           <p className="text-xs text-blue-800">
-            This event is free for members. Non-members pay ₱{event.price} per person.
+            This event is free for members. Non-members pay ₱{event.price} per
+            person.
           </p>
         </div>
       )}

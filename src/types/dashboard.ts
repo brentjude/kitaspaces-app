@@ -6,8 +6,8 @@ export interface DashboardData {
     isMember: boolean;
   };
   membership: {
-    type: 'MONTHLY' | 'DAILY';
-    status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED' | 'PENDING';
+    type: "MONTHLY" | "DAILY";
+    status: "ACTIVE" | "INACTIVE" | "EXPIRED" | "PENDING";
     startDate: Date;
     endDate: Date | null;
     planName: string | null;
@@ -40,7 +40,7 @@ export interface UserEventRegistration {
     } | null;
   };
   numberOfPax: number;
-  paymentStatus: 'PENDING' | 'COMPLETED' | 'FREE';
+  paymentStatus: "PENDING" | "COMPLETED" | "FREE";
   createdAt: Date;
 }
 
@@ -74,5 +74,35 @@ export interface RedemptionEvent {
   } | null;
   isRedeemed: boolean;
   redeemedAt: Date | null;
-  canRedeem: boolean; // New field to indicate if redemption is available today
+  canRedeem: boolean;
+}
+
+export interface MembershipPerk {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string;
+  quantity: number;
+  unit: string;
+  maxPerDay: number | null;
+  maxPerWeek: number | null;
+  daysOfWeek: string | null;
+  isRecurring: boolean;
+  validFrom: string | null;
+  validUntil: string | null;
+  isAvailable: boolean;
+  unavailableReason: string;
+  nextAvailableDate: Date | null;
+  usedToday: number;
+  lastUsedAt: Date | null;
+}
+
+export interface UserPerksData {
+  membership: {
+    id: string;
+    planName: string;
+    status: string;
+    endDate: Date | null;
+  } | null;
+  perks: MembershipPerk[];
 }

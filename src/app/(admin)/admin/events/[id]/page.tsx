@@ -26,7 +26,44 @@ async function getEventDetails(eventId: string) {
               contactNumber: true,
             },
           },
-          pax: true,
+          pax: {
+            include: {
+              freebies: {
+                include: {
+                  freebie: {
+                    select: {
+                      id: true,
+                      name: true,
+                      description: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          payment: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+      customerRegistrations: {
+        include: {
+          pax: {
+            include: {
+              freebies: {
+                include: {
+                  freebie: {
+                    select: {
+                      id: true,
+                      name: true,
+                      description: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
           payment: true,
         },
         orderBy: {
@@ -92,7 +129,6 @@ export default async function EventDetailsPage({
 
   return (
     <div className="min-h-screen bg-background">
-
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Back Button */}

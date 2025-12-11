@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { PlusIcon, TrashIcon, UserIcon } from '@heroicons/react/24/outline';
-import { Event } from '@/types/database';
-import { AttendeeFormData } from '@/types/registration';
-import FreebieSelector from './FreebieSelector';
+import { PlusIcon, TrashIcon, UserIcon } from "@heroicons/react/24/outline";
+import { Event } from "@/types/database";
+import { AttendeeFormData } from "@/types/registration";
+import FreebieSelector from "./FreebieSelector";
 
 interface AttendeeFormProps {
   attendees: AttendeeFormData[];
@@ -32,8 +32,8 @@ export default function AttendeeForm({
       ...attendees,
       {
         id: Math.random().toString(36).substring(2, 9),
-        name: '',
-        email: '',
+        name: "",
+        email: "",
         selectedFreebies: {},
       },
     ]);
@@ -80,7 +80,7 @@ export default function AttendeeForm({
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-foreground flex items-center">
               <UserIcon className="w-5 h-5 mr-2 text-primary" />
-              {index === 0 ? 'Main Attendee (You)' : `Guest #${index}`}
+              {index === 0 ? "Main Attendee (You)" : `Guest #${index}`}
             </h3>
             {index > 0 && (
               <button
@@ -103,7 +103,9 @@ export default function AttendeeForm({
                 className="w-full rounded-lg border border-foreground/20 px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                 placeholder="Full Name"
                 value={attendee.name}
-                onChange={(e) => updateAttendee(attendee.id, 'name', e.target.value)}
+                onChange={(e) =>
+                  updateAttendee(attendee.id, "name", e.target.value)
+                }
                 disabled={index === 0 && !!currentUser}
               />
             </div>
@@ -116,7 +118,9 @@ export default function AttendeeForm({
                 className="w-full rounded-lg border border-foreground/20 px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                 placeholder="email@example.com"
                 value={attendee.email}
-                onChange={(e) => updateAttendee(attendee.id, 'email', e.target.value)}
+                onChange={(e) =>
+                  updateAttendee(attendee.id, "email", e.target.value)
+                }
                 disabled={index === 0 && !!currentUser}
               />
             </div>
@@ -132,7 +136,11 @@ export default function AttendeeForm({
                   ...attendee.selectedFreebies,
                   [freebieId]: option,
                 };
-                updateAttendee(attendee.id, 'selectedFreebies', newSelectedFreebies);
+                updateAttendee(
+                  attendee.id,
+                  "selectedFreebies",
+                  newSelectedFreebies
+                );
               }}
             />
           )}

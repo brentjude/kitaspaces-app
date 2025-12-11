@@ -14,7 +14,7 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
         { status: 401 }
@@ -43,7 +43,7 @@ export async function POST(
       },
     });
 
-    if (!membership) {
+    if (!membership || !membership.plan) {
       return NextResponse.json(
         { success: false, error: "No active membership found" },
         { status: 400 }
@@ -75,7 +75,7 @@ export async function POST(
     // Check day-specific perks
     if (perk.daysOfWeek) {
       try {
-        const allowedDays = JSON.parse(perk.daysOfWeek);
+        const allowedDays = JSON.parse(perk.daysOfWeek) as string[];
         if (!allowedDays.includes(dayOfWeek)) {
           return NextResponse.json(
             {
@@ -165,12 +165,16 @@ export async function POST(
       }
     }
 
-    // Create usage record
+    // Create usage record with all required fields
     const usage = await prisma.membershipPerkUsage.create({
       data: {
         membershipId: membership.id,
+        userId: session.user.id,
         perkId: perk.id,
+        perkType: perk.perkType,
+        perkName: perk.name,
         quantityUsed: 1,
+        unit: perk.unit,
         notes: notes || `Redeemed ${perk.name}`,
       },
       include: {

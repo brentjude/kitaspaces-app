@@ -255,8 +255,6 @@ export type CustomerPaymentUpdateInput = Partial<
 // MEMBERSHIP PLAN PERK TYPES
 // ============================================
 
-export type MembershipPlanPerk = PrismaMembershipPlanPerk;
-
 export type MembershipPlanPerk = PrismaMembershipPlanPerk & {
   daysOfWeek?: string | null;
   isRecurring?: boolean;
