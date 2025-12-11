@@ -172,7 +172,7 @@ export default function PaymentDetailsModal({
 
     setIsUpdating(true);
     try {
-      const response = await fetch(`/api/admin/payments/${payment.id}`, {
+      const response = await fetch(`/api/admin/payment/${payment.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -487,7 +487,7 @@ export default function PaymentDetailsModal({
         )}
 
         {/* Total Amount Summary */}
-        <div className="p-4 bg-gradient-to-br from-primary/10 to-orange-50 rounded-xl border-2 border-primary/20">
+        <div className="p-4 bg-linear-to-br from-primary/10 to-orange-50 rounded-xl border-2 border-primary/20">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-foreground/60">Number of Guests</span>

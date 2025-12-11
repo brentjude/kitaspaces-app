@@ -133,7 +133,6 @@ export async function POST(
     // Process registration in transaction
     const result = await prisma.$transaction(async (tx) => {
       let paymentId: string | undefined;
-      let registrationId: string;
       let paymentReferenceNumber: string | undefined;
 
       // === REGISTERED USER (MEMBER OR NON-MEMBER) ===
@@ -150,8 +149,25 @@ export async function POST(
           throw new Error("You are already registered for this event");
         }
 
-        // Create Payment if not free
-        if (!isFreeEvent && paymentMethod) {
+        // Create Payment record even for free events
+        if (isFreeEvent) {
+          // ✅ Free event - create COMPLETED payment with FREE_MEMBERSHIP method
+          paymentReferenceNumber = await generateUniqueReference("event");
+
+          const payment = await tx.payment.create({
+            data: {
+              userId: session.user.id,
+              amount: 0,
+              paymentMethod: "FREE_MEMBERSHIP",
+              status: "COMPLETED", // ✅ Mark as COMPLETED immediately
+              paymentReference: paymentReferenceNumber,
+              notes: `Free event registration: ${event.title}`,
+              paidAt: new Date(), // ✅ Set paid timestamp
+            },
+          });
+          paymentId = payment.id;
+        } else if (paymentMethod) {
+          // Paid event - create PENDING payment
           paymentReferenceNumber = await generateUniqueReference("event");
 
           const payment = await tx.payment.create({
@@ -180,7 +196,6 @@ export async function POST(
             paymentId: paymentId || undefined,
           },
         });
-        registrationId = registration.id;
 
         // Create EventPax for ALL attendees (including main payer)
         for (const attendee of attendees) {
@@ -203,7 +218,7 @@ export async function POST(
                   paxId: pax.id,
                   freebieId: selection.freebieId,
                   quantity: 1,
-                  option: selection.selectedOption || undefined, // ✅ Save selected option
+                  option: selection.selectedOption || undefined,
                 },
               });
             }
@@ -251,8 +266,25 @@ export async function POST(
           );
         }
 
-        // Create CustomerPayment if not free
-        if (!isFreeEvent && paymentMethod) {
+        // Create Payment record even for free events
+        if (isFreeEvent) {
+          // ✅ Free event - create COMPLETED payment with FREE_MEMBERSHIP method
+          paymentReferenceNumber = await generateUniqueReference("event");
+
+          const payment = await tx.customerPayment.create({
+            data: {
+              customerId: customer.id,
+              amount: 0,
+              paymentMethod: "FREE_MEMBERSHIP",
+              status: "COMPLETED", // ✅ Mark as COMPLETED immediately
+              paymentReference: paymentReferenceNumber,
+              notes: `Free event registration: ${event.title}`,
+              paidAt: new Date(), // ✅ Set paid timestamp
+            },
+          });
+          paymentId = payment.id;
+        } else if (paymentMethod) {
+          // Paid event - create PENDING payment
           paymentReferenceNumber = await generateUniqueReference("event");
 
           const payment = await tx.customerPayment.create({
@@ -281,7 +313,6 @@ export async function POST(
             paymentId: paymentId || undefined,
           },
         });
-        registrationId = registration.id;
 
         // Create CustomerEventPax for ALL attendees (including main payer)
         for (const attendee of attendees) {
@@ -304,7 +335,7 @@ export async function POST(
                   paxId: pax.id,
                   freebieId: selection.freebieId,
                   quantity: 1,
-                  option: selection.selectedOption || undefined, // ✅ Save selected option
+                  option: selection.selectedOption || undefined,
                 },
               });
             }
@@ -327,7 +358,7 @@ export async function POST(
         registrationId: result.registrationId,
         paymentReference: result.paymentReference,
         totalAmount: result.totalAmount,
-        status: isFreeEvent ? "CONFIRMED" : "PENDING",
+        status: isFreeEvent ? "COMPLETED" : "PENDING", // ✅ Return COMPLETED for free events
         attendees: attendees.map((a) => ({
           name: a.name,
           email: a.email,
