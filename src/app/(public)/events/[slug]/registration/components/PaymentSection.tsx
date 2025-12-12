@@ -7,6 +7,8 @@ import {
   QrCodeIcon,
   PhotoIcon,
   CheckCircleIcon,
+  ClipboardDocumentIcon,
+  ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { PaymentSettings } from "@/types/registration";
 import Image from "next/image";
@@ -36,6 +38,26 @@ export default function PaymentSection({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [copiedQrNumber, setCopiedQrNumber] = useState(false);
+  const [copiedAccountNumber, setCopiedAccountNumber] = useState(false);
+
+  const handleCopyToClipboard = async (
+    text: string,
+    type: "qr" | "account"
+  ) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (type === "qr") {
+        setCopiedQrNumber(true);
+        setTimeout(() => setCopiedQrNumber(false), 2000);
+      } else {
+        setCopiedAccountNumber(true);
+        setTimeout(() => setCopiedAccountNumber(false), 2000);
+      }
+    } catch (error) {
+      console.error("Failed to copy:", error);
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -197,26 +219,50 @@ export default function PaymentSection({
                       className="object-contain"
                     />
                   </div>
-                  {paymentSettings.qrCodeNumber && (
-                    <p className="text-center text-sm font-mono text-foreground mt-3">
+                </div>
+              )}
+
+              {paymentSettings?.qrCodeNumber && (
+                <div className="bg-white rounded-lg p-4">
+                  <p className="text-sm text-foreground/60 mb-2">
+                    Or send payment to:
+                  </p>
+                  <div className="flex items-center justify-between bg-foreground/5 rounded-lg p-3 border border-foreground/10">
+                    <p className="text-lg font-bold text-foreground font-mono">
                       {paymentSettings.qrCodeNumber}
                     </p>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopyToClipboard(
+                          paymentSettings.qrCodeNumber!,
+                          "qr"
+                        )
+                      }
+                      className="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                      title="Copy number"
+                    >
+                      {copiedQrNumber ? (
+                        <>
+                          <ClipboardDocumentCheckIcon className="w-5 h-5" />
+                          <span className="text-sm font-medium">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <ClipboardDocumentIcon className="w-5 h-5" />
+                          <span className="text-sm font-medium">Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
-              {!paymentSettings?.qrCodeUrl && paymentSettings?.qrCodeNumber && (
-                <div className="space-y-2">
-                  <p className="text-sm text-foreground/60">Send payment to:</p>
-                  <p className="text-lg font-bold text-foreground font-mono">
-                    {paymentSettings.qrCodeNumber}
-                  </p>
-                </div>
-              )}
+
               <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/70">
                 <li>Open your GCash app</li>
                 <li>
                   {paymentSettings?.qrCodeUrl
-                    ? "Scan the QR code above"
+                    ? "Scan the QR code above or send to the number"
                     : "Send money to the number above"}
                 </li>
                 <li>Complete the payment</li>
@@ -241,9 +287,36 @@ export default function PaymentSection({
                   <p className="text-xs text-foreground/50 uppercase tracking-wide mb-1">
                     Account Number
                   </p>
-                  <p className="font-bold text-foreground font-mono text-lg">
-                    {paymentSettings?.accountNumber || "N/A"}
-                  </p>
+                  <div className="flex items-center justify-between bg-foreground/5 rounded-lg p-3 border border-foreground/10">
+                    <p className="font-bold text-foreground font-mono text-lg">
+                      {paymentSettings?.accountNumber || "N/A"}
+                    </p>
+                    {paymentSettings?.accountNumber && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopyToClipboard(
+                            paymentSettings.accountNumber!,
+                            "account"
+                          )
+                        }
+                        className="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                        title="Copy account number"
+                      >
+                        {copiedAccountNumber ? (
+                          <>
+                            <ClipboardDocumentCheckIcon className="w-5 h-5" />
+                            <span className="text-sm font-medium">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <ClipboardDocumentIcon className="w-5 h-5" />
+                            <span className="text-sm font-medium">Copy</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs text-foreground/50 uppercase tracking-wide mb-1">

@@ -51,8 +51,8 @@ export default function PaymentsTab({
     folder: "kitaspaces/payment-qr",
     onSuccess: async (data) => {
       try {
-        await onUploadQR(data.secure_url); // Use secure_url!
-        alert("QR code uploaded successfully!"); // Add success feedback
+        await onUploadQR(data.secure_url);
+        alert("QR code uploaded successfully!");
       } catch (error) {
         console.error("Error saving QR URL:", error);
         alert("Failed to save QR code URL");
@@ -289,14 +289,14 @@ export default function PaymentsTab({
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-foreground">
-              Account/Phone Number
+              GCash/PayMaya Number
             </label>
-            {!isEditingQR && qrCodeNumber && (
+            {!isEditingQR && (
               <button
                 onClick={() => setIsEditingQR(true)}
                 className="text-sm font-medium text-primary hover:underline"
               >
-                Edit
+                {qrCodeNumber ? "Edit" : "Add"}
               </button>
             )}
           </div>
@@ -311,11 +311,14 @@ export default function PaymentsTab({
                 placeholder="e.g., 09123456789"
                 required
               />
+              <p className="text-xs text-foreground/50">
+                Enter your GCash or PayMaya mobile number
+              </p>
               <div className="flex gap-3">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 text-sm"
                 >
                   {saving ? "Saving..." : "Save"}
                 </button>
@@ -325,21 +328,30 @@ export default function PaymentsTab({
                     setIsEditingQR(false);
                     setQrNumber(qrCodeNumber);
                   }}
-                  className="px-4 py-2 text-foreground/60 hover:bg-foreground/5 rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 text-foreground/60 hover:bg-foreground/5 rounded-lg font-medium transition-colors text-sm"
                 >
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div className="text-sm font-medium text-foreground font-mono">
-              {qrCodeNumber || "Not set"}
+            <div className="px-4 py-3 bg-foreground/5 rounded-lg border border-foreground/10">
+              <div className="text-sm font-medium text-foreground font-mono">
+                {qrCodeNumber || (
+                  <span className="text-foreground/40 font-sans">
+                    Not set - Click Add to enter your number
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
 
         {/* QR Code Image */}
         <div>
+          <label className="block text-sm font-medium text-foreground mb-3">
+            QR Code Image
+          </label>
           {qrCodeUrl ? (
             <div className="space-y-4">
               <div className="relative w-full max-w-xs mx-auto aspect-square rounded-xl overflow-hidden border-2 border-foreground/10">
@@ -352,7 +364,7 @@ export default function PaymentsTab({
               </div>
               <div className="flex gap-3 justify-center">
                 <label
-                  className={`px-4 py-2 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20 transition-colors cursor-pointer ${
+                  className={`px-4 py-2 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20 transition-colors cursor-pointer text-sm ${
                     isUploading ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
@@ -370,7 +382,7 @@ export default function PaymentsTab({
                 <button
                   onClick={handleDeleteQR}
                   disabled={isUploading}
-                  className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
                 >
                   <TrashIcon className="w-4 h-4" />
                   Delete
