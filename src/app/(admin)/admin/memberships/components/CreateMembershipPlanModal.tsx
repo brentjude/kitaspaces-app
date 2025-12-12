@@ -7,7 +7,7 @@ import {
   MembershipPlanPerk,
   MembershipPlanWithPerks,
 } from '@/types/membership';
-import { PerkType, MembershipType } from '@prisma/client';
+import { PerkType, MembershipType } from '@/generated/prisma';
 import {
   XMarkIcon,
   PlusIcon,
@@ -175,18 +175,7 @@ export default function CreateMembershipPlanModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="3xl">
-      <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-        <h3 className="font-bold text-gray-900 text-lg">
-          {initialData ? 'Edit Membership Plan' : 'Create Membership Plan'}
-        </h3>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-100"
-        >
-          <XMarkIcon className="w-5 h-5" />
-        </button>
-      </div>
+    <Modal title={initialData ? 'Edit Membership Plan' : 'Create Membership Plan'} isOpen={isOpen} onClose={onClose} size="xl">
 
       <div className="flex-1 overflow-y-auto p-6">
         <form id="planForm" onSubmit={handleSubmit} className="space-y-6">
@@ -291,7 +280,7 @@ export default function CreateMembershipPlanModal({
                       setFormData({ ...formData, isActive: e.target.checked })
                     }
                   />
-                  <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </div>
                 <span className="ml-3 text-sm font-medium text-gray-700">
                   Plan is Active
@@ -477,7 +466,7 @@ export default function CreateMembershipPlanModal({
                               )
                             }
                           />
-                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                         </div>
                         <span className="ml-2 text-xs font-medium text-gray-600 flex items-center">
                           <ArrowPathIcon className="w-3 h-3 mr-1" /> Recurring

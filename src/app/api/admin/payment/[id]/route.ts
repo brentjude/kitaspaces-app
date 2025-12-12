@@ -181,7 +181,7 @@ export async function GET(
     const { id: paymentId } = await context.params;
 
     // Try to find in user payments first
-    await prisma.payment.findUnique({
+    const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
       include: {
         user: {

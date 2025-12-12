@@ -16,7 +16,60 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
-import type { Payment, CustomerPayment } from "@/generated/prisma";
+import type {
+  Payment,
+  CustomerPayment,
+  EventRegistration,
+  EventPax,
+  PaxFreebie,
+  CustomerEventRegistration,
+  CustomerEventPax,
+  CustomerPaxFreebie,
+  PaymentStatus,
+} from "@/generated/prisma";
+
+// Add these type definitions
+interface UserSelect {
+  id: string;
+  name: string;
+  email: string;
+  isMember: boolean;
+}
+
+interface RegistrationWithUser extends EventRegistration {
+  user: UserSelect;
+  payment: Payment | null;
+  pax: Array<
+    EventPax & {
+      freebies: Array<
+        PaxFreebie & {
+          freebie: {
+            id: string;
+            name: string;
+            description: string | null;
+          };
+        }
+      >;
+    }
+  >;
+}
+
+interface CustomerRegistrationFull extends CustomerEventRegistration {
+  payment: CustomerPayment | null;
+  pax: Array<
+    CustomerEventPax & {
+      freebies: Array<
+        CustomerPaxFreebie & {
+          freebie: {
+            id: string;
+            name: string;
+            description: string | null;
+          };
+        }
+      >;
+    }
+  >;
+}
 
 interface PaymentDetailsModalProps {
   isOpen: boolean;
@@ -31,7 +84,7 @@ interface PaymentDetailsModalProps {
       isMember?: boolean;
     };
     numberOfPax: number;
-    paymentStatus: "FREE" | "PENDING" | "COMPLETED" | "FAILED" | null;
+    paymentStatus: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "FREE" | null;
     payment: Payment | CustomerPayment | null;
     pax: Array<{
       name: string;
@@ -43,21 +96,20 @@ interface PaymentDetailsModalProps {
           description: string | null;
         };
         quantity: number;
+        option: string | null;
       }>;
     }>;
+    createdAt: Date;
+    data: RegistrationWithUser | CustomerRegistrationFull;
   };
   event: {
     id: string;
     title: string;
     price: number;
     isFree: boolean;
-    freebies: Array<{
-      id: string;
-      name: string;
-      description: string | null;
-    }>;
+    isFreeForMembers: boolean;
   };
-  onRefresh?: () => void;
+  onRefresh: () => void;
 }
 
 export default function PaymentDetailsModal({
@@ -71,7 +123,7 @@ export default function PaymentDetailsModal({
   const totalAmount = event.isFree ? 0 : event.price * numberOfPax;
 
   const [isEditingStatus, setIsEditingStatus] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState(
+  const [selectedStatus, setSelectedStatus] = useState<PaymentStatus>(
     payment?.status || "PENDING"
   );
   const [statusNotes, setStatusNotes] = useState("");
@@ -229,7 +281,7 @@ export default function PaymentDetailsModal({
                 <div className="flex items-center gap-2">
                   <select
                     value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    onChange={(e) => setSelectedStatus(e.target.value as PaymentStatus)}
                     className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                   >
                     <option value="PENDING">Pending</option>

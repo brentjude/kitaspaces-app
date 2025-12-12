@@ -20,7 +20,6 @@ import type {
   CustomerPayment,
   CustomerEventPax,
   CustomerPaxFreebie,
-  PaymentStatus,
 } from "@/generated/prisma";
 
 interface UserSelect {

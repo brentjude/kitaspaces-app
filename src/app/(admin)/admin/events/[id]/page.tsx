@@ -104,6 +104,20 @@ async function getAllUsers() {
   return users;
 }
 
+async function getPaymentSettings() {
+  const settings = await prisma.adminSettings.findFirst({
+    select: {
+      bankName: true,
+      accountNumber: true,
+      accountName: true,
+      qrCodeUrl: true,
+      qrCodeNumber: true,
+    },
+  });
+
+  return settings;
+}
+
 export default async function EventDetailsPage({
   params,
 }: EventDetailsPageProps) {
@@ -114,13 +128,17 @@ export default async function EventDetailsPage({
   }
 
   const resolvedParams = await params;
-  const event = await getEventDetails(resolvedParams.id);
+  
+  // Fetch all data in parallel
+  const [event, allUsers, paymentSettings] = await Promise.all([
+    getEventDetails(resolvedParams.id),
+    getAllUsers(),
+    getPaymentSettings(),
+  ]);
 
   if (!event) {
     notFound();
   }
-
-  const allUsers = await getAllUsers();
 
   // Check if event has paid registrations
   const hasPaidRegistrations = event.registrations.some(
@@ -149,7 +167,11 @@ export default async function EventDetailsPage({
             />
 
             {/* Right Column: Registrants List */}
-            <EventRegistrantsList event={event} allUsers={allUsers} />
+            <EventRegistrantsList 
+              event={event} 
+              allUsers={allUsers}
+              paymentSettings={paymentSettings}
+            />
           </div>
         </div>
       </div>

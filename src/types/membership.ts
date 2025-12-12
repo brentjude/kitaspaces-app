@@ -1,4 +1,4 @@
-import { MembershipType, PerkType } from '@prisma/client';
+import { MembershipType, PerkType } from '@/generated/prisma';
 
 export interface MembershipPlanPerk {
   id?: string;
