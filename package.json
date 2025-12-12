@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint . && node -e \"console.log('\\n✅ No ESLint errors or warnings found!\\n')\"",
     "lint:fix": "eslint . --fix && node -e \"console.log('\\n✅ Auto-fixed all possible issues!\\n')\"",
