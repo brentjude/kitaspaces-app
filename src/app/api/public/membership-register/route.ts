@@ -9,7 +9,7 @@ function generateUserId(): string {
   return `${year}${randomNum}`;
 }
 
-function generatePaymentReference(type: 'membership'): string {
+function generatePaymentReference(): string {
   const year = new Date().getFullYear();
   const randomNum = Math.floor(Math.random() * 9000) + 1000;
   return `mb_kita${year}_${randomNum}`;
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Generate payment reference
-      const paymentReference = generatePaymentReference('membership');
+      const paymentReference = generatePaymentReference();
 
       // Create payment
       const payment = await tx.payment.create({

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { MembershipRegistrationFormData } from '@/types/membership-registration';
-import { ReferralSource } from '@/generated/prisma';
 import {
   ArrowRightIcon,
   ArrowLeftIcon,

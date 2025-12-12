@@ -9,7 +9,6 @@ import {
   CouponValidationResponse,
   MembershipRegistrationConfirmation,
 } from '@/types/membership-registration';
-import { PaymentMethod } from '@/generated/prisma';
 import PlanSelectionStep from './components/PlanSelectionStep';
 import MemberDetailsStep from './components/MemberDetailsStep';
 import PaymentStep from './components/PaymentStep';

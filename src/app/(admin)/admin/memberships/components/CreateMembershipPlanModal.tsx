@@ -9,7 +9,6 @@ import {
 } from '@/types/membership';
 import { PerkType, MembershipType } from '@/generated/prisma';
 import {
-  XMarkIcon,
   PlusIcon,
   TrashIcon,
   CheckCircleIcon,

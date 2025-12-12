@@ -11,16 +11,18 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is admin
     if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const { id: paymentId } = await context.params;
     const body = await request.json();
     const { status, type, notes } = body as {
       status: PaymentStatus;
-      type: "user" | "customer";
+      type?: "user" | "customer";
       notes?: string;
     };
 
@@ -33,45 +35,65 @@ export async function PATCH(
     ];
     if (!validStatuses.includes(status)) {
       return NextResponse.json(
-        { error: "Invalid payment status" },
+        { success: false, error: "Invalid payment status" },
         { status: 400 }
       );
     }
 
-    // Validate type
-    if (!type || (type !== "user" && type !== "customer")) {
-      return NextResponse.json(
-        { error: "Invalid payment type" },
-        { status: 400 }
-      );
+    // Auto-detect type if not provided
+    let paymentType = type;
+    if (!paymentType) {
+      const userPayment = await prisma.payment.findUnique({
+        where: { id: paymentId },
+      });
+      const customerPayment = await prisma.customerPayment.findUnique({
+        where: { id: paymentId },
+      });
+
+      if (userPayment) {
+        paymentType = "user";
+      } else if (customerPayment) {
+        paymentType = "customer";
+      } else {
+        return NextResponse.json(
+          { success: false, error: "Payment not found" },
+          { status: 404 }
+        );
+      }
     }
 
     // Update payment based on type
     let updatedPayment;
 
-    if (type === "user") {
-      // Update user payment
+    if (paymentType === "user") {
+      // Fetch existing payment
       const existingPayment = await prisma.payment.findUnique({
         where: { id: paymentId },
+        include: {
+          membership: true,
+          eventRegistration: true,
+        },
       });
 
       if (!existingPayment) {
         return NextResponse.json(
-          { error: "Payment not found" },
+          { success: false, error: "Payment not found" },
           { status: 404 }
         );
       }
 
+      // Prepare notes update
+      const updatedNotes = notes
+        ? `${existingPayment.notes || ""}\n[Admin Update ${new Date().toISOString()}]: ${notes}`.trim()
+        : existingPayment.notes;
+
+      // Update user payment
       updatedPayment = await prisma.payment.update({
         where: { id: paymentId },
         data: {
           status,
           paidAt: status === "COMPLETED" ? new Date() : existingPayment.paidAt,
-          notes: notes
-            ? `${
-                existingPayment.notes || ""
-              }\n[Admin Update ${new Date().toISOString()}]: ${notes}`.trim()
-            : existingPayment.notes,
+          notes: updatedNotes,
           updatedAt: new Date(),
         },
         include: {
@@ -100,29 +122,44 @@ export async function PATCH(
           },
         },
       });
+
+      // Update related membership status
+      if (status === "COMPLETED" && existingPayment.membership) {
+        await prisma.membership.update({
+          where: { id: existingPayment.membership.id },
+          data: { status: "ACTIVE" },
+        });
+      }
+
+      // Note: EventRegistration doesn't have a status field, so we skip updating it
     } else {
-      // Update customer payment
+      // Fetch existing customer payment
       const existingPayment = await prisma.customerPayment.findUnique({
         where: { id: paymentId },
+        include: {
+          eventRegistration: true,
+        },
       });
 
       if (!existingPayment) {
         return NextResponse.json(
-          { error: "Payment not found" },
+          { success: false, error: "Payment not found" },
           { status: 404 }
         );
       }
 
+      // Prepare notes update
+      const updatedNotes = notes
+        ? `${existingPayment.notes || ""}\n[Admin Update ${new Date().toISOString()}]: ${notes}`.trim()
+        : existingPayment.notes;
+
+      // Update customer payment
       updatedPayment = await prisma.customerPayment.update({
         where: { id: paymentId },
         data: {
           status,
           paidAt: status === "COMPLETED" ? new Date() : existingPayment.paidAt,
-          notes: notes
-            ? `${
-                existingPayment.notes || ""
-              }\n[Admin Update ${new Date().toISOString()}]: ${notes}`.trim()
-            : existingPayment.notes,
+          notes: updatedNotes,
           updatedAt: new Date(),
         },
         include: {
@@ -145,6 +182,8 @@ export async function PATCH(
           },
         },
       });
+
+      // Note: CustomerEventRegistration doesn't have a status field, so we skip updating it
     }
 
     return NextResponse.json({
@@ -156,6 +195,7 @@ export async function PATCH(
     console.error("Error updating payment status:", error);
     return NextResponse.json(
       {
+        success: false,
         error:
           error instanceof Error
             ? error.message
@@ -173,9 +213,11 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is admin
     if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const { id: paymentId } = await context.params;
@@ -274,11 +316,15 @@ export async function GET(
       });
     }
 
-    return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+    return NextResponse.json(
+      { success: false, error: "Payment not found" },
+      { status: 404 }
+    );
   } catch (error) {
     console.error("Error fetching payment:", error);
     return NextResponse.json(
       {
+        success: false,
         error:
           error instanceof Error ? error.message : "Failed to fetch payment",
       },
@@ -294,9 +340,11 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is admin
     if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const { id: paymentId } = await context.params;
@@ -305,13 +353,12 @@ export async function DELETE(
 
     if (!type || (type !== "user" && type !== "customer")) {
       return NextResponse.json(
-        { error: "Payment type is required" },
+        { success: false, error: "Payment type is required" },
         { status: 400 }
       );
     }
 
     if (type === "user") {
-      // Check if payment exists and is not linked to critical data
       const payment = await prisma.payment.findUnique({
         where: { id: paymentId },
         include: {
@@ -322,18 +369,18 @@ export async function DELETE(
 
       if (!payment) {
         return NextResponse.json(
-          { error: "Payment not found" },
+          { success: false, error: "Payment not found" },
           { status: 404 }
         );
       }
 
-      // Don't allow deletion if payment is completed and linked to active resources
       if (
         payment.status === "COMPLETED" &&
         (payment.eventRegistration || payment.membership)
       ) {
         return NextResponse.json(
           {
+            success: false,
             error:
               "Cannot delete completed payment linked to active registration or membership",
           },
@@ -345,7 +392,6 @@ export async function DELETE(
         where: { id: paymentId },
       });
     } else {
-      // Customer payment deletion
       const payment = await prisma.customerPayment.findUnique({
         where: { id: paymentId },
         include: {
@@ -355,7 +401,7 @@ export async function DELETE(
 
       if (!payment) {
         return NextResponse.json(
-          { error: "Payment not found" },
+          { success: false, error: "Payment not found" },
           { status: 404 }
         );
       }
@@ -363,6 +409,7 @@ export async function DELETE(
       if (payment.status === "COMPLETED" && payment.eventRegistration) {
         return NextResponse.json(
           {
+            success: false,
             error:
               "Cannot delete completed payment linked to active registration",
           },
@@ -383,6 +430,7 @@ export async function DELETE(
     console.error("Error deleting payment:", error);
     return NextResponse.json(
       {
+        success: false,
         error:
           error instanceof Error ? error.message : "Failed to delete payment",
       },

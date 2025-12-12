@@ -12,6 +12,7 @@ import {
   XMarkIcon,
   TicketIcon,
   CreditCardIcon,
+  BanknotesIcon,
 } from "@heroicons/react/24/outline";
 
 export default function AdminSidebar() {
@@ -60,6 +61,11 @@ export default function AdminSidebar() {
       name: 'Membership Plan',
       href: '/admin/memberships',
       icon: <CreditCardIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Payments",
+      href: "/admin/payments",
+      icon: <BanknotesIcon className="w-5 h-5" />,
     },
     {
       name: "Settings",

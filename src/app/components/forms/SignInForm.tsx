@@ -272,7 +272,7 @@ export default function SignInForm() {
 
         <div className="relative h-full flex flex-col items-center justify-center p-12 text-center">
           <div className="w-full max-w-md space-y-8">
-            <div className="relative aspect-square w-full bg-gradient-to-tr from-[#FF8E49] to-[#FFB082] rounded-3xl shadow-2xl flex items-center justify-center overflow-hidden">
+            <div className="relative aspect-square w-full bg-linear-to-tr from-[#FF8E49] to-[#FFB082] rounded-3xl shadow-2xl flex items-center justify-center overflow-hidden">
               <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')] bg-cover bg-center mix-blend-overlay opacity-40"></div>
               <h1 className="text-white text-5xl font-bold relative z-10 px-8">
                 KITA Spaces

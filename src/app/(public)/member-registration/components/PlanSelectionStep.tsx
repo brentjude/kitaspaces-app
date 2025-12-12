@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { MembershipPlanPublic } from '@/types/membership-registration';
 import {
   CheckCircleIcon,

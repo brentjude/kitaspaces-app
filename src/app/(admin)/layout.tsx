@@ -37,6 +37,10 @@ export default function AdminLayout({
       return "Membership Management";
     }
 
+    if (pathname.startsWith("/admin/payments")) {
+      return "Payment Management";
+    }
+
     if (pathname.startsWith("/admin/calendar")) {
       return "Event Calendar";
     }
