@@ -160,7 +160,7 @@ export async function PATCH(
               startDate: existingPayment.membership.startDate.toISOString(),
               endDate: existingPayment.membership.endDate?.toISOString() || '',
             });
-            console.log(`✅ Payment approval email sent to ${existingPayment.membership.user.email}`);
+            console.info(`✅ Payment approval email sent to ${existingPayment.membership.user.email}`);
           }
         } catch (emailError) {
           console.error('Failed to send payment approval email:', emailError);

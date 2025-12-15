@@ -83,9 +83,8 @@ export async function POST(request: NextRequest) {
     // Calculate amount
     let totalAmount = plan.price * quantity;
     let couponId: string | undefined;
-    let appliedCoupon: any = null;
 
-    // Apply coupon if provided
+    // Apply coupon if provided - this ensures coupon validation happens for every registration
     if (couponCode) {
       const coupon = await prisma.coupon.findFirst({
         where: {
@@ -98,24 +97,39 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      if (coupon && coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+      // Validate coupon exists
+      if (!coupon) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid coupon code' },
+          { status: 400 }
+        );
+      }
+
+      // Check if coupon usage limit reached
+      if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
         return NextResponse.json(
           { success: false, error: 'Coupon usage limit reached' },
           { status: 400 }
         );
       }
 
-      if (coupon) {
-        couponId = coupon.id;
-        appliedCoupon = coupon;
-        
-        if (coupon.discountType === 'PERCENTAGE') {
-          totalAmount = totalAmount * (1 - coupon.discountValue / 100);
-        } else if (coupon.discountType === 'FIXED_AMOUNT') {
-          totalAmount = Math.max(0, totalAmount - coupon.discountValue);
-        } else if (coupon.discountType === 'FREE') {
-          totalAmount = 0;
-        }
+      // Check if coupon is expired
+      if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+        return NextResponse.json(
+          { success: false, error: 'Coupon has expired' },
+          { status: 400 }
+        );
+      }
+
+      // Apply coupon discount
+      couponId = coupon.id;
+      
+      if (coupon.discountType === 'PERCENTAGE') {
+        totalAmount = totalAmount * (1 - coupon.discountValue / 100);
+      } else if (coupon.discountType === 'FIXED_AMOUNT') {
+        totalAmount = Math.max(0, totalAmount - coupon.discountValue);
+      } else if (coupon.discountType === 'FREE') {
+        totalAmount = 0;
       }
     }
 
@@ -224,7 +238,7 @@ export async function POST(request: NextRequest) {
         endDate: endDate.toISOString(),
         couponCode: couponCode?.toUpperCase(),
       });
-      console.log(`✅ Registration email sent to ${email}`);
+      console.info(`✅ Registration email sent to ${email}`);
     } catch (emailError) {
       console.error('Failed to send registration email:', emailError);
       // Don't fail the registration if email fails

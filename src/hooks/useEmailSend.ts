@@ -10,11 +10,17 @@ export type EmailType =
 interface SendEmailParams {
   type: EmailType;
   to: string;
-  data: Record<string, any>;
+  data: Record<string, string | number | boolean | null | undefined>;
+}
+
+interface EmailSendResult {
+  success: boolean;
+  error?: string;
+  message?: string;
 }
 
 interface UseEmailSendReturn {
-  sendEmail: (params: SendEmailParams) => Promise<{ success: boolean; error?: string }>;
+  sendEmail: (params: SendEmailParams) => Promise<EmailSendResult>;
   isSending: boolean;
   error: string | null;
 }
@@ -23,7 +29,7 @@ export function useEmailSend(): UseEmailSendReturn {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sendEmail = async (params: SendEmailParams) => {
+  const sendEmail = async (params: SendEmailParams): Promise<EmailSendResult> => {
     setIsSending(true);
     setError(null);
 
@@ -40,7 +46,7 @@ export function useEmailSend(): UseEmailSendReturn {
         throw new Error(result.error || 'Failed to send email');
       }
 
-      return { success: true };
+      return { success: true, message: result.message };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);

@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export async function sendPaymentApprovalEmail(
   membershipId: string,
-  userId: string
 ) {
   try {
     const membership = await prisma.membership.findUnique({
