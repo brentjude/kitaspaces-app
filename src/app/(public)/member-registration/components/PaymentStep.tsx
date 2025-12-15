@@ -117,12 +117,22 @@ export default function PaymentStep({
   };
 
   const handleSubmit = async () => {
-    if (totalAmount > 0 && !referenceNumber) {
+    // Only GCash and Bank Transfer require reference number
+    if (
+      totalAmount > 0 &&
+      (paymentMethod === 'GCASH' || paymentMethod === 'BANK_TRANSFER') &&
+      !referenceNumber
+    ) {
       alert('Please enter a payment reference number');
       return;
     }
 
-    if (totalAmount > 0 && !proofImageUrl && paymentMethod !== 'CASH') {
+    // Only GCash and Bank Transfer require proof upload
+    if (
+      totalAmount > 0 &&
+      (paymentMethod === 'GCASH' || paymentMethod === 'BANK_TRANSFER') &&
+      !proofImageUrl
+    ) {
       alert('Please upload payment proof');
       return;
     }
@@ -198,13 +208,27 @@ export default function PaymentStep({
 
       case 'CASH':
         return (
-          <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full text-green-600 mb-3">
-              <CheckCircleIcon className="w-8 h-8" />
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full text-blue-600 mb-3">
+              <BanknotesIcon className="w-8 h-8" />
             </div>
-            <h4 className="font-bold text-foreground mb-2">Pay at Counter</h4>
+            <h4 className="font-bold text-foreground mb-2">Pay at Cashier</h4>
             <p className="text-sm text-foreground/60">
-              Please proceed to our counter to complete your payment. Show your
+              Please proceed to our cashier to complete your cash payment. Show your
+              registration confirmation.
+            </p>
+          </div>
+        );
+
+      case 'CREDIT_CARD':
+        return (
+          <div className="mt-4 bg-purple-50 border border-purple-200 rounded-xl p-6 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full text-purple-600 mb-3">
+              <CreditCardIcon className="w-8 h-8" />
+            </div>
+            <h4 className="font-bold text-foreground mb-2">Pay at Cashier</h4>
+            <p className="text-sm text-foreground/60">
+              Please proceed to our cashier to process your credit card payment. Show your
               registration confirmation.
             </p>
           </div>
@@ -356,8 +380,8 @@ export default function PaymentStep({
             {renderPaymentMethodDetails()}
           </div>
 
-          {/* Payment Reference */}
-          {paymentMethod !== 'CASH' && (
+          {/* Payment Reference - Only for GCash and Bank Transfer */}
+          {paymentMethod !== 'CASH' && paymentMethod !== 'CREDIT_CARD' && (
             <>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-foreground mb-2">

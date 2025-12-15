@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { UserIcon, ArrowRightOnRectangleIcon, Cog6ToothIcon, HomeIcon } from "@heroicons/react/24/outline";
 import { signOut } from "next-auth/react";
@@ -63,10 +64,11 @@ export default function PublicHeader({
     <nav className="border-b border-gray-100 bg-white backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
-            K
-          </div>
-          <span className="text-xl font-bold tracking-tight">KITA Spaces</span>
+          <Image 
+            src="/logo/kita-primary-logo.png" 
+            alt="KitaSpaces Logo" 
+            width={120} 
+            height={60} />
         </Link>
 
         <div className="flex items-center space-x-3">
