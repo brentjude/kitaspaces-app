@@ -393,9 +393,9 @@ export default function MemberDetailsStep({
               }`}
             >
               {error.type === 'error' ? (
-                <XCircleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <XCircleIcon className="w-5 h-5 shrink-0 mt-0.5" />
               ) : (
-                <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <ExclamationTriangleIcon className="w-5 h-5 shrink-0 mt-0.5" />
               )}
               <div className="flex-1">
                 <p className="text-sm font-medium">

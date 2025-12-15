@@ -392,6 +392,23 @@ const handleEditAdmin = async (
   }
 };
 
+const handleDeleteAdmin = async (id: string) => {
+  const response = await fetch(`/api/admin/settings/admins/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const result = await response.json();
+    throw new Error(result.error || 'Failed to delete admin');
+  }
+
+  // Remove from state
+  setAdmins(admins.filter((a) => a.id !== id));
+};
+
+
+
+
 const handleEditCoupon = async (
   id: string,
   data: {
@@ -516,6 +533,7 @@ const handleEditCoupon = async (
                 admins={admins}
                 onAddAdmin={handleAddAdmin}
                 onEditAdmin={handleEditAdmin}
+                onDeleteAdmin={handleDeleteAdmin}
               />
             )}
           </div>

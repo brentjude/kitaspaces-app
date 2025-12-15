@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { PaymentMethod, ReferralSource, MembershipType } from '@/generated/prisma';
+import { sendMembershipRegistrationEmail } from '@/lib/email';
 
 function generateUserId(): string {
   const year = new Date().getFullYear();
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase() },
     });
 
     if (existingUser) {
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
     // Calculate amount
     let totalAmount = plan.price * quantity;
     let couponId: string | undefined;
+    let appliedCoupon: any = null;
 
     // Apply coupon if provided
     if (couponCode) {
@@ -105,6 +107,7 @@ export async function POST(request: NextRequest) {
 
       if (coupon) {
         couponId = coupon.id;
+        appliedCoupon = coupon;
         
         if (coupon.discountType === 'PERCENTAGE') {
           totalAmount = totalAmount * (1 - coupon.discountValue / 100);
@@ -142,7 +145,7 @@ export async function POST(request: NextRequest) {
       const user = await tx.user.create({
         data: {
           id: userId,
-          email,
+          email: email.toLowerCase(),
           password: hashedPassword,
           name,
           nickname: nickname || undefined,
@@ -151,7 +154,7 @@ export async function POST(request: NextRequest) {
           company: company || undefined,
           referralSource: referralSource as ReferralSource | undefined,
           agreeToNewsletter: agreeToNewsletter || false,
-          isMember: true,
+          isMember: totalAmount === 0 ? true : false, // Set to true only if free
         },
       });
 
@@ -198,7 +201,35 @@ export async function POST(request: NextRequest) {
       return { user, payment, membership };
     });
 
-    // TODO: Send confirmation email
+    // Determine email status and send appropriate email
+    let emailStatus: 'PENDING' | 'FREE' | 'ACTIVE' = 'PENDING';
+    
+    if (totalAmount === 0 && couponCode) {
+      emailStatus = 'FREE';
+    } else if (totalAmount > 0) {
+      emailStatus = 'PENDING';
+    }
+
+    // Send confirmation email
+    try {
+      await sendMembershipRegistrationEmail({
+        to: email.toLowerCase(),
+        name,
+        planName: plan.name,
+        amount: totalAmount,
+        paymentReference: result.payment.paymentReference || '',
+        paymentMethod: paymentMethod || 'GCASH',
+        status: emailStatus,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        couponCode: couponCode?.toUpperCase(),
+      });
+      console.log(`✅ Registration email sent to ${email}`);
+    } catch (emailError) {
+      console.error('Failed to send registration email:', emailError);
+      // Don't fail the registration if email fails
+      // Just log the error for monitoring
+    }
 
     return NextResponse.json({
       success: true,

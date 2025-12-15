@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { PaymentStatus } from "@/generated/prisma";
+import { sendMembershipRegistrationEmail } from '@/lib/email';
 
 export async function PATCH(
   request: NextRequest,
@@ -70,8 +71,14 @@ export async function PATCH(
       const existingPayment = await prisma.payment.findUnique({
         where: { id: paymentId },
         include: {
-          membership: true,
+          membership: {
+            include: {
+              user: true,
+              plan: true,
+            },
+          },
           eventRegistration: true,
+          user: true,
         },
       });
 
@@ -115,20 +122,50 @@ export async function PATCH(
             },
           },
           membership: {
-            select: {
-              id: true,
-              type: true,
+            include: {
+              user: true,
+              plan: true,
             },
           },
         },
       });
 
-      // Update related membership status
+      // Update related membership status and send email
       if (status === "COMPLETED" && existingPayment.membership) {
+        // Update membership to ACTIVE
         await prisma.membership.update({
           where: { id: existingPayment.membership.id },
-          data: { status: "ACTIVE" },
+          data: { 
+            status: "ACTIVE",
+          },
         });
+
+        // Update user isMember flag
+        await prisma.user.update({
+          where: { id: existingPayment.membership.userId },
+          data: { isMember: true },
+        });
+
+        // Send payment approval email
+        try {
+          if (existingPayment.membership.user && existingPayment.membership.plan) {
+            await sendMembershipRegistrationEmail({
+              to: existingPayment.membership.user.email,
+              name: existingPayment.membership.user.name,
+              planName: existingPayment.membership.plan.name,
+              amount: existingPayment.amount,
+              paymentReference: existingPayment.paymentReference || '',
+              paymentMethod: existingPayment.paymentMethod,
+              status: 'ACTIVE',
+              startDate: existingPayment.membership.startDate.toISOString(),
+              endDate: existingPayment.membership.endDate?.toISOString() || '',
+            });
+            console.log(`✅ Payment approval email sent to ${existingPayment.membership.user.email}`);
+          }
+        } catch (emailError) {
+          console.error('Failed to send payment approval email:', emailError);
+          // Don't fail the payment update if email fails
+        }
       }
 
       // Note: EventRegistration doesn't have a status field, so we skip updating it
@@ -256,11 +293,8 @@ export async function GET(
           },
         },
         membership: {
-          select: {
-            id: true,
-            type: true,
-            startDate: true,
-            endDate: true,
+          include: {
+            plan: true,
           },
         },
       },

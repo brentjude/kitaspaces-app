@@ -74,7 +74,7 @@ export default function Modal({
         className={`relative w-full ${sizeClasses[size]} rounded-2xl bg-white shadow-2xl border border-foreground/10 transform transition-all max-h-[90vh] flex flex-col`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-foreground/10 px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between border-b border-foreground/10 px-6 py-4 shrink-0">
           <h3 className="text-xl font-bold text-foreground">{title}</h3>
           <button
             onClick={onClose}
@@ -99,7 +99,7 @@ export default function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-foreground/10 flex-shrink-0 bg-white rounded-b-2xl">
+          <div className="flex items-center justify-end space-x-3 p-6 border-t border-foreground/10 shrink-0 bg-white rounded-b-2xl">
             {footer}
           </div>
         )}
