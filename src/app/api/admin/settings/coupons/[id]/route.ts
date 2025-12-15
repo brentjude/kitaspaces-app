@@ -3,9 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function PATCH(
+export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,40 +17,93 @@ export async function PATCH(
       );
     }
 
-    // Await the params
-    const { id } = await params;
+    const { id } = await context.params;
+    const body = await request.json();
+    const { code, discountType, discountValue, maxUses, expiresAt } = body;
 
-    if (!id) {
+    // Validate input
+    if (!code || !discountType || discountValue === undefined) {
       return NextResponse.json(
-        { success: false, error: 'Coupon ID is required' },
+        { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    const body = await request.json();
-    const { isActive } = body;
+    // Check if coupon code is already used by another coupon
+    const existingCoupon = await prisma.coupon.findFirst({
+      where: {
+        code: code.toUpperCase(),
+        id: { not: id },
+      },
+    });
 
-    const coupon = await prisma.coupon.update({
+    if (existingCoupon) {
+      return NextResponse.json(
+        { success: false, error: 'Coupon code already exists' },
+        { status: 400 }
+      );
+    }
+
+    // Update coupon
+    const updatedCoupon = await prisma.coupon.update({
+      where: { id },
+      data: {
+        code: code.toUpperCase(),
+        discountType,
+        discountValue: parseFloat(discountValue),
+        maxUses: maxUses ? parseInt(maxUses) : null,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedCoupon,
+    });
+  } catch (error) {
+    console.error('Error updating coupon:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update coupon',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await context.params;
+    const { isActive } = await request.json();
+
+    const updatedCoupon = await prisma.coupon.update({
       where: { id },
       data: { isActive },
     });
 
-    return NextResponse.json({ success: true, data: coupon });
+    return NextResponse.json({
+      success: true,
+      data: updatedCoupon,
+    });
   } catch (error) {
-    console.error('Error updating coupon:', error);
-    
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-      });
-    }
-
+    console.error('Error toggling coupon:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to toggle coupon',
       },
       { status: 500 }
     );
@@ -59,7 +112,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -71,43 +124,7 @@ export async function DELETE(
       );
     }
 
-    // Await the params
-    const { id } = await params;
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'Coupon ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Check if coupon exists
-    const existingCoupon = await prisma.coupon.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: { memberships: true },
-        },
-      },
-    });
-
-    if (!existingCoupon) {
-      return NextResponse.json(
-        { success: false, error: 'Coupon not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if coupon is being used by any memberships
-    if (existingCoupon._count.memberships > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Cannot delete coupon "${existingCoupon.code}" because it is being used by ${existingCoupon._count.memberships} membership(s)`,
-        },
-        { status: 400 }
-      );
-    }
+    const { id } = await context.params;
 
     await prisma.coupon.delete({
       where: { id },
@@ -119,19 +136,10 @@ export async function DELETE(
     });
   } catch (error) {
     console.error('Error deleting coupon:', error);
-    
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-      });
-    }
-
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete coupon',
       },
       { status: 500 }
     );

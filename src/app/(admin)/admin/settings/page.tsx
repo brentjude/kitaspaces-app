@@ -369,6 +369,55 @@ export default function SettingsPage() {
     }
   };
 
+  // Add these handlers after the existing handleAddAdmin function:
+
+const handleEditAdmin = async (
+  id: string,
+  data: { name: string; password?: string }
+) => {
+  const response = await fetch(`/api/admin/settings/admins/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const result = await response.json();
+    throw new Error(result.error || 'Failed to update admin');
+  }
+
+  const result = await response.json();
+  if (result.success && result.data) {
+    setAdmins(admins.map((a) => (a.id === id ? result.data : a)));
+  }
+};
+
+const handleEditCoupon = async (
+  id: string,
+  data: {
+    code: string;
+    discountType: string;
+    discountValue: number;
+    maxUses: number | null;
+    expiresAt: Date | null;
+  }
+) => {
+  const response = await fetch(`/api/admin/settings/coupons/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) throw new Error('Failed to update coupon');
+
+  const result = await response.json();
+  if (result.success && result.data) {
+    setCoupons(coupons.map((c) => (c.id === id ? result.data : c)));
+  }
+};
+
+
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -452,17 +501,22 @@ export default function SettingsPage() {
               />
             )}
 
-            {activeTab === "coupons" && (
+            {activeTab === 'coupons' && (
               <CouponsTab
                 coupons={coupons}
                 onAddCoupon={handleAddCoupon}
+                onEditCoupon={handleEditCoupon}
                 onToggleCoupon={handleToggleCoupon}
                 onDeleteCoupon={handleDeleteCoupon}
               />
             )}
 
-            {activeTab === "users" && (
-              <SystemUsersTab admins={admins} onAddAdmin={handleAddAdmin} />
+            {activeTab === 'users' && (
+              <SystemUsersTab
+                admins={admins}
+                onAddAdmin={handleAddAdmin}
+                onEditAdmin={handleEditAdmin}
+              />
             )}
           </div>
         </div>

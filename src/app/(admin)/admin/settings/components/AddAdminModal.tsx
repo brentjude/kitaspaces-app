@@ -1,20 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import Modal from '@/app/components/Modal';
+import { XMarkIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 interface AddAdminModalProps {
-  isOpen: boolean;
   onClose: () => void;
-  onAdd: (data: { name: string; email: string; password: string }) => Promise<void>;
+  onSave: (data: { name: string; email: string; password: string }) => Promise<void>;
 }
 
-export default function AddAdminModal({ isOpen, onClose, onAdd }: AddAdminModalProps) {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-  });
+export default function AddAdminModal({ onClose, onSave }: AddAdminModalProps) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,20 +22,30 @@ export default function AddAdminModal({ isOpen, onClose, onAdd }: AddAdminModalP
     e.preventDefault();
     setError('');
 
-    if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) {
+    // Validate
+    if (!name.trim() || !email.trim() || !password) {
       setError('All fields are required');
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
     setIsSubmitting(true);
+
     try {
-      await onAdd(formData);
-      setFormData({ name: '', email: '', password: '' });
+      await onSave({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+      });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add admin');
@@ -44,80 +54,127 @@ export default function AddAdminModal({ isOpen, onClose, onAdd }: AddAdminModalP
     }
   };
 
-  const handleClose = () => {
-    setFormData({ name: '', email: '', password: '' });
-    setError('');
-    onClose();
-  };
-
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Add System Administrator">
-      <form onSubmit={handleSubmit} className="space-y-4 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-foreground">Add New Admin</h3>
+          <button
+            onClick={onClose}
+            className="text-foreground/60 hover:text-foreground"
+          >
+            <XMarkIcon className="w-6 h-6" />
+          </button>
+        </div>
+
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800">{error}</p>
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {error}
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            Full Name
-          </label>
-          <input
-            type="text"
-            className="block w-full rounded-lg border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="John Doe"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              className="w-full px-3 py-2 border border-foreground/20 rounded-lg focus:outline-none focus:border-primary"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Admin Name"
+            />
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            Email Address
-          </label>
-          <input
-            type="email"
-            className="block w-full rounded-lg border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="admin@kitaspaces.com"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          />
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              required
+              className="w-full px-3 py-2 border border-foreground/20 rounded-lg focus:outline-none focus:border-primary"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@example.com"
+            />
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            Password
-          </label>
-          <input
-            type="password"
-            className="block w-full rounded-lg border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="At least 8 characters"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          />
-          <p className="mt-1 text-xs text-foreground/50">
-            Admin will have full access to the system.
-          </p>
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Password <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                className="w-full px-3 py-2 pr-10 border border-foreground/20 rounded-lg focus:outline-none focus:border-primary"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Minimum 6 characters"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-foreground/40 hover:text-foreground"
+              >
+                {showPassword ? (
+                  <EyeSlashIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
 
-        <div className="flex justify-end gap-3 p-4">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition-colors"
-          >
-            {isSubmitting ? 'Adding...' : 'Add Administrator'}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Confirm Password <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                className="w-full px-3 py-2 pr-10 border border-foreground/20 rounded-lg focus:outline-none focus:border-primary"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-2.5 text-foreground/40 hover:text-foreground"
+              >
+                {showConfirmPassword ? (
+                  <EyeSlashIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 border border-foreground/20 rounded-lg hover:bg-foreground/5 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {isSubmitting ? 'Adding...' : 'Add Admin'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

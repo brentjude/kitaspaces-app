@@ -1,111 +1,169 @@
 'use client';
 
 import { useState } from 'react';
-import { UsersIcon, PlusIcon } from '@heroicons/react/24/outline';
 import AddAdminModal from './AddAdminModal';
-
-interface Admin {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: Date;
-}
+import EditAdminModal from './EditAdminModal';
+import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface SystemUsersTabProps {
-  admins: Admin[];
-  onAddAdmin: (data: { name: string; email: string; password: string }) => Promise<void>;
+  admins: Array<{
+    id: string;
+    name: string;
+    email: string;
+    createdAt: Date;
+  }>;
+  onAddAdmin: (data: {
+    name: string;
+    email: string;
+    password: string;
+  }) => Promise<void>;
+  onEditAdmin: (id: string, data: { name: string; password?: string }) => Promise<void>;
+  onDeleteAdmin: (id: string) => Promise<void>;
 }
 
-export default function SystemUsersTab({ admins, onAddAdmin }: SystemUsersTabProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export default function SystemUsersTab({
+  admins,
+  onAddAdmin,
+  onEditAdmin,
+  onDeleteAdmin,
+}: SystemUsersTabProps) {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState<{
+    id: string;
+    name: string;
+    email: string;
+  } | null>(null);
+
+  const handleOpenEditModal = (admin: { id: string; name: string; email: string }) => {
+    setEditingAdmin(admin);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingAdmin(null);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete admin "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await onDeleteAdmin(id);
+      alert('Admin deleted successfully!');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to delete admin');
+    }
+  };
 
   return (
-    <>
-      <div className="bg-white rounded-xl shadow-sm border border-foreground/10 overflow-hidden">
-        <div className="border-b border-foreground/10 bg-foreground/5 px-6 py-4 flex justify-between items-center">
-          <h3 className="text-base font-semibold text-foreground flex items-center">
-            <UsersIcon className="w-5 h-5 mr-2" />
-            System Administrators
-          </h3>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center px-3 py-1.5 bg-white border border-foreground/20 text-foreground text-xs font-medium rounded-lg hover:bg-foreground/5 transition-colors"
-          >
-            <PlusIcon className="w-4 h-4 mr-1.5" />
-            Add Admin
-          </button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">System Administrators</h2>
+          <p className="text-sm text-foreground/60 mt-1">
+            Manage admin user accounts with full system access
+          </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-foreground/10">
-            <thead className="bg-foreground/5">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-foreground/60 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-foreground/60 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-foreground/60 uppercase tracking-wider">
-                  Joined
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-foreground/60 uppercase tracking-wider">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-foreground/10">
-              {admins.map((admin) => (
-                <tr key={admin.id} className="hover:bg-foreground/5">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                          {admin.name.charAt(0).toUpperCase()}
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-foreground">
-                          {admin.name}
-                        </div>
-                        <div className="text-sm text-foreground/50">{admin.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
-                      Admin
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground/60">
-                    {new Date(admin.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                      Active
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {admins.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-6 py-8 text-center text-foreground/40 text-sm"
-                  >
-                    No administrators found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center"
+        >
+          <PlusIcon className="w-5 h-5 mr-2" />
+          Add Admin
+        </button>
       </div>
 
-      <AddAdminModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onAdd={onAddAdmin}
-      />
-    </>
+      {/* Admins List */}
+      <div className="bg-white rounded-xl shadow-sm border border-foreground/10 overflow-hidden">
+        {admins.length === 0 ? (
+          <div className="p-8 text-center text-foreground/60">
+            No administrators found.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-foreground/5 border-b border-foreground/10">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">
+                    Email
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">
+                    Created At
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-foreground uppercase">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-foreground/10">
+                {admins.map((admin) => (
+                  <tr key={admin.id} className="hover:bg-foreground/5">
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-foreground">{admin.name}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-foreground">{admin.email}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-foreground/60">
+                        {new Date(admin.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() =>
+                            handleOpenEditModal({
+                              id: admin.id,
+                              name: admin.name,
+                              email: admin.email,
+                            })
+                          }
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit admin"
+                        >
+                          <PencilIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(admin.id, admin.name)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete admin"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Add Admin Modal */}
+      {isAddModalOpen && (
+        <AddAdminModal
+          onClose={() => setIsAddModalOpen(false)}
+          onSave={onAddAdmin}
+        />
+      )}
+
+      {/* Edit Admin Modal */}
+      {editingAdmin && (
+        <EditAdminModal
+          admin={editingAdmin}
+          onClose={handleCloseEditModal}
+          onSave={onEditAdmin}
+        />
+      )}
+    </div>
   );
 }

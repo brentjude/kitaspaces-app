@@ -109,24 +109,31 @@ export default function MemberRegistrationPage() {
   };
 
   const handleApplyCoupon = async () => {
-    if (!couponCode) return;
+  if (!couponCode) return;
 
-    setIsCouponLoading(true);
+  setIsCouponLoading(true);
 
-    try {
-      const response = await fetch('/api/public/membership-validate-coupon', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          couponCode,
-          planId: formData.planId,
-          quantity: formData.quantity,
-        }),
-      });
+  try {
+    const response = await fetch('/api/public/membership-validate-coupon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        couponCode,
+        planId: formData.planId,
+        quantity: formData.quantity,
+      }),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
       if (data.success && data.data.isValid) {
+        // Check expiration on client side as well
+        const coupon = data.data.coupon;
+        if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+          alert('This coupon has expired');
+          return;
+        }
+
         setAppliedCoupon(data.data.coupon);
         setTotalAmount(data.data.finalAmount);
         setDiscountAmount(data.data.discountAmount);
