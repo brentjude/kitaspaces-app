@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Invalid email address',
-          details: error.errors,
+          details: error.issues, // Changed from error.errors to error.issues
         },
         { status: 400 }
       );
