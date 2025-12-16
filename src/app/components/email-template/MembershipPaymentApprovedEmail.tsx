@@ -39,7 +39,7 @@ export function MembershipPaymentApprovedEmail({
           {/* Header with Logo */}
           <Section style={header}>
             <Img
-              src="https://community.kitaspaces.com/logo/kita-primary-logo.png"
+              src="https://community.kitaspaces.com/logo/kita-white-logo.png"
               alt="KITA Spaces Logo"
               width="180"
               height="auto"

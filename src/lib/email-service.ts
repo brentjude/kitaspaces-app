@@ -15,7 +15,7 @@ export interface SendEmailOptions {
 export async function sendEmail({ to, subject, react }: SendEmailOptions) {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'KITA Spaces <onboarding@resend.dev>',
+      from: 'KITA Spaces <noreply@notifications.kitaspaces.com>',
       to: [to],
       subject,
       react,

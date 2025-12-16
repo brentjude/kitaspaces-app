@@ -9,8 +9,8 @@ export async function POST(request: NextRequest) {
     const { firstName } = await request.json();
 
     const { data, error } = await resend.emails.send({
-      from: 'KITA Spaces <onboarding@resend.dev>',
-      to: ['delivered@resend.dev'],
+      from: 'KITA Spaces <noreply@notifications.kitaspaces.com>',
+      to: ['brent.boombox@gmail.com'],
       subject: 'Hello from KITA Spaces',
       react: EmailTemplate({ firstName: firstName || 'John' }),
     });
