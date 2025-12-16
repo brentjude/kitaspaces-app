@@ -1,5 +1,3 @@
-// Update the payment creation sections to use paymentReference
-
 import { PrismaClient, PerkType } from "../src/generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hash } from "bcryptjs";
@@ -53,7 +51,6 @@ function generateEventSlug(title: string): string {
     .replace(/-+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-  // Add random suffix for uniqueness
   const randomSuffix = Math.random().toString(36).substring(2, 8);
   return `${slug}-${randomSuffix}`;
 }
@@ -134,6 +131,54 @@ async function generateEventPaymentReference(): Promise<string> {
   return `${prefix}${year}_${nextNumber.toString().padStart(3, "0")}`;
 }
 
+// Helper function to generate meeting room booking reference
+async function generateMeetingRoomPaymentReference(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = "mrb_kita";
+
+  const latestPayment = await prisma.payment.findFirst({
+    where: {
+      paymentReference: {
+        startsWith: `${prefix}${year}_`,
+      },
+    },
+    orderBy: {
+      paymentReference: "desc",
+    },
+  });
+
+  const latestCustomerPayment = await prisma.customerPayment.findFirst({
+    where: {
+      paymentReference: {
+        startsWith: `${prefix}${year}_`,
+      },
+    },
+    orderBy: {
+      paymentReference: "desc",
+    },
+  });
+
+  let nextNumber = 1;
+
+  if (latestPayment?.paymentReference) {
+    const match = latestPayment.paymentReference.match(/_(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1]);
+      nextNumber = Math.max(nextNumber, num + 1);
+    }
+  }
+
+  if (latestCustomerPayment?.paymentReference) {
+    const match = latestCustomerPayment.paymentReference.match(/_(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1]);
+      nextNumber = Math.max(nextNumber, num + 1);
+    }
+  }
+
+  return `${prefix}${year}_${nextNumber.toString().padStart(3, "0")}`;
+}
+
 async function main() {
   console.log("🌱 Start seeding...");
 
@@ -142,6 +187,10 @@ async function main() {
 
   // Clear existing data
   console.log("\n🗑️  Clearing existing data...");
+  await prisma.passwordResetToken.deleteMany();
+  await prisma.customerMeetingRoomBooking.deleteMany();
+  await prisma.meetingRoomBooking.deleteMany();
+  await prisma.meetingRoom.deleteMany();
   await prisma.membershipPerkUsage.deleteMany();
   await prisma.customerDailyUseRedemption.deleteMany();
   await prisma.dailyUseRedemption.deleteMany();
@@ -161,8 +210,22 @@ async function main() {
   await prisma.customerPayment.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.customer.deleteMany();
+  await prisma.adminSettings.deleteMany();
   await prisma.user.deleteMany();
   console.log("✅ Cleared all data");
+
+  // Create Admin Settings
+  console.log("\n⚙️  Creating admin settings...");
+  await prisma.adminSettings.create({
+    data: {
+      bankName: "BDO",
+      accountNumber: "1234567890",
+      accountName: "KITA Spaces Inc.",
+      qrCodeUrl: null,
+      qrCodeNumber: "+639123456789",
+    },
+  });
+  console.log("✅ Created admin settings");
 
   // Create Membership Plans
   console.log("\n📋 Creating membership plans...");
@@ -228,7 +291,7 @@ async function main() {
       },
     ],
   });
-  console.log(`✅ Created Basic Monthly plan with perks`);
+  console.log("✅ Created Basic Monthly plan with perks");
 
   const premiumMonthly = await prisma.membershipPlan.create({
     data: {
@@ -307,7 +370,7 @@ async function main() {
       },
     ],
   });
-  console.log(`✅ Created Premium Monthly plan with perks`);
+  console.log("✅ Created Premium Monthly plan with perks");
 
   const dailyPass = await prisma.membershipPlan.create({
     data: {
@@ -353,7 +416,7 @@ async function main() {
       },
     ],
   });
-  console.log(`✅ Created Daily Pass plan with perks`);
+  console.log("✅ Created Daily Pass plan with perks");
 
   // Create Coupons
   console.log("\n🎟️  Creating coupons...");
@@ -380,7 +443,7 @@ async function main() {
       expiresAt: new Date("2025-06-30"),
     },
   });
-  console.log(`✅ Created 2 coupons`);
+  console.log("✅ Created 2 coupons");
 
   // Create Event Categories
   console.log("\n🏷️  Creating event categories...");
@@ -428,7 +491,63 @@ async function main() {
     },
   });
 
-  console.log(`✅ Created 4 event categories`);
+  console.log("✅ Created 4 event categories");
+
+  // Create Meeting Rooms
+  console.log("\n🏢 Creating meeting rooms...");
+
+  const conferenceRoom = await prisma.meetingRoom.create({
+    data: {
+      name: "Conference Room A",
+      description: "Large conference room perfect for team meetings and presentations",
+      coverPhotoUrl: "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
+      hourlyRate: 500,
+      capacity: 12,
+      startTime: "08:00",
+      endTime: "20:00",
+      amenities: JSON.stringify(["Projector", "Whiteboard", "WiFi", "Air Conditioning", "TV Screen"]),
+      status: "AVAILABLE",
+      isActive: true,
+      floor: "2nd Floor",
+      roomNumber: "2A",
+    },
+  });
+
+  const smallMeetingRoom = await prisma.meetingRoom.create({
+    data: {
+      name: "Small Meeting Room B",
+      description: "Cozy meeting space ideal for 1-on-1 or small team discussions",
+      coverPhotoUrl: "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
+      hourlyRate: 300,
+      capacity: 4,
+      startTime: "08:00",
+      endTime: "20:00",
+      amenities: JSON.stringify(["Whiteboard", "WiFi", "Air Conditioning"]),
+      status: "AVAILABLE",
+      isActive: true,
+      floor: "2nd Floor",
+      roomNumber: "2B",
+    },
+  });
+
+  const executiveRoom = await prisma.meetingRoom.create({
+    data: {
+      name: "Executive Boardroom",
+      description: "Premium boardroom for executive meetings and client presentations",
+      coverPhotoUrl: "https://images.unsplash.com/photo-1497366412874-3415097a27e7",
+      hourlyRate: 800,
+      capacity: 16,
+      startTime: "08:00",
+      endTime: "20:00",
+      amenities: JSON.stringify(["Projector", "Whiteboard", "WiFi", "Air Conditioning", "Video Conferencing", "Coffee Machine"]),
+      status: "AVAILABLE",
+      isActive: true,
+      floor: "3rd Floor",
+      roomNumber: "3A",
+    },
+  });
+
+  console.log("✅ Created 3 meeting rooms");
 
   // Create Admin User
   console.log("\n👤 Creating admin user...");
@@ -500,7 +619,6 @@ async function main() {
       },
     });
 
-    // Get the meeting room perk from the plan
     const meetingRoomPerk = await prisma.membershipPlanPerk.findFirst({
       where: {
         planId: basicMonthly.id,
@@ -576,7 +694,6 @@ async function main() {
     },
   });
 
-  // Get premium perks
   const premiumMeetingRoomPerk = await prisma.membershipPlanPerk.findFirst({
     where: {
       planId: premiumMonthly.id,
@@ -638,7 +755,7 @@ async function main() {
     `✅ Created premium member: ${premiumUser.email} (ID: ${premiumUser.id}, Payment Ref: ${premiumPaymentRef})`
   );
 
-  // Create Daily Members (with today's date)
+  // Create Daily Members
   console.log("\n📅 Creating daily members...");
   const dailyMembers = [];
   const today = new Date();
@@ -685,7 +802,6 @@ async function main() {
       },
     });
 
-    // Get daily pass coffee perk
     const dailyCoffeePerk = await prisma.membershipPlanPerk.findFirst({
       where: {
         planId: dailyPass.id,
@@ -739,7 +855,6 @@ async function main() {
   // Create Events
   console.log("\n📅 Creating events...");
 
-  // 1. Rameniac - Free Ramen Friday (Redemption Event - Today)
   const ramieniacSlug = generateEventSlug("Rameniac Free Ramen Friday");
   const rameniac = await prisma.event.create({
     data: {
@@ -773,7 +888,6 @@ async function main() {
     `✅ Created redemption event: ${rameniac.title} (slug: ${ramieniacSlug})`
   );
 
-  // 2. Member-Only Exclusive Workshop
   const memberWorkshopSlug = generateEventSlug("Member Exclusive Workshop");
   const memberWorkshop = await prisma.event.create({
     data: {
@@ -813,7 +927,6 @@ async function main() {
     `✅ Created member-only event: ${memberWorkshop.title} (slug: ${memberWorkshopSlug})`
   );
 
-  // 3. Completely Free Event (Open to All)
   const freeNetworkingSlug = generateEventSlug("Community Networking Night");
   const freeNetworking = await prisma.event.create({
     data: {
@@ -853,7 +966,6 @@ async function main() {
     `✅ Created free event: ${freeNetworking.title} (slug: ${freeNetworkingSlug})`
   );
 
-  // 4. Paid Event (Free for Members)
   const paidWorkshopSlug = generateEventSlug("Team Building Workshop");
   const paidWorkshop = await prisma.event.create({
     data: {
@@ -900,7 +1012,6 @@ async function main() {
     `✅ Created paid/free-for-members event: ${paidWorkshop.title} (slug: ${paidWorkshopSlug})`
   );
 
-  // 5. Coffee Social with Freebie Options
   const coffeeSocialSlug = generateEventSlug("Morning Coffee Social");
   const coffeeSocial = await prisma.event.create({
     data: {
@@ -933,28 +1044,99 @@ async function main() {
     `✅ Created coffee event with options: ${coffeeSocial.title} (slug: ${coffeeSocialSlug})`
   );
 
-  // Create User Event Registrations with Payments
-  console.log("\n📝 Creating user event registrations...");
+  // Create Meeting Room Bookings
+  console.log("\n📅 Creating meeting room bookings...");
 
-  // NEW LOGIC: Monthly member registers for paid workshop with 2 people (free for members)
-  // Main payer is the member, additional guest is John Doe
+  // User booking
+  const userBookingPaymentRef = await generateMeetingRoomPaymentReference();
+  const userBookingPayment = await prisma.payment.create({
+    data: {
+      userId: monthlyMembers[0].id,
+      amount: conferenceRoom.hourlyRate * 3,
+      paymentMethod: "GCASH",
+      status: "COMPLETED",
+      paymentReference: userBookingPaymentRef,
+      referenceNumber: `GCASH${Date.now()}`,
+      paidAt: new Date(),
+      notes: `Meeting Room: ${conferenceRoom.name} | Date: ${new Date(
+        Date.now() + 2 * 24 * 60 * 60 * 1000
+      ).toLocaleDateString()}`,
+    },
+  });
+
+  await prisma.meetingRoomBooking.create({
+    data: {
+      userId: monthlyMembers[0].id,
+      roomId: conferenceRoom.id,
+      bookingDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      startTime: "09:00",
+      endTime: "12:00",
+      duration: 3,
+      numberOfAttendees: 8,
+      purpose: "Team strategy meeting",
+      status: "CONFIRMED",
+      totalAmount: conferenceRoom.hourlyRate * 3,
+      paymentId: userBookingPayment.id,
+    },
+  });
+  console.log(
+    `✅ Created user booking for ${conferenceRoom.name} (Ref: ${userBookingPaymentRef})`
+  );
+
+  // Customer booking
+  const customerBookingPaymentRef = await generateMeetingRoomPaymentReference();
+  const customerBookingPayment = await prisma.customerPayment.create({
+    data: {
+      customerId: guestCustomers[0].id,
+      amount: smallMeetingRoom.hourlyRate * 2,
+      paymentMethod: "CASH",
+      status: "PENDING",
+      paymentReference: customerBookingPaymentRef,
+      notes: `Meeting Room: ${smallMeetingRoom.name} | Date: ${new Date(
+        Date.now() + 3 * 24 * 60 * 60 * 1000
+      ).toLocaleDateString()}`,
+    },
+  });
+
+  await prisma.customerMeetingRoomBooking.create({
+    data: {
+      customerId: guestCustomers[0].id,
+      roomId: smallMeetingRoom.id,
+      bookingDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      startTime: "14:00",
+      endTime: "16:00",
+      duration: 2,
+      numberOfAttendees: 3,
+      purpose: "Client presentation",
+      contactPerson: guestCustomers[0].name,
+      contactEmail: guestCustomers[0].email!,
+      contactPhone: guestCustomers[0].contactNumber!,
+      status: "PENDING",
+      totalAmount: smallMeetingRoom.hourlyRate * 2,
+      paymentId: customerBookingPayment.id,
+    },
+  });
+  console.log(
+    `✅ Created customer booking for ${smallMeetingRoom.name} (Ref: ${customerBookingPaymentRef})`
+  );
+
+  // Event registrations (existing logic)
+  console.log("\n📝 Creating event registrations...");
+
   const workshopFreebies = await prisma.eventFreebie.findMany({
     where: { eventId: paidWorkshop.id },
   });
 
-  // Create ONE registration for the main payer
   const memberReg1 = await prisma.eventRegistration.create({
     data: {
       userId: monthlyMembers[0].id,
       eventId: paidWorkshop.id,
       attendeeName: monthlyMembers[0].name,
       attendeeEmail: monthlyMembers[0].email,
-      numberOfPax: 2, // Total people in party
-      // No paymentId because it's free for members
+      numberOfPax: 2,
     },
   });
 
-  // Create pax for ALL attendees (including main payer)
   const memberPax1 = await prisma.eventPax.create({
     data: {
       registrationId: memberReg1.id,
@@ -971,7 +1153,6 @@ async function main() {
     },
   });
 
-  // Add freebies for each pax
   for (const freebie of workshopFreebies) {
     await prisma.paxFreebie.createMany({
       data: [
@@ -981,10 +1162,9 @@ async function main() {
     });
   }
   console.log(
-    `✅ Member ${monthlyMembers[0].name} registered for ${paidWorkshop.title} with 2 people (free for members)`
+    `✅ Member ${monthlyMembers[0].name} registered for ${paidWorkshop.title} with 2 people`
   );
 
-  // NEW LOGIC: Daily member registers for coffee social with payment
   const dailyEventPaymentRef = await generateEventPaymentReference();
   const dailyPayment = await prisma.payment.create({
     data: {
@@ -999,7 +1179,6 @@ async function main() {
     },
   });
 
-  // Create ONE registration (main payer only)
   const dailyReg = await prisma.eventRegistration.create({
     data: {
       userId: dailyMembers[0].id,
@@ -1007,11 +1186,10 @@ async function main() {
       attendeeName: dailyMembers[0].name,
       attendeeEmail: dailyMembers[0].email,
       numberOfPax: 1,
-      paymentId: dailyPayment.id, // Link payment to registration
+      paymentId: dailyPayment.id,
     },
   });
 
-  // Create pax (including main payer)
   const dailyPax = await prisma.eventPax.create({
     data: {
       registrationId: dailyReg.id,
@@ -1025,25 +1203,19 @@ async function main() {
   });
 
   if (coffeeFreebie) {
-    // Coffee has options: "Latte" or "Americano"
-    // User chose "Latte"
     await prisma.paxFreebie.create({
       data: {
         paxId: dailyPax.id,
         freebieId: coffeeFreebie.id,
         quantity: 1,
-        option: "Latte", // ✅ Selected option
+        option: "Latte",
       },
     });
   }
   console.log(
-    `✅ Daily member ${dailyMembers[0].name} registered for ${coffeeSocial.title} with payment (Ref: ${dailyEventPaymentRef}) - Chose: Latte`
+    `✅ Daily member ${dailyMembers[0].name} registered for ${coffeeSocial.title} (Ref: ${dailyEventPaymentRef})`
   );
 
-  // Guest customer registrations with payments
-  console.log("\n👤 Creating guest customer registrations...");
-
-  // NEW LOGIC: Guest registers for free networking event
   const guestFreeReg = await prisma.customerEventRegistration.create({
     data: {
       customerId: guestCustomers[0].id,
@@ -1052,11 +1224,9 @@ async function main() {
       attendeeEmail: guestCustomers[0].email!,
       attendeePhone: guestCustomers[0].contactNumber!,
       numberOfPax: 1,
-      // No paymentId for free event
     },
   });
 
-  // Create pax for guest
   const guestFreePax = await prisma.customerEventPax.create({
     data: {
       registrationId: guestFreeReg.id,
@@ -1066,7 +1236,6 @@ async function main() {
     },
   });
 
-  // Add freebies for networking event (no options)
   const networkingFreebies = await prisma.eventFreebie.findMany({
     where: { eventId: freeNetworking.id },
   });
@@ -1085,153 +1254,9 @@ async function main() {
     `✅ Guest ${guestCustomers[0].name} registered for ${freeNetworking.title}`
   );
 
-  // NEW LOGIC: Guest registers for paid workshop with payment
-  const guestEventPaymentRef = await generateEventPaymentReference();
-  const guestPayment = await prisma.customerPayment.create({
-    data: {
-      customerId: guestCustomers[1].id,
-      amount: paidWorkshop.price,
-      paymentMethod: "BANK_TRANSFER",
-      status: "COMPLETED",
-      paymentReference: guestEventPaymentRef,
-      referenceNumber: `BANK${Date.now()}`,
-      paidAt: new Date(),
-      notes: `Event registration: ${paidWorkshop.title}`,
-    },
-  });
+  // Daily use redemptions
+  console.log("\n🎁 Creating daily use redemptions...");
 
-  // Create ONE registration (main payer only)
-  const guestReg = await prisma.customerEventRegistration.create({
-    data: {
-      customerId: guestCustomers[1].id,
-      eventId: paidWorkshop.id,
-      attendeeName: guestCustomers[1].name,
-      attendeeEmail: guestCustomers[1].email!,
-      attendeePhone: guestCustomers[1].contactNumber!,
-      numberOfPax: 1,
-      paymentId: guestPayment.id, // Link payment to registration
-    },
-  });
-
-  // Create pax (including main payer)
-  const guestPax = await prisma.customerEventPax.create({
-    data: {
-      registrationId: guestReg.id,
-      name: guestCustomers[1].name,
-      email: guestCustomers[1].email!,
-      phone: guestCustomers[1].contactNumber!,
-    },
-  });
-
-  // Add freebies for guest
-  for (const freebie of workshopFreebies) {
-    await prisma.customerPaxFreebie.create({
-      data: {
-        paxId: guestPax.id,
-        freebieId: freebie.id,
-        quantity: 1,
-      },
-    });
-  }
-  console.log(
-    `✅ Guest ${guestCustomers[1].name} registered for ${paidWorkshop.title} with payment (Ref: ${guestEventPaymentRef})`
-  );
-
-  // NEW: Add more registrations with OPTION SELECTIONS for demonstration
-  console.log("\n☕ Creating registrations with option selections...");
-
-  // Daily member 2 registers for coffee and chooses "Americano"
-  const dailyEventPaymentRef2 = await generateEventPaymentReference();
-  const dailyPayment2 = await prisma.payment.create({
-    data: {
-      userId: dailyMembers[1].id,
-      amount: coffeeSocial.price,
-      paymentMethod: "GCASH",
-      status: "COMPLETED",
-      paymentReference: dailyEventPaymentRef2,
-      referenceNumber: `GCASH${Date.now() + 1}`,
-      paidAt: new Date(),
-      notes: `Event registration: ${coffeeSocial.title}`,
-    },
-  });
-
-  const dailyReg2 = await prisma.eventRegistration.create({
-    data: {
-      userId: dailyMembers[1].id,
-      eventId: coffeeSocial.id,
-      attendeeName: dailyMembers[1].name,
-      attendeeEmail: dailyMembers[1].email,
-      numberOfPax: 1,
-      paymentId: dailyPayment2.id,
-    },
-  });
-
-  const dailyPax2 = await prisma.eventPax.create({
-    data: {
-      registrationId: dailyReg2.id,
-      name: dailyMembers[1].name,
-      email: dailyMembers[1].email,
-    },
-  });
-
-  if (coffeeFreebie) {
-    await prisma.paxFreebie.create({
-      data: {
-        paxId: dailyPax2.id,
-        freebieId: coffeeFreebie.id,
-        quantity: 1,
-        option: "Americano", // ✅ Different option
-      },
-    });
-  }
-  console.log(
-    `✅ Daily member ${dailyMembers[1].name} registered for ${coffeeSocial.title} - Chose: Americano`
-  );
-
-  // Guest customer registers for Rameniac with option selection
-  const ramenFreebie = await prisma.eventFreebie.findFirst({
-    where: { eventId: rameniac.id },
-  });
-
-  const guestRamenReg = await prisma.customerEventRegistration.create({
-    data: {
-      customerId: guestCustomers[2].id,
-      eventId: rameniac.id,
-      attendeeName: guestCustomers[2].name,
-      attendeeEmail: guestCustomers[2].email!,
-      attendeePhone: guestCustomers[2].contactNumber!,
-      numberOfPax: 1,
-    },
-  });
-
-  const guestRamenPax = await prisma.customerEventPax.create({
-    data: {
-      registrationId: guestRamenReg.id,
-      name: guestCustomers[2].name,
-      email: guestCustomers[2].email!,
-      phone: guestCustomers[2].contactNumber!,
-    },
-  });
-
-  if (ramenFreebie) {
-    // Ramen options: Tonkotsu, Shoyu, or Miso
-    await prisma.customerPaxFreebie.create({
-      data: {
-        paxId: guestRamenPax.id,
-        freebieId: ramenFreebie.id,
-        quantity: 1,
-        option: "Miso", // ✅ Guest chose Miso
-      },
-    });
-  }
-  console.log(
-    `✅ Guest ${guestCustomers[2].name} registered for ${rameniac.title} - Chose: Miso`
-  );
-
-  // Create daily use redemptions with options
-  console.log("\n🎁 Creating daily use redemptions with options...");
-
-  // Update existing redemption to include note about option
   for (const member of dailyMembers.slice(0, 2)) {
     const ramenOptions = ["Tonkotsu", "Shoyu", "Miso"];
     const chosenOption =
@@ -1260,6 +1285,13 @@ async function main() {
   );
   console.log(`   - Guest Customers: ${guestCustomers.length}`);
   console.log(`   - Membership Plans: ${await prisma.membershipPlan.count()}`);
+  console.log(`   - Meeting Rooms: ${await prisma.meetingRoom.count()}`);
+  console.log(
+    `   - User Bookings: ${await prisma.meetingRoomBooking.count()}`
+  );
+  console.log(
+    `   - Customer Bookings: ${await prisma.customerMeetingRoomBooking.count()}`
+  );
   console.log(`   - Events: ${await prisma.event.count()}`);
   console.log(
     `   - User Registrations: ${await prisma.eventRegistration.count()}`
@@ -1316,12 +1348,6 @@ async function main() {
   sampleCustomerPayments.forEach((p) => {
     console.log(`   - ${p.paymentReference} (₱${p.amount}) ${p.notes || ""}`);
   });
-
-  console.log("\n✅ New Registration Logic Applied:");
-  console.log("   - One registration per booking (main payer)");
-  console.log("   - All attendees stored in pax table (including main)");
-  console.log("   - Payment ID properly linked to registration");
-  console.log("   - numberOfPax reflects total party size");
 }
 
 main()

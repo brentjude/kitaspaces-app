@@ -10,6 +10,7 @@
     "lint:fix": "eslint . --fix && node -e \"console.log('\\n✅ Auto-fixed all possible issues!\\n')\"",
     "type-check": "tsc --noEmit && node -e \"console.log('\\n✅ No TypeScript errors found!\\n')\"",
     "seed": "tsx prisma/seed.ts",
+    "seed:admin": "tsx prisma/seed-admin.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
