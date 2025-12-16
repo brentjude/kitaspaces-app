@@ -99,32 +99,32 @@ export function MembershipFreeRegistrationEmail({
             <Section style={benefitsSection}>
               <Text style={sectionTitle}>Your Membership Includes:</Text>
               <table style={benefitsList}>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>Access to coworking spaces</td>
-                </tr>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>Meeting room hours</td>
-                </tr>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>Printing credits</td>
-                </tr>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>Exclusive member events</td>
-                </tr>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>And much more!</td>
-                </tr>
+                 <tr>
+                    <td style={bulletCell}>✓</td>
+                    <td style={benefitText}>1 free Matcha/Coffee first Monday of the Month</td>
+                  </tr>
+                  <tr>
+                    <td style={bulletCell}>✓</td>
+                    <td style={benefitText}>Free access to all weekly events (trivia, mixers)</td>
+                  </tr>
+                  <tr>
+                    <td style={bulletCell}>✓</td>
+                    <td style={benefitText}>4-hour meeting room (6 pax) FREE per month</td>
+                  </tr>
+                  <tr>
+                    <td style={bulletCell}>✓</td>
+                    <td style={benefitText}>Members-only Discord/Telegram group/ Viber</td>
+                  </tr>
+                  <tr>
+                    <td style={bulletCell}>✓</td>
+                    <td style={benefitText}>“Founding 25” badge</td>
+                  </tr>
               </table>
             </Section>
 
             {/* CTA Button */}
             <Section style={ctaSection}>
-              <Button style={button} href="http://localhost:3000/user/dashboard">
+              <Button style={button} href="https://community.kitaspaces.com/dashboard">
                 View My Dashboard
               </Button>
             </Section>
@@ -146,9 +146,9 @@ export function MembershipFreeRegistrationEmail({
             </Text>
             <Text style={footerText}>Your Creative Workspace</Text>
             <Text style={footerLinks}>
-              <a href="http://localhost:3000" style={footerLink}>Website</a> |{' '}
-              <a href="http://localhost:3000/about" style={footerLink}>About</a> |{' '}
-              <a href="http://localhost:3000/contact" style={footerLink}>Contact</a>
+              <a href="https://kitaspaces.com" style={footerLink}>Website</a> |{' '}
+              <a href="https://kitaspaces.com/about" style={footerLink}>About</a> |{' '}
+              <a href="https://kitaspaces.com/contact" style={footerLink}>Contact</a>
             </Text>
           </Section>
         </Container>

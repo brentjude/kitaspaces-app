@@ -126,9 +126,9 @@ export function MembershipPendingPaymentEmail({
             </Text>
             <Text style={footerText}>Your Creative Workspace</Text>
             <Text style={footerLinks}>
-              <a href="http://localhost:3000" style={footerLink}>Website</a> |{' '}
-              <a href="http://localhost:3000/about" style={footerLink}>About</a> |{' '}
-              <a href="http://localhost:3000/contact" style={footerLink}>Contact</a>
+              <a href="https://kitaspaces.com" style={footerLink}>Website</a> |{' '}
+              <a href="https://kitaspaces.com/about" style={footerLink}>About</a> |{' '}
+              <a href="https://kitaspaces.com/contact" style={footerLink}>Contact</a>
             </Text>
           </Section>
         </Container>
