@@ -45,6 +45,10 @@ export default function AdminLayout({
       return "Event Calendar";
     }
 
+    if (pathname.startsWith("/admin/meeting-rooms")) {
+      return "Meeting Rooms Management";
+    }
+
     if (pathname.startsWith("/admin/users")) {
       return "Users Management";
     }

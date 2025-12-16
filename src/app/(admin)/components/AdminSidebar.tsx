@@ -13,6 +13,7 @@ import {
   TicketIcon,
   CreditCardIcon,
   BanknotesIcon,
+  PresentationChartBarIcon,
 } from "@heroicons/react/24/outline";
 
 export default function AdminSidebar() {
@@ -46,6 +47,11 @@ export default function AdminSidebar() {
       name: "Events",
       href: "/admin/events",
       icon: <TicketIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Meeting Rooms",
+      href: "/admin/meeting-rooms",
+      icon: <PresentationChartBarIcon className="w-5 h-5" />,
     },
     {
       name: "Calendar",
@@ -108,7 +114,7 @@ export default function AdminSidebar() {
         {/* Logo */}
         <div className="flex items-center h-16 px-6 border-b border-foreground/10">
           <Link href="/admin" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-linear-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">K</span>
             </div>
             <h1 className="text-xl font-semibold font-display text-primary">
