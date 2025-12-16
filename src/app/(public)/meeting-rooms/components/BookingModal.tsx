@@ -52,7 +52,6 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
     },
   });
 
-  // Update guest details if user logs in
   useEffect(() => {
     if (currentUser) {
       setFormData(prev => ({
@@ -121,7 +120,7 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
         company: formData.guestDetails.company,
         status: 'PENDING' as BookingStatus,
         totalAmount,
-        paymentMethod: 'CASH', // Automatic cash payment
+        paymentMethod: 'CASH',
       };
 
       const response = await fetch('/api/public/meeting-rooms/book', {
@@ -136,9 +135,14 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
         throw new Error(result.error || 'Failed to create booking');
       }
 
+      // Show success step
       setBookingReference(result.data.paymentReference || '');
       setShowSuccess(true);
-      onSuccess();
+      
+      // Call onSuccess after a delay to allow user to see success message
+      setTimeout(() => {
+        onSuccess();
+      }, 100);
     } catch (error) {
       console.error('Booking error:', error);
       alert(error instanceof Error ? error.message : 'Failed to create booking');
@@ -193,6 +197,7 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
     }
   };
 
+  // Success step renders in its own full-screen container
   if (showSuccess) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -247,7 +252,6 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
       }
     >
       <form className="p-6">
-        {/* Progress Indicator - Now only 3 steps */}
         <div className="flex items-center space-x-1 mb-6">
           {[1, 2, 3].map((i) => (
             <div

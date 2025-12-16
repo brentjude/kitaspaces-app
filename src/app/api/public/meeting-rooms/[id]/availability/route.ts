@@ -18,25 +18,49 @@ export async function GET(
       );
     }
 
-    // Fetch all confirmed bookings for this room on the given date
-    const bookings = await prisma.meetingRoomBooking.findMany({
-      where: {
-        roomId: id,
-        bookingDate: new Date(date),
-        status: {
-          in: ['CONFIRMED', 'PENDING'],
-        },
-      },
-      select: {
-        startTime: true,
-        endTime: true,
-      },
-    });
+    const bookingDate = new Date(date);
 
-    const bookedSlots = bookings.map((booking) => ({
-      startTime: booking.startTime,
-      endTime: booking.endTime,
-    }));
+    // Fetch all confirmed/pending bookings from BOTH tables for this room on the given date
+    const [userBookings, customerBookings] = await Promise.all([
+      prisma.meetingRoomBooking.findMany({
+        where: {
+          roomId: id,
+          bookingDate: bookingDate,
+          status: {
+            in: ['CONFIRMED', 'PENDING'],
+          },
+        },
+        select: {
+          startTime: true,
+          endTime: true,
+        },
+      }),
+      prisma.customerMeetingRoomBooking.findMany({
+        where: {
+          roomId: id,
+          bookingDate: bookingDate,
+          status: {
+            in: ['CONFIRMED', 'PENDING'],
+          },
+        },
+        select: {
+          startTime: true,
+          endTime: true,
+        },
+      }),
+    ]);
+
+    // Combine all booked slots from both tables
+    const bookedSlots = [
+      ...userBookings.map((booking) => ({
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+      })),
+      ...customerBookings.map((booking) => ({
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+      })),
+    ];
 
     return NextResponse.json({
       success: true,

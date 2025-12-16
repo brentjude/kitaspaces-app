@@ -8,8 +8,6 @@ import {
   Text,
   Hr,
   Heading,
-  Row,
-  Column,
 } from '@react-email/components';
 
 interface MeetingRoomBookingEmailProps {
@@ -34,27 +32,9 @@ export default function MeetingRoomBookingEmail({
   endTime = '12:00',
   totalAmount = 0,
   paymentReference = 'mrb_kita2024_001',
-  paymentMethod = 'GCASH',
-  status = 'PENDING',
   company,
   purpose,
 }: MeetingRoomBookingEmailProps) {
-  const statusColors = {
-    PENDING: '#F59E0B',
-    CONFIRMED: '#10B981',
-    CANCELLED: '#EF4444',
-    COMPLETED: '#3B82F6',
-  };
-
-  const statusColor = statusColors[status as keyof typeof statusColors] || '#6B7280';
-
-  const paymentMethodDisplay: Record<string, string> = {
-    GCASH: 'GCash',
-    BANK_TRANSFER: 'Bank Transfer',
-    CASH: 'Cash',
-    CREDIT_CARD: 'Credit Card',
-  };
-
   return (
     <Html>
       <Head />
@@ -62,31 +42,15 @@ export default function MeetingRoomBookingEmail({
         <Container style={container}>
           {/* Header */}
           <Section style={header}>
-            <Heading style={h1}>Meeting Room Booking Confirmation</Heading>
-            <Text style={tagline}>KitaSpaces Coworking</Text>
-          </Section>
-
-          {/* Status Badge */}
-          <Section style={statusSection}>
-            <div
-              style={{
-                ...statusBadge,
-                backgroundColor: `${statusColor}15`,
-                borderLeft: `4px solid ${statusColor}`,
-              }}
-            >
-              <Text style={{ ...statusText, color: statusColor }}>
-                Status: {status}
-              </Text>
-            </div>
+            <Heading style={h1}>Meeting Room Booking Confirmed!</Heading>
+            <Text style={tagline}>KITA Spaces</Text>
           </Section>
 
           {/* Greeting */}
           <Section style={content}>
             <Text style={greeting}>Hi {customerName},</Text>
             <Text style={paragraph}>
-              Thank you for booking a meeting room with us! Your booking has been received and is
-              currently being processed.
+              Great news! Your meeting room booking has been confirmed. We look forward to hosting you at KITA Spaces.
             </Text>
           </Section>
 
@@ -99,157 +63,80 @@ export default function MeetingRoomBookingEmail({
             </Heading>
 
             <div style={detailsCard}>
-              <Row style={detailRow}>
-                <Column style={detailLabel}>Room:</Column>
-                <Column style={detailValue}>{roomName}</Column>
-              </Row>
+              <div style={detailRow}>
+                <Text style={detailLabel}>Room:</Text>
+                <Text style={detailValue}>{roomName}</Text>
+              </div>
 
-              <Row style={detailRow}>
-                <Column style={detailLabel}>Date:</Column>
-                <Column style={detailValue}>{bookingDate}</Column>
-              </Row>
+              <div style={detailRow}>
+                <Text style={detailLabel}>Date:</Text>
+                <Text style={detailValue}>{bookingDate}</Text>
+              </div>
 
-              <Row style={detailRow}>
-                <Column style={detailLabel}>Time:</Column>
-                <Column style={detailValue}>
-                  {startTime} - {endTime}
-                </Column>
-              </Row>
+              <div style={detailRow}>
+                <Text style={detailLabel}>Time:</Text>
+                <Text style={detailValue}>{startTime} - {endTime}</Text>
+              </div>
 
               {company && (
-                <Row style={detailRow}>
-                  <Column style={detailLabel}>Company:</Column>
-                  <Column style={detailValue}>{company}</Column>
-                </Row>
+                <div style={detailRow}>
+                  <Text style={detailLabel}>Company:</Text>
+                  <Text style={detailValue}>{company}</Text>
+                </div>
               )}
 
               {purpose && (
-                <Row style={detailRow}>
-                  <Column style={detailLabel}>Purpose:</Column>
-                  <Column style={detailValue}>{purpose}</Column>
-                </Row>
+                <div style={detailRow}>
+                  <Text style={detailLabel}>Purpose:</Text>
+                  <Text style={detailValue}>{purpose}</Text>
+                </div>
               )}
-            </div>
-          </Section>
-
-          <Hr style={divider} />
-
-          {/* Payment Details */}
-          <Section style={content}>
-            <Heading as="h2" style={h2}>
-              💳 Payment Information
-            </Heading>
-
-            <div style={detailsCard}>
-              <Row style={detailRow}>
-                <Column style={detailLabel}>Reference Number:</Column>
-                <Column style={{ ...detailValue, fontFamily: 'monospace', fontWeight: '700' }}>
-                  {paymentReference}
-                </Column>
-              </Row>
-
-              <Row style={detailRow}>
-                <Column style={detailLabel}>Payment Method:</Column>
-                <Column style={detailValue}>
-                  {paymentMethodDisplay[paymentMethod] || paymentMethod}
-                </Column>
-              </Row>
-
-              <Row style={detailRow}>
-                <Column style={detailLabel}>Payment Status:</Column>
-                <Column style={detailValue}>
-                  <span
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      backgroundColor: '#FEF3C7',
-                      color: '#92400E',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                    }}
-                  >
-                    PENDING
-                  </span>
-                </Column>
-              </Row>
 
               <Hr style={{ margin: '16px 0', borderColor: '#E5E7EB' }} />
 
-              <Row style={detailRow}>
-                <Column style={detailLabel}>
-                  <Text style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>
-                    Total Amount:
-                  </Text>
-                </Column>
-                <Column style={detailValue}>
-                  <Text
-                    style={{
-                      fontSize: '20px',
-                      fontWeight: '700',
-                      color: '#FF8E49',
-                      margin: 0,
-                    }}
-                  >
-                    ₱{totalAmount.toFixed(2)}
-                  </Text>
-                </Column>
-              </Row>
+              <div style={detailRow}>
+                <Text style={{ ...detailLabel, fontSize: '16px', fontWeight: '700' }}>
+                  Total Amount:
+                </Text>
+                <Text style={{ ...detailValue, fontSize: '20px', fontWeight: '700', color: '#FF8E49' }}>
+                  ₱{totalAmount.toFixed(2)}
+                </Text>
+              </div>
+
+              <div style={detailRow}>
+                <Text style={detailLabel}>Reference Number:</Text>
+                <Text style={{ ...detailValue, fontFamily: 'monospace', fontWeight: '700' }}>
+                  {paymentReference}
+                </Text>
+              </div>
             </div>
           </Section>
 
           <Hr style={divider} />
 
-          {/* Next Steps */}
+          {/* What's Next */}
           <Section style={content}>
             <Heading as="h2" style={h2}>
               ✅ What's Next?
             </Heading>
 
             <div style={infoBox}>
-              {status === 'PENDING' &&
-                (paymentMethod === 'GCASH' || paymentMethod === 'BANK_TRANSFER') && (
-                  <>
-                    <Text style={infoParagraph}>
-                      <strong>1. Payment Verification</strong>
-                      <br />
-                      Our team will verify your payment within 24 hours. You will receive a
-                      confirmation email once approved.
-                    </Text>
-                  </>
-                )}
-
-              {status === 'PENDING' &&
-                (paymentMethod === 'CASH' || paymentMethod === 'CREDIT_CARD') && (
-                  <>
-                    <Text style={infoParagraph}>
-                      <strong>1. Payment on Arrival</strong>
-                      <br />
-                      Please bring{' '}
-                      {paymentMethod === 'CASH' ? 'exact amount' : 'your credit card'} when you
-                      arrive. Payment will be collected before room access.
-                    </Text>
-                  </>
-                )}
-
               <Text style={infoParagraph}>
-                <strong>2. Access Instructions</strong>
+                <strong>Arrival</strong>
                 <br />
-                You will receive detailed access instructions and any required codes or keys before
-                your booking time.
+                Please arrive 5-10 minutes before your scheduled time. Our staff will greet you at the reception and guide you to your meeting room.
               </Text>
 
               <Text style={infoParagraph}>
-                <strong>3. Arrival</strong>
+                <strong>Payment</strong>
                 <br />
-                Please arrive 5-10 minutes before your scheduled time. Our staff will assist you
-                with room setup.
+                Payment can be made on the day of your booking at our reception. We accept cash and credit cards. Please bring your reference number.
               </Text>
 
               <Text style={infoParagraph}>
-                <strong>4. Payment Completion</strong>
+                <strong>Room Access</strong>
                 <br />
-                After your meeting, payment status will be updated to COMPLETED. You will receive a
-                final receipt via email.
+                You will receive access instructions and any required codes or keys when you check in at reception.
               </Text>
             </div>
           </Section>
@@ -264,18 +151,16 @@ export default function MeetingRoomBookingEmail({
 
             <div style={warningBox}>
               <Text style={warningText}>
-                • <strong>Cancellation Policy:</strong> Free cancellation up to 24 hours before
-                booking time
+                • <strong>Property Care:</strong> Please do not damage any property or equipment in the meeting room. Any damages will be charged accordingly.
               </Text>
               <Text style={warningText}>
-                • <strong>Late Arrival:</strong> Please notify us if you'll be more than 15 minutes
-                late
+                • <strong>Cancellation Policy:</strong> Free cancellation up to 24 hours before booking time. Please notify us as soon as possible if you need to cancel.
               </Text>
               <Text style={warningText}>
-                • <strong>Room Rules:</strong> Please maintain cleanliness and respect noise levels
+                • <strong>Late Arrival:</strong> If you're running more than 15 minutes late, please contact us to ensure your room remains available.
               </Text>
               <Text style={warningText}>
-                • <strong>Equipment:</strong> Report any issues with room equipment immediately
+                • <strong>Room Rules:</strong> Please maintain cleanliness, respect noise levels, and leave the room as you found it.
               </Text>
             </div>
           </Section>
@@ -290,25 +175,20 @@ export default function MeetingRoomBookingEmail({
             <Text style={paragraph}>
               If you have any questions or need to make changes to your booking, please contact us:
             </Text>
-            <Text style={contactInfo}>
-              📧 Email: bookings@kitaspaces.com
-              <br />
-              📱 Phone: +63 123 456 7890
-              <br />
-              🕐 Hours: Monday - Saturday, 8:00 AM - 6:00 PM
-            </Text>
+            <div style={contactInfo}>
+              <Text style={contactText}>📧 bookings@kitaspaces.com</Text>
+              <Text style={contactText}>📱 +63 123 456 7890</Text>
+              <Text style={contactText}>🕐 Monday - Saturday, 8:00 AM - 6:00 PM</Text>
+            </div>
           </Section>
 
           {/* Footer */}
           <Section style={footer}>
             <Text style={footerText}>
-              This is an automated email. Please do not reply directly to this message.
+              This is an automated confirmation email from KITA Spaces.
             </Text>
             <Text style={footerText}>
-              © {new Date().getFullYear()} KitaSpaces Coworking. All rights reserved.
-            </Text>
-            <Text style={footerText}>
-              Keep this email for your records. Your reference number is: {paymentReference}
+              © {new Date().getFullYear()} KITA Spaces. All rights reserved.
             </Text>
           </Section>
         </Container>
@@ -319,9 +199,8 @@ export default function MeetingRoomBookingEmail({
 
 // Styles
 const main = {
-  backgroundColor: '#F3F4F6',
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  backgroundColor: '#FFF6EF',
+  fontFamily: 'Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
 };
 
 const container = {
@@ -331,7 +210,7 @@ const container = {
 };
 
 const header = {
-  backgroundColor: '#1F2937',
+  backgroundColor: '#343535',
   padding: '32px 24px',
   borderRadius: '12px 12px 0 0',
   textAlign: 'center' as const,
@@ -354,25 +233,6 @@ const tagline = {
   letterSpacing: '1px',
 };
 
-const statusSection = {
-  backgroundColor: '#FFFFFF',
-  padding: '20px 24px',
-};
-
-const statusBadge = {
-  padding: '12px 16px',
-  borderRadius: '8px',
-  display: 'inline-block',
-};
-
-const statusText = {
-  margin: '0',
-  fontSize: '14px',
-  fontWeight: '700',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.5px',
-};
-
 const content = {
   backgroundColor: '#FFFFFF',
   padding: '24px',
@@ -381,21 +241,21 @@ const content = {
 const greeting = {
   fontSize: '18px',
   fontWeight: '600',
-  color: '#1F2937',
+  color: '#343535',
   margin: '0 0 16px 0',
 };
 
 const h2 = {
   fontSize: '20px',
   fontWeight: '700',
-  color: '#1F2937',
+  color: '#343535',
   margin: '0 0 16px 0',
 };
 
 const paragraph = {
   fontSize: '15px',
   lineHeight: '1.6',
-  color: '#4B5563',
+  color: '#666666',
   margin: '0 0 16px 0',
 };
 
@@ -405,29 +265,32 @@ const divider = {
 };
 
 const detailsCard = {
-  backgroundColor: '#F9FAFB',
-  border: '1px solid #E5E7EB',
-  borderRadius: '8px',
-  padding: '16px',
+  backgroundColor: '#FFF6EF',
+  border: '2px solid #FF8E49',
+  borderRadius: '12px',
+  padding: '20px',
 };
 
 const detailRow = {
   marginBottom: '12px',
+  display: 'flex' as const,
+  justifyContent: 'space-between' as const,
+  alignItems: 'flex-start' as const,
 };
 
 const detailLabel = {
   fontSize: '14px',
-  color: '#6B7280',
+  color: '#666666',
   fontWeight: '500',
-  width: '40%',
-  paddingRight: '8px',
+  margin: '0',
 };
 
 const detailValue = {
   fontSize: '14px',
-  color: '#1F2937',
-  fontWeight: '600',
-  width: '60%',
+  color: '#343535',
+  fontWeight: '700',
+  margin: '0',
+  textAlign: 'right' as const,
 };
 
 const infoBox = {
@@ -441,7 +304,7 @@ const infoParagraph = {
   fontSize: '14px',
   lineHeight: '1.6',
   color: '#1E40AF',
-  margin: '0 0 12px 0',
+  margin: '0 0 16px 0',
 };
 
 const warningBox = {
@@ -459,14 +322,19 @@ const warningText = {
 };
 
 const contactInfo = {
+  backgroundColor: '#FFF6EF',
+  borderRadius: '8px',
+  border: '2px solid #FF8E49',
+  padding: '16px',
+  marginTop: '16px',
+};
+
+const contactText = {
   fontSize: '14px',
   lineHeight: '1.8',
-  color: '#4B5563',
-  margin: '16px 0 0 0',
-  padding: '16px',
-  backgroundColor: '#F9FAFB',
-  borderRadius: '8px',
-  border: '1px solid #E5E7EB',
+  color: '#343535',
+  margin: '4px 0',
+  fontWeight: '500',
 };
 
 const footer = {

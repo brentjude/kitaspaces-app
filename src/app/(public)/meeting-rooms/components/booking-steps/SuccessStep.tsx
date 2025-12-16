@@ -6,7 +6,7 @@ import {
   CalendarIcon,
   ClockIcon,
   ReceiptPercentIcon,
-  BanknotesIcon,
+  EnvelopeIcon,
 } from '@heroicons/react/24/outline';
 
 interface SuccessStepProps {
@@ -72,38 +72,28 @@ export default function SuccessStep({
               </p>
             </div>
           </div>
-
-          <div className="flex items-start gap-3">
-            <BanknotesIcon className="w-5 h-5 text-primary mt-0.5" />
-            <div className="flex-1">
-              <p className="text-xs text-foreground/60 mb-1">Payment Method</p>
-              <p className="font-semibold text-foreground">Pay on Arrival (Cash)</p>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Payment Instructions */}
-      <div className="bg-yellow-50 rounded-lg p-4 mb-8 text-left border border-yellow-200">
-        <h3 className="font-semibold text-yellow-900 mb-2 text-sm flex items-center gap-2">
-          <BanknotesIcon className="w-4 h-4" />
-          Payment on Arrival
+      {/* Email Confirmation */}
+      <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left border border-blue-200">
+        <h3 className="font-semibold text-blue-900 mb-2 text-sm flex items-center gap-2">
+          <EnvelopeIcon className="w-4 h-4" />
+          Confirmation Email Sent
         </h3>
-        <ul className="text-sm text-yellow-800 space-y-1">
-          <li>✓ Payment will be collected when you arrive</li>
-          <li>✓ Please bring exact amount if possible</li>
-          <li>✓ Arrive 5-10 minutes before your scheduled time</li>
-          <li>✓ Show your reference number at reception</li>
-        </ul>
+        <p className="text-sm text-blue-800">
+          A confirmation email with all booking details has been sent to your email address. Please check your inbox.
+        </p>
       </div>
 
       {/* Next Steps */}
-      <div className="bg-blue-50 rounded-lg p-4 mb-8 text-left border border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2 text-sm">What's Next?</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>✓ Check your email for booking confirmation</li>
-          <li>✓ You'll receive access instructions before your booking</li>
-          <li>✓ Payment status will update to COMPLETED after checkout</li>
+      <div className="bg-orange-50 rounded-lg p-4 mb-8 text-left border border-orange-200">
+        <h3 className="font-semibold text-orange-900 mb-2 text-sm">What's Next?</h3>
+        <ul className="text-sm text-orange-800 space-y-1">
+          <li>✓ Arrive 5-10 minutes before your scheduled time</li>
+          <li>✓ Payment can be made on arrival (cash or card accepted)</li>
+          <li>✓ Show your reference number at reception</li>
+          <li>✓ Please take care of the property and equipment</li>
         </ul>
       </div>
 
