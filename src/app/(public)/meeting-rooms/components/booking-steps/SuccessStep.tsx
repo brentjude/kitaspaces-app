@@ -86,16 +86,6 @@ export default function SuccessStep({
         </p>
       </div>
 
-      {/* Next Steps */}
-      <div className="bg-orange-50 rounded-lg p-4 mb-8 text-left border border-orange-200">
-        <h3 className="font-semibold text-orange-900 mb-2 text-sm">What's Next?</h3>
-        <ul className="text-sm text-orange-800 space-y-1">
-          <li>✓ Arrive 5-10 minutes before your scheduled time</li>
-          <li>✓ Payment can be made on arrival (cash or card accepted)</li>
-          <li>✓ Show your reference number at reception</li>
-          <li>✓ Please take care of the property and equipment</li>
-        </ul>
-      </div>
 
       <button
         onClick={onClose}

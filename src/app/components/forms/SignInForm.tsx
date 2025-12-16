@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from "next/image";
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -11,6 +12,8 @@ import {
   LockClosedIcon,
   ArrowRightIcon,
   ArrowTopRightOnSquareIcon,
+  EyeIcon,
+  EyeSlashIcon,
 } from '@heroicons/react/24/outline';
 
 export default function SignInForm() {
@@ -22,6 +25,7 @@ export default function SignInForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,18 +152,30 @@ export default function SignInForm() {
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className={`block w-full pl-10 pr-3 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 sm:text-sm transition duration-150 ease-in-out ${
+                  className={`block w-full pl-10 pr-11 py-3 border rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 sm:text-sm transition duration-150 ease-in-out ${
                     errors.password
                       ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                       : 'border-gray-300 focus:ring-[#FF8E49] focus:border-[#FF8E49]'
                   }`}
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </button>
               </div>
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
@@ -263,20 +279,66 @@ export default function SignInForm() {
         </div>
       </div>
 
-      {/* Right Side - Image/Pattern */}
-      <div className="hidden lg:block relative w-0 flex-1 overflow-hidden bg-orange-50">
-        <div className="absolute inset-0 h-full w-full bg-[#FF8E49]/5" />
+      {/* Right Side - Image/Pattern with Logo */}
+      <div className="hidden lg:block relative w-0 flex-1 overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#FF8E49] via-[#ff7d2e] to-[#FFB082]" />
+        
         {/* Abstract shapes */}
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] rounded-full bg-[#FF8E49]/10 blur-3xl" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[400px] h-[400px] rounded-full bg-[#FF8E49]/10 blur-3xl" />
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[400px] h-[400px] rounded-full bg-white/10 blur-3xl" />
 
-        <div className="relative h-full flex flex-col items-center justify-center p-12 text-center">
-          <div className="w-full max-w-md space-y-8">
-            <div className="relative aspect-square w-full bg-linear-to-tr from-[#FF8E49] to-[#FFB082] rounded-3xl shadow-2xl flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')] bg-cover bg-center mix-blend-overlay opacity-40"></div>
-              <h1 className="text-white text-5xl font-bold relative z-10 px-8">
-                KITA Spaces
-              </h1>
+        {/* Overlay Pattern */}
+        <div 
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+
+        {/* Center Content */}
+        <div className="relative h-full flex flex-col items-center justify-center p-12">
+          <div className="w-full max-w-md space-y-8 text-center">
+            {/* Logo Container */}
+            <div className="relative mx-auto w-80 h-80 flex items-center justify-center">
+              {/* Animated Circle Background */}
+              <div className="absolute inset-0 rounded-full bg-white/10 animate-pulse" />
+              <div className="absolute inset-8 rounded-full bg-white/5 animate-pulse" style={{ animationDelay: '0.3s' }} />
+              
+              {/* Logo */}
+              <div className="relative z-10">
+                <Image 
+                  src="/logo/kita-white-logo.png" 
+                  alt="KITA Spaces Logo" 
+                  width={280} 
+                  height={180}
+                  priority
+                  className="drop-shadow-2xl"
+                />
+              </div>
+            </div>
+
+            {/* Text Content */}
+            <div className="space-y-4">
+              <h2 className="text-4xl font-bold text-white drop-shadow-lg">
+                Welcome to KITA Spaces
+              </h2>
+              <p className="text-lg text-white/90 drop-shadow-md max-w-sm mx-auto">
+                Your collaborative workspace for innovation, creativity, and growth.
+              </p>
+            </div>
+
+            {/* Feature Pills */}
+            <div className="flex flex-wrap justify-center gap-3 pt-8">
+              <div className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium text-white border border-white/30">
+                ✨ Modern Spaces
+              </div>
+              <div className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium text-white border border-white/30">
+                🤝 Community Driven
+              </div>
+              <div className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium text-white border border-white/30">
+                🚀 Growth Focused
+              </div>
             </div>
           </div>
         </div>

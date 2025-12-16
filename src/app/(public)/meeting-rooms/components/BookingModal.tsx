@@ -15,6 +15,7 @@ import {
 interface BookingModalProps {
   room: MeetingRoom;
   currentUser?: {
+    id?: string;
     name?: string | null;
     email?: string | null;
   };
@@ -39,6 +40,8 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [bookingReference, setBookingReference] = useState('');
+
+  const isLoggedIn = !!currentUser?.id;
 
   const [formData, setFormData] = useState<BookingFormData>({
     bookingDate: '',
@@ -135,20 +138,19 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
         throw new Error(result.error || 'Failed to create booking');
       }
 
-      // Show success step
       setBookingReference(result.data.paymentReference || '');
       setShowSuccess(true);
-      
-      // Call onSuccess after a delay to allow user to see success message
-      setTimeout(() => {
-        onSuccess();
-      }, 100);
     } catch (error) {
       console.error('Booking error:', error);
       alert(error instanceof Error ? error.message : 'Failed to create booking');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSuccessClose = () => {
+    onSuccess();
+    onClose();
   };
 
   const renderStepContent = () => {
@@ -160,7 +162,7 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
           startTime={`${String(Math.min(...formData.selectedSlots)).padStart(2, '0')}:00`}
           endTime={`${String(Math.max(...formData.selectedSlots) + 1).padStart(2, '0')}:00`}
           reference={bookingReference}
-          onClose={onClose}
+          onClose={handleSuccessClose}
         />
       );
     }
@@ -190,6 +192,7 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
             bookingDate={formData.bookingDate}
             guestDetails={formData.guestDetails}
             onDetailsChange={(details) => setFormData({ ...formData, guestDetails: details })}
+            isLoggedIn={isLoggedIn}
           />
         );
       default:
@@ -197,7 +200,6 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
     }
   };
 
-  // Success step renders in its own full-screen container
   if (showSuccess) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

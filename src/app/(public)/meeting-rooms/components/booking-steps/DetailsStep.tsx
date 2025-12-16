@@ -7,6 +7,7 @@ import {
   PhoneIcon,
   BuildingOfficeIcon,
   DocumentTextIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 
 interface DetailsStepProps {
@@ -21,6 +22,7 @@ interface DetailsStepProps {
     purpose: string;
   };
   onDetailsChange: (details: DetailsStepProps['guestDetails']) => void;
+  isLoggedIn?: boolean;
 }
 
 export default function DetailsStep({
@@ -29,6 +31,7 @@ export default function DetailsStep({
   bookingDate,
   guestDetails,
   onDetailsChange,
+  isLoggedIn = false,
 }: DetailsStepProps) {
   const handleChange = (field: keyof typeof guestDetails, value: string) => {
     onDetailsChange({
@@ -39,8 +42,24 @@ export default function DetailsStep({
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-      <h4 className="text-lg font-bold text-foreground">Guest Information</h4>
+      <h4 className="text-lg font-bold text-foreground">
+        {isLoggedIn ? 'Booking Information' : 'Guest Information'}
+      </h4>
 
+      {/* Logged-in User Info Banner */}
+      {isLoggedIn && (
+        <div className="bg-green-50 p-4 rounded-xl border border-green-200 flex gap-3 items-start mb-4">
+          <CheckCircleIcon className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-green-800">Logged in as Member</p>
+            <p className="text-xs text-green-600 mt-1">
+              Your account information will be used for this booking.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Name Field */}
       <div>
         <label className="block text-xs font-semibold text-foreground/60 mb-1">
           Full Name <span className="text-red-500">*</span>
@@ -50,14 +69,23 @@ export default function DetailsStep({
           <input
             type="text"
             required
-            className="w-full rounded-lg border border-foreground/20 pl-9 pr-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            disabled={isLoggedIn}
+            className={`w-full rounded-lg border border-foreground/20 pl-9 pr-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${
+              isLoggedIn ? 'bg-foreground/5 cursor-not-allowed' : ''
+            }`}
             placeholder="Jane Doe"
             value={guestDetails.name}
             onChange={(e) => handleChange('name', e.target.value)}
           />
         </div>
+        {isLoggedIn && (
+          <p className="text-xs text-foreground/50 mt-1">
+            From your account profile
+          </p>
+        )}
       </div>
 
+      {/* Email Field */}
       <div>
         <label className="block text-xs font-semibold text-foreground/60 mb-1">
           Email Address <span className="text-red-500">*</span>
@@ -67,14 +95,23 @@ export default function DetailsStep({
           <input
             type="email"
             required
-            className="w-full rounded-lg border border-foreground/20 pl-9 pr-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            disabled={isLoggedIn}
+            className={`w-full rounded-lg border border-foreground/20 pl-9 pr-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${
+              isLoggedIn ? 'bg-foreground/5 cursor-not-allowed' : ''
+            }`}
             placeholder="jane@example.com"
             value={guestDetails.email}
             onChange={(e) => handleChange('email', e.target.value)}
           />
         </div>
+        {isLoggedIn && (
+          <p className="text-xs text-foreground/50 mt-1">
+            From your account profile
+          </p>
+        )}
       </div>
 
+      {/* Contact Number & Company */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-semibold text-foreground/60 mb-1">
@@ -109,6 +146,7 @@ export default function DetailsStep({
         </div>
       </div>
 
+      {/* Purpose Field */}
       <div>
         <label className="block text-xs font-semibold text-foreground/60 mb-1">
           Purpose of Booking (Optional)
@@ -125,6 +163,7 @@ export default function DetailsStep({
         </div>
       </div>
 
+      {/* Booking Summary */}
       <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mt-6">
         <h5 className="font-semibold text-foreground mb-3">Booking Summary</h5>
         <div className="space-y-2 text-sm">
@@ -150,13 +189,20 @@ export default function DetailsStep({
               {String(Math.max(...selectedSlots) + 1).padStart(2, '0')}:00
             </span>
           </div>
+          <div className="flex justify-between">
+            <span className="text-foreground/60">Duration</span>
+            <span className="font-bold text-foreground">
+              {selectedSlots.length} hour{selectedSlots.length > 1 ? 's' : ''}
+            </span>
+          </div>
           <div className="border-t border-orange-200 my-2"></div>
           <div className="flex justify-between text-lg">
-            <span className="font-bold text-foreground/70">Total</span>
+            <span className="font-bold text-foreground/70">Total Amount</span>
             <span className="font-bold text-primary">
               ₱{(selectedSlots.length * room.hourlyRate).toFixed(2)}
             </span>
           </div>
+
         </div>
       </div>
     </div>
