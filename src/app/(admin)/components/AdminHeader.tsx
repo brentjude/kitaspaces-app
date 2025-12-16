@@ -80,7 +80,7 @@ export default function AdminHeader({
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <span className="text-sm font-semibold text-primary">
                     {session?.user?.name?.charAt(0) || "A"}
                   </span>

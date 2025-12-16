@@ -1,55 +1,64 @@
 import { prisma } from '@/lib/prisma';
 
-export type ReferenceType = 'event' | 'membership';
+export type ReferenceType = 'event' | 'membership' | 'meeting-room';
 
 /**
  * Generate payment reference number
- * Format: ev_kita[YEAR]_XXX for events, mem_kita[YEAR]_XXXX for memberships
+ * Format: 
+ * - ev_kita[YEAR]_XXX for events
+ * - mem_kita[YEAR]_XXXX for memberships
+ * - mrb_kita[YEAR]_XXX for meeting room bookings
  */
 export async function generatePaymentReference(type: ReferenceType): Promise<string> {
   const year = new Date().getFullYear();
-  const prefix = type === 'event' ? 'ev_kita' : 'mem_kita';
-  const digits = type === 'event' ? 3 : 4;
+  
+  let prefix: string;
+  let digits: number;
+  
+  switch (type) {
+    case 'event':
+      prefix = 'ev_kita';
+      digits = 3;
+      break;
+    case 'membership':
+      prefix = 'mem_kita';
+      digits = 4;
+      break;
+    case 'meeting-room':
+      prefix = 'mrb_kita';
+      digits = 3;
+      break;
+  }
 
-  // Find the latest payment reference for this type and year
-  const latestPayment = await prisma.payment.findFirst({
-    where: {
-      paymentReference: {
-        startsWith: `${prefix}${year}_`,
-      },
-    },
-    orderBy: {
-      paymentReference: 'desc',
-    },
-  });
+  const searchPrefix = `${prefix}${year}_`;
 
-  const latestCustomerPayment = await prisma.customerPayment.findFirst({
-    where: {
-      paymentReference: {
-        startsWith: `${prefix}${year}_`,
-      },
-    },
-    orderBy: {
-      paymentReference: 'desc',
-    },
-  });
+  // Find the latest payment reference for this type and year from all payment tables
+  const [latestPayment, latestCustomerPayment] = await Promise.all([
+    prisma.payment.findFirst({
+      where: { paymentReference: { startsWith: searchPrefix } },
+      orderBy: { paymentReference: 'desc' },
+    }),
+    prisma.customerPayment.findFirst({
+      where: { paymentReference: { startsWith: searchPrefix } },
+      orderBy: { paymentReference: 'desc' },
+    }),
+  ]);
 
   let nextNumber = 1;
 
   // Get the highest number from both tables
-  if (latestPayment?.paymentReference) {
-    const match = latestPayment.paymentReference.match(/_(\d+)$/);
-    if (match) {
-      const num = parseInt(match[1]);
-      nextNumber = Math.max(nextNumber, num + 1);
-    }
-  }
+  const allReferences = [
+    latestPayment?.paymentReference,
+    latestCustomerPayment?.paymentReference,
+  ].filter(Boolean);
 
-  if (latestCustomerPayment?.paymentReference) {
-    const match = latestCustomerPayment.paymentReference.match(/_(\d+)$/);
-    if (match) {
-      const num = parseInt(match[1]);
-      nextNumber = Math.max(nextNumber, num + 1);
+  for (const ref of allReferences) {
+    if (ref) {
+      const match = ref.match(/_(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1]);
+        nextNumber = Math.max(nextNumber, num + 1);
+      }
     }
   }
 
@@ -62,13 +71,10 @@ export async function generatePaymentReference(type: ReferenceType): Promise<str
  * Check if payment reference already exists
  */
 export async function isReferenceUnique(paymentReference: string): Promise<boolean> {
-  const existingPayment = await prisma.payment.findFirst({
-    where: { paymentReference },
-  });
-
-  const existingCustomerPayment = await prisma.customerPayment.findFirst({
-    where: { paymentReference },
-  });
+  const [existingPayment, existingCustomerPayment] = await Promise.all([
+    prisma.payment.findFirst({ where: { paymentReference } }),
+    prisma.customerPayment.findFirst({ where: { paymentReference } }),
+  ]);
 
   return !existingPayment && !existingCustomerPayment;
 }

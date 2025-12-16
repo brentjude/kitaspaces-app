@@ -348,7 +348,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
                 checked={formData.isActive}
                 onChange={e => setFormData({ ...formData, isActive: e.target.checked })}
               />
-              <div className="w-10 h-6 bg-foreground/20 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-foreground/30 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              <div className="w-10 h-6 bg-foreground/20 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-foreground/30 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </div>
             <span className="ml-3 text-sm font-medium text-foreground">
               Room is Active and Bookable

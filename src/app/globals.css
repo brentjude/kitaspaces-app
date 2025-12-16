@@ -91,3 +91,4 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--foreground) / 0.3);
 }
+

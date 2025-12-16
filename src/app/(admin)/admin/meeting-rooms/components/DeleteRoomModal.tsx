@@ -74,7 +74,7 @@ export default function DeleteRoomModal({ isOpen, onClose, onSuccess, room }: De
         )}
 
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
               <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
             </div>

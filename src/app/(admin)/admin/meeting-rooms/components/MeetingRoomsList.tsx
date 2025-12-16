@@ -137,7 +137,7 @@ export default function MeetingRoomsList({ rooms, onRoomsChange }: MeetingRoomsL
                 {/* Title and Price */}
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="font-bold text-lg text-foreground leading-tight">{room.name}</h3>
-                  <div className="text-right flex-shrink-0 ml-4">
+                  <div className="text-right shrink-0 ml-4">
                     <div className="text-xl font-bold text-primary">₱{room.hourlyRate}</div>
                     <div className="text-xs text-foreground/60">per hour</div>
                   </div>
