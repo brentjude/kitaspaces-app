@@ -65,6 +65,21 @@ enum PerkType {
   CUSTOM
 }
 
+enum MeetingRoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
 model User {
   id       String   @id // Format: YYYYNNN (e.g., 2025001, 2025002)
   email    String   @unique
@@ -90,6 +105,7 @@ model User {
   payments            Payment[]
   dailyUseRedemptions DailyUseRedemption[]
   perkUsages          MembershipPerkUsage[]
+  meetingRoomBookings MeetingRoomBooking[]
 
   @@index([email])
   @@index([isMember])
@@ -117,6 +133,7 @@ model Customer {
   eventRegistrations  CustomerEventRegistration[]
   payments            CustomerPayment[]
   dailyUseRedemptions CustomerDailyUseRedemption[]
+  meetingRoomBookings CustomerMeetingRoomBooking[]
 
   @@index([email])
   @@index([contactNumber])
@@ -231,6 +248,8 @@ model MembershipPerkUsage {
   perkName     String
   quantityUsed Float // Amount used
   unit         String // e.g., "hours", "credits"
+
+  meetingRoomBooking MeetingRoomBooking?
 
   usedAt DateTime @default(now())
   notes  String?  @db.Text
@@ -540,6 +559,7 @@ model Payment {
   // Relations
   eventRegistration EventRegistration?
   membership        Membership?
+  meetingRoomBooking MeetingRoomBooking?
 
   @@index([userId])
   @@index([status])
@@ -577,6 +597,7 @@ model CustomerPayment {
 
   // Relations
   eventRegistration CustomerEventRegistration?
+  meetingRoomBooking CustomerMeetingRoomBooking?
 
   @@index([customerId])
   @@index([status])
@@ -602,4 +623,147 @@ model AdminSettings {
   updatedAt DateTime @updatedAt
 
   @@map("admin_settings")
+}
+
+model MeetingRoom {
+  id          String             @id @default(cuid())
+  name        String             @unique
+  description String?            @db.Text
+  coverPhotoUrl String?          // Cloudinary URL
+  
+  // Pricing
+  hourlyRate  Float
+  
+  // Capacity
+  capacity    Int                // Maximum number of people
+  
+  // Availability
+  startTime   String?            // "09:00" - Daily start time
+  endTime     String?            // "18:00" - Daily end time
+  
+  // Amenities (stored as JSON array)
+  amenities   String?            @db.Text // JSON: ["Projector", "Whiteboard", "WiFi"]
+  
+  // Status
+  status      MeetingRoomStatus  @default(AVAILABLE)
+  isActive    Boolean            @default(true)
+  
+  // Metadata
+  floor       String?
+  roomNumber  String?
+  notes       String?            @db.Text
+  
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  
+  // Relations
+  userBookings     MeetingRoomBooking[]
+  customerBookings CustomerMeetingRoomBooking[]
+  
+  @@index([name])
+  @@index([status])
+  @@index([isActive])
+  @@map("meeting_rooms")
+}
+
+// User Meeting Room Bookings
+model MeetingRoomBooking {
+  id          String        @id @default(cuid())
+  
+  // User relation
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Room relation
+  roomId      String
+  room        MeetingRoom   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  // Booking details
+  bookingDate DateTime      // Date of booking
+  startTime   String        // "09:00"
+  endTime     String        // "12:00"
+  duration    Float         // Hours (e.g., 3.0)
+  
+  // Attendees
+  numberOfAttendees Int     @default(1)
+  purpose     String?       @db.Text // Purpose of meeting
+  
+  // Status
+  status      BookingStatus @default(PENDING)
+  
+  // Payment
+  totalAmount Float         // Calculated: duration * hourlyRate
+  paymentId   String?       @unique
+  payment     Payment?      @relation(fields: [paymentId], references: [id])
+  
+  // Membership perk usage
+  isUsingMembershipPerk Boolean @default(false)
+  membershipPerkUsageId String? @unique
+  perkUsage   MembershipPerkUsage? @relation(fields: [membershipPerkUsageId], references: [id])
+  
+  // Additional info
+  notes       String?       @db.Text
+  
+  // Check-in/Check-out
+  checkedInAt  DateTime?
+  checkedOutAt DateTime?
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  @@index([userId])
+  @@index([roomId])
+  @@index([bookingDate])
+  @@index([status])
+  @@map("meeting_room_bookings")
+}
+
+// Customer Meeting Room Bookings
+model CustomerMeetingRoomBooking {
+  id          String        @id @default(cuid())
+  
+  // Customer relation
+  customerId  String
+  customer    Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  // Room relation
+  roomId      String
+  room        MeetingRoom   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  // Booking details
+  bookingDate DateTime      // Date of booking
+  startTime   String        // "09:00"
+  endTime     String        // "12:00"
+  duration    Float         // Hours (e.g., 3.0)
+  
+  // Attendees
+  numberOfAttendees Int     @default(1)
+  purpose     String?       @db.Text // Purpose of meeting
+  contactPerson String      // Name of person booking
+  contactEmail  String?
+  contactPhone  String?
+  
+  // Status
+  status      BookingStatus @default(PENDING)
+  
+  // Payment
+  totalAmount Float         // Calculated: duration * hourlyRate
+  paymentId   String?       @unique
+  payment     CustomerPayment? @relation(fields: [paymentId], references: [id])
+  
+  // Additional info
+  notes       String?       @db.Text
+  
+  // Check-in/Check-out
+  checkedInAt  DateTime?
+  checkedOutAt DateTime?
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  @@index([customerId])
+  @@index([roomId])
+  @@index([bookingDate])
+  @@index([status])
+  @@map("customer_meeting_room_bookings")
 }

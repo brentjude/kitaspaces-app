@@ -927,3 +927,247 @@ export type AdminSettingsUpdateInput = {
 };
 
 export type AdminSettingsResponse = ApiResponse<AdminSettings>;
+
+// ============================================
+// MEETING ROOM TYPES
+// ============================================
+
+import {
+  MeetingRoomStatus,
+  BookingStatus,
+  MeetingRoom as PrismaMeetingRoom,
+  MeetingRoomBooking as PrismaMeetingRoomBooking,
+  CustomerMeetingRoomBooking as PrismaCustomerMeetingRoomBooking,
+} from "@/generated/prisma";
+
+export { MeetingRoomStatus, BookingStatus };
+
+export type MeetingRoom = PrismaMeetingRoom;
+
+export type MeetingRoomWithBookings = PrismaMeetingRoom & {
+  userBookings: MeetingRoomBooking[];
+  customerBookings: CustomerMeetingRoomBooking[];
+};
+
+export type MeetingRoomCreateInput = {
+  name: string;
+  description?: string;
+  coverPhotoUrl?: string;
+  hourlyRate: number;
+  capacity: number;
+  startTime?: string; // "09:00"
+  endTime?: string; // "18:00"
+  amenities?: string; // JSON string: '["Projector","Whiteboard"]'
+  status?: MeetingRoomStatus;
+  isActive?: boolean;
+  floor?: string;
+  roomNumber?: string;
+  notes?: string;
+};
+
+export type MeetingRoomUpdateInput = Partial<MeetingRoomCreateInput>;
+
+// Parsed amenities helper type
+export type MeetingRoomAmenity = string;
+export type MeetingRoomWithParsedAmenities = Omit<MeetingRoom, 'amenities'> & {
+  amenities: MeetingRoomAmenity[];
+};
+
+// ============================================
+// MEETING ROOM BOOKING TYPES (User)
+// ============================================
+
+export type MeetingRoomBooking = PrismaMeetingRoomBooking;
+
+export type MeetingRoomBookingWithUser = PrismaMeetingRoomBooking & {
+  user: User;
+};
+
+export type MeetingRoomBookingWithRoom = PrismaMeetingRoomBooking & {
+  room: MeetingRoom;
+};
+
+export type MeetingRoomBookingWithRelations = PrismaMeetingRoomBooking & {
+  user?: User;
+  room?: MeetingRoom;
+  payment?: Payment | null;
+  perkUsage?: MembershipPerkUsage | null;
+};
+
+export type MeetingRoomBookingCreateInput = {
+  userId: string;
+  roomId: string;
+  bookingDate: Date;
+  startTime: string; // "09:00"
+  endTime: string; // "12:00"
+  duration: number; // Hours
+  numberOfAttendees?: number;
+  purpose?: string;
+  status?: BookingStatus;
+  totalAmount: number;
+  paymentId?: string;
+  isUsingMembershipPerk?: boolean;
+  membershipPerkUsageId?: string;
+  notes?: string;
+};
+
+export type MeetingRoomBookingUpdateInput = Partial<
+  Omit<MeetingRoomBookingCreateInput, "userId" | "roomId">
+>;
+
+// ============================================
+// CUSTOMER MEETING ROOM BOOKING TYPES
+// ============================================
+
+export type CustomerMeetingRoomBooking = PrismaCustomerMeetingRoomBooking;
+
+export type CustomerMeetingRoomBookingWithCustomer = PrismaCustomerMeetingRoomBooking & {
+  customer: Customer;
+};
+
+export type CustomerMeetingRoomBookingWithRoom = PrismaCustomerMeetingRoomBooking & {
+  room: MeetingRoom;
+};
+
+export type CustomerMeetingRoomBookingWithRelations = PrismaCustomerMeetingRoomBooking & {
+  customer?: Customer;
+  room?: MeetingRoom;
+  payment?: CustomerPayment | null;
+};
+
+export type CustomerMeetingRoomBookingCreateInput = {
+  customerId: string;
+  roomId: string;
+  bookingDate: Date;
+  startTime: string; // "09:00"
+  endTime: string; // "12:00"
+  duration: number; // Hours
+  numberOfAttendees?: number;
+  purpose?: string;
+  contactPerson: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  status?: BookingStatus;
+  totalAmount: number;
+  paymentId?: string;
+  notes?: string;
+};
+
+export type CustomerMeetingRoomBookingUpdateInput = Partial<
+  Omit<CustomerMeetingRoomBookingCreateInput, "customerId" | "roomId">
+>;
+
+// ============================================
+// MEETING ROOM FILTERS & QUERIES
+// ============================================
+
+export type MeetingRoomFilters = {
+  status?: MeetingRoomStatus;
+  isActive?: boolean;
+  minCapacity?: number;
+  maxCapacity?: number;
+  minHourlyRate?: number;
+  maxHourlyRate?: number;
+  search?: string; // Search by name
+};
+
+export type MeetingRoomBookingFilters = {
+  userId?: string;
+  roomId?: string;
+  status?: BookingStatus;
+  dateFrom?: Date;
+  dateTo?: Date;
+  isUsingMembershipPerk?: boolean;
+};
+
+export type CustomerMeetingRoomBookingFilters = {
+  customerId?: string;
+  roomId?: string;
+  status?: BookingStatus;
+  dateFrom?: Date;
+  dateTo?: Date;
+};
+
+// ============================================
+// MEETING ROOM AVAILABILITY TYPES
+// ============================================
+
+export type TimeSlot = {
+  startTime: string; // "09:00"
+  endTime: string; // "10:00"
+  isAvailable: boolean;
+  bookingId?: string;
+  bookedBy?: string;
+};
+
+export type MeetingRoomAvailability = {
+  roomId: string;
+  roomName: string;
+  date: Date;
+  timeSlots: TimeSlot[];
+};
+
+export type BookingTimeRange = {
+  startTime: string;
+  endTime: string;
+  duration: number; // in hours
+  totalAmount: number;
+};
+
+// ============================================
+// MEETING ROOM STATISTICS
+// ============================================
+
+export type MeetingRoomStats = {
+  totalRooms: number;
+  availableRooms: number;
+  occupiedRooms: number;
+  maintenanceRooms: number;
+  totalBookingsToday: number;
+  totalBookingsThisWeek: number;
+  totalBookingsThisMonth: number;
+  revenueToday: number;
+  revenueThisWeek: number;
+  revenueThisMonth: number;
+  popularRooms: Array<{
+    roomId: string;
+    roomName: string;
+    bookingCount: number;
+    revenue: number;
+  }>;
+};
+
+export type BookingStats = {
+  totalBookings: number;
+  confirmedBookings: number;
+  pendingBookings: number;
+  cancelledBookings: number;
+  completedBookings: number;
+  noShowBookings: number;
+  averageBookingDuration: number;
+  averageBookingAmount: number;
+  peakBookingHours: Array<{
+    hour: string;
+    count: number;
+  }>;
+};
+
+// ============================================
+// API RESPONSE TYPES
+// ============================================
+
+export type MeetingRoomResponse = ApiResponse<MeetingRoom>;
+export type MeetingRoomsResponse = ApiResponse<PaginatedResponse<MeetingRoom>>;
+
+export type MeetingRoomBookingResponse = ApiResponse<MeetingRoomBookingWithRelations>;
+export type MeetingRoomBookingsResponse = ApiResponse<
+  PaginatedResponse<MeetingRoomBookingWithRelations>
+>;
+
+export type CustomerMeetingRoomBookingResponse = ApiResponse<CustomerMeetingRoomBookingWithRelations>;
+export type CustomerMeetingRoomBookingsResponse = ApiResponse<
+  PaginatedResponse<CustomerMeetingRoomBookingWithRelations>
+>;
+
+export type MeetingRoomAvailabilityResponse = ApiResponse<MeetingRoomAvailability>;
+export type MeetingRoomStatsResponse = ApiResponse<MeetingRoomStats>;
