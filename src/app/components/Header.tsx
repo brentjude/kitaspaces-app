@@ -91,7 +91,7 @@ export default function PublicHeader({
     <nav className="border-b border-gray-100 bg-white backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
+        <Link href="/" className="flex items-center space-x-2 shrink-0">
           <Image 
             src="/logo/kita-primary-logo.png" 
             alt="KitaSpaces Logo" 
@@ -218,7 +218,7 @@ export default function PublicHeader({
                     {/* User Info Section */}
                     <div className="px-4 py-4 border-b border-gray-100 bg-foreground/5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                           <UserIcon className="w-5 h-5 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">

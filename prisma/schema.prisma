@@ -767,3 +767,16 @@ model CustomerMeetingRoomBooking {
   @@index([status])
   @@map("customer_meeting_room_bookings")
 }
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@index([email])
+  @@index([expiresAt])
+}

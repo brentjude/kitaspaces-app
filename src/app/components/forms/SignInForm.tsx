@@ -282,7 +282,7 @@ export default function SignInForm() {
       {/* Right Side - Image/Pattern with Logo */}
       <div className="hidden lg:block relative w-0 flex-1 overflow-hidden">
         {/* Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#FF8E49] via-[#ff7d2e] to-[#FFB082]" />
+        <div className="absolute inset-0 bg-linear-to-br from-[#FF8E49] via-[#ff7d2e] to-[#FFB082]" />
         
         {/* Abstract shapes */}
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] rounded-full bg-white/10 blur-3xl" />
