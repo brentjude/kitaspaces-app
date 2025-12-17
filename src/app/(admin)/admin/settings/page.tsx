@@ -9,16 +9,24 @@ import {
   TagIcon,
   TicketIcon,
   UsersIcon,
+  ClockIcon, // Add this for logs icon
 } from "@heroicons/react/24/outline";
 import GeneralTab from "./components/GeneralTab";
 import PaymentsTab from "./components/PaymentsTab";
 import EventCategoriesTab from "./components/EventCategoriesTab";
 import CouponsTab from "./components/CouponsTab";
 import SystemUsersTab from "./components/SystemUsersTab";
+import ActivityLogsTab from "./components/ActivityLogsTab"; // Add this
 import { AdminSettings } from "@/types/database";
 import { EventCategory, Coupon } from "@/types/database";
 
-type TabId = "general" | "payments" | "categories" | "coupons" | "users";
+type TabId =
+  | "general"
+  | "payments"
+  | "categories"
+  | "coupons"
+  | "users"
+  | "logs"; // Add 'logs'
 
 interface Tab {
   id: TabId;
@@ -32,6 +40,7 @@ const tabs: Tab[] = [
   { id: "categories", label: "Event Categories", icon: TagIcon },
   { id: "coupons", label: "Coupons", icon: TicketIcon },
   { id: "users", label: "System Users", icon: UsersIcon },
+  { id: "logs", label: "Activity Logs", icon: ClockIcon }, // Add this
 ];
 
 export default function SettingsPage() {
@@ -39,7 +48,8 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const [loading, setLoading] = useState(true);
 
-  // General tab data
+  // ... existing state declarations ...
+
   const [profile, setProfile] = useState({
     name: "",
     email: "",
@@ -58,14 +68,14 @@ export default function SettingsPage() {
     updatedAt: new Date(),
   });
 
-  // Categories and coupons
   const [categories, setCategories] = useState<EventCategory[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [admins, setAdmins] = useState<
     Array<{ id: string; name: string; email: string; createdAt: Date }>
   >([]);
 
-  // Load initial data
+  // ... existing loadData and handlers ...
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -129,7 +139,8 @@ export default function SettingsPage() {
     }
   }, [status, session, loadData]);
 
-  // Handlers for General Tab
+  // ... all existing handlers ...
+
   const handleUpdateProfile = async (data: Partial<typeof profile>) => {
     const response = await fetch("/api/admin/settings/profile", {
       method: "PUT",
@@ -166,7 +177,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Add new handlers for payments
   const handleUpdateBankInfo = async (data: {
     bankName: string;
     accountNumber: string;
@@ -235,7 +245,6 @@ export default function SettingsPage() {
       const result = await response.json();
       if (result.success && result.data) {
         setPaymentSettings(result.data);
-        // Don't show alert here, let the component handle success feedback
       } else {
         throw new Error("Invalid response from server");
       }
@@ -269,7 +278,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Handlers for Categories Tab
   const handleAddCategory = async (data: {
     name: string;
     color: string;
@@ -299,7 +307,6 @@ export default function SettingsPage() {
     setCategories(categories.filter((c) => c.id !== id));
   };
 
-  // Handlers for Coupons Tab
   const handleAddCoupon = async (data: {
     code: string;
     discountType: string;
@@ -346,7 +353,6 @@ export default function SettingsPage() {
     setCoupons(coupons.filter((c) => c.id !== id));
   };
 
-  // Handlers for System Users Tab
   const handleAddAdmin = async (data: {
     name: string;
     email: string;
@@ -369,71 +375,63 @@ export default function SettingsPage() {
     }
   };
 
-  // Add these handlers after the existing handleAddAdmin function:
+  const handleEditAdmin = async (
+    id: string,
+    data: { name: string; password?: string }
+  ) => {
+    const response = await fetch(`/api/admin/settings/admins/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
 
-const handleEditAdmin = async (
-  id: string,
-  data: { name: string; password?: string }
-) => {
-  const response = await fetch(`/api/admin/settings/admins/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || "Failed to update admin");
+    }
 
-  if (!response.ok) {
     const result = await response.json();
-    throw new Error(result.error || 'Failed to update admin');
-  }
+    if (result.success && result.data) {
+      setAdmins(admins.map((a) => (a.id === id ? result.data : a)));
+    }
+  };
 
-  const result = await response.json();
-  if (result.success && result.data) {
-    setAdmins(admins.map((a) => (a.id === id ? result.data : a)));
-  }
-};
+  const handleDeleteAdmin = async (id: string) => {
+    const response = await fetch(`/api/admin/settings/admins/${id}`, {
+      method: "DELETE",
+    });
 
-const handleDeleteAdmin = async (id: string) => {
-  const response = await fetch(`/api/admin/settings/admins/${id}`, {
-    method: 'DELETE',
-  });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || "Failed to delete admin");
+    }
 
-  if (!response.ok) {
+    setAdmins(admins.filter((a) => a.id !== id));
+  };
+
+  const handleEditCoupon = async (
+    id: string,
+    data: {
+      code: string;
+      discountType: string;
+      discountValue: number;
+      maxUses: number | null;
+      expiresAt: Date | null;
+    }
+  ) => {
+    const response = await fetch(`/api/admin/settings/coupons/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) throw new Error("Failed to update coupon");
+
     const result = await response.json();
-    throw new Error(result.error || 'Failed to delete admin');
-  }
-
-  // Remove from state
-  setAdmins(admins.filter((a) => a.id !== id));
-};
-
-
-
-
-const handleEditCoupon = async (
-  id: string,
-  data: {
-    code: string;
-    discountType: string;
-    discountValue: number;
-    maxUses: number | null;
-    expiresAt: Date | null;
-  }
-) => {
-  const response = await fetch(`/api/admin/settings/coupons/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) throw new Error('Failed to update coupon');
-
-  const result = await response.json();
-  if (result.success && result.data) {
-    setCoupons(coupons.map((c) => (c.id === id ? result.data : c)));
-  }
-};
-
-
+    if (result.success && result.data) {
+      setCoupons(coupons.map((c) => (c.id === id ? result.data : c)));
+    }
+  };
 
   if (status === "loading" || loading) {
     return (
@@ -518,7 +516,7 @@ const handleEditCoupon = async (
               />
             )}
 
-            {activeTab === 'coupons' && (
+            {activeTab === "coupons" && (
               <CouponsTab
                 coupons={coupons}
                 onAddCoupon={handleAddCoupon}
@@ -528,7 +526,7 @@ const handleEditCoupon = async (
               />
             )}
 
-            {activeTab === 'users' && (
+            {activeTab === "users" && (
               <SystemUsersTab
                 admins={admins}
                 onAddAdmin={handleAddAdmin}
@@ -536,6 +534,9 @@ const handleEditCoupon = async (
                 onDeleteAdmin={handleDeleteAdmin}
               />
             )}
+
+            {/* Add Activity Logs Tab */}
+            {activeTab === "logs" && <ActivityLogsTab />}
           </div>
         </div>
       </div>

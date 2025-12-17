@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { hash } from 'bcryptjs';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { hash } from "bcryptjs";
+import { logAdminActivity } from "@/lib/activityLogger";
+import { Session } from "next-auth"; // Add this import
 
 async function generateUserId(): Promise<string> {
   const currentYear = new Date().getFullYear();
@@ -15,7 +17,7 @@ async function generateUserId(): Promise<string> {
       },
     },
     orderBy: {
-      id: 'desc',
+      id: "desc",
     },
   });
 
@@ -26,58 +28,62 @@ async function generateUserId(): Promise<string> {
     nextNumber = lastNumber + 1;
   }
 
-  return `${yearPrefix}${nextNumber.toString().padStart(3, '0')}`;
+  return `${yearPrefix}${nextNumber.toString().padStart(3, "0")}`;
 }
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
     const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN' },
+      where: { role: "ADMIN" },
       select: {
         id: true,
         name: true,
         email: true,
         createdAt: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json({ success: true, data: admins });
   } catch (error) {
-    console.error('Error fetching admins:', error);
+    console.error("Error fetching admins:", error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
+  // Properly type session and body
+  let session: Session | null = null;
+  let body: { name?: string; email?: string; password?: string } = {};
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+  try {
+    session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const body = await request.json();
+    body = await request.json();
     const { name, email, password } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: "Missing required fields" },
         { status: 400 }
       );
     }
@@ -89,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { success: false, error: 'Email already exists' },
+        { success: false, error: "Email already exists" },
         { status: 400 }
       );
     }
@@ -103,7 +109,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password: hashedPassword,
-        role: 'ADMIN',
+        role: "ADMIN",
         isMember: false,
       },
       select: {
@@ -114,11 +120,52 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Log admin creation activity
+    await logAdminActivity(
+      session.user.id,
+      "ADMIN_USER_CREATED",
+      `Created new admin user: ${admin.name} (${admin.email})`,
+      {
+        userId: admin.id,
+        referenceId: admin.id,
+        referenceType: "USER",
+        metadata: {
+          adminId: admin.id,
+          adminName: admin.name,
+          adminEmail: admin.email,
+          createdBy: session.user.name,
+          createdByEmail: session.user.email,
+        },
+        request,
+      }
+    );
+
     return NextResponse.json({ success: true, data: admin });
   } catch (error) {
-    console.error('Error creating admin:', error);
+    console.error("Error creating admin:", error);
+
+    // Log failed admin creation
+    if (session?.user?.id) {
+      await logAdminActivity(
+        session.user.id,
+        "ADMIN_USER_CREATED",
+        `Failed to create admin user: ${body?.name || "Unknown"}`,
+        {
+          metadata: {
+            attemptedName: body?.name,
+            attemptedEmail: body?.email,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+          request,
+          isSuccess: false,
+          errorMessage:
+            error instanceof Error ? error.message : "Unknown error",
+        }
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }
