@@ -344,8 +344,8 @@ export async function POST(request: NextRequest) {
           appliedCoupon.discountType === "PERCENTAGE"
             ? `${appliedCoupon.discountValue}%`
             : appliedCoupon.discountType === "FIXED_AMOUNT"
-            ? `₱${appliedCoupon.discountValue}`
-            : "FREE"
+              ? `₱${appliedCoupon.discountValue}`
+              : "FREE"
         } discount`,
         {
           referenceId: appliedCoupon.id,
@@ -389,39 +389,8 @@ export async function POST(request: NextRequest) {
         couponCode: couponCode?.toUpperCase(),
       });
       console.info(`✅ Registration email sent to ${email}`);
-
-      // Log email sent
-      await logUserActivity(
-        result.user.id,
-        "SYSTEM_EMAIL_SENT",
-        `Membership confirmation email sent to ${email}`,
-        {
-          metadata: {
-            emailType: "MEMBERSHIP_REGISTRATION",
-            status: emailStatus,
-          },
-          ...clientInfo,
-        }
-      );
     } catch (emailError) {
       console.error("Failed to send registration email:", emailError);
-
-      // Log email failure
-      await logUserActivity(
-        result.user.id,
-        "SYSTEM_ERROR",
-        `Failed to send membership confirmation email`,
-        {
-          isSuccess: false,
-          errorMessage:
-            emailError instanceof Error ? emailError.message : "Unknown error",
-          metadata: {
-            emailType: "MEMBERSHIP_REGISTRATION",
-            email,
-          },
-          ...clientInfo,
-        }
-      );
     }
 
     return NextResponse.json({
