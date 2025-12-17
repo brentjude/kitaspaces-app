@@ -107,6 +107,10 @@ model User {
   perkUsages          MembershipPerkUsage[]
   meetingRoomBookings MeetingRoomBooking[]
 
+  // Activity tracking
+  activityLogs      ActivityLog[]
+  adminActivityLogs ActivityLog[] @relation("AdminActivities")
+
   @@index([email])
   @@index([isMember])
   @@map("users")
@@ -134,6 +138,9 @@ model Customer {
   payments            CustomerPayment[]
   dailyUseRedemptions CustomerDailyUseRedemption[]
   meetingRoomBookings CustomerMeetingRoomBooking[]
+
+  // Activity tracking
+  activityLogs ActivityLog[]
 
   @@index([email])
   @@index([contactNumber])
@@ -779,4 +786,149 @@ model PasswordResetToken {
   
   @@index([email])
   @@index([expiresAt])
+}
+
+// Add after the PasswordResetToken model
+
+enum ActivityAction {
+  // User Authentication
+  USER_LOGIN
+  USER_LOGOUT
+  USER_REGISTER
+  PASSWORD_RESET
+  PASSWORD_CHANGE
+  
+  // Profile Management
+  PROFILE_UPDATE
+  EMAIL_CHANGE
+  
+  // Membership Actions
+  MEMBERSHIP_PURCHASE
+  MEMBERSHIP_RENEWAL
+  MEMBERSHIP_CANCELLATION
+  MEMBERSHIP_EXPIRY
+  
+  // Event Actions
+  EVENT_REGISTRATION
+  EVENT_CANCELLATION
+  EVENT_ATTENDANCE
+  
+  // Payment Actions
+  PAYMENT_INITIATED
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+  PAYMENT_REFUNDED
+  PAYMENT_VERIFIED
+  
+  // Meeting Room Actions
+  ROOM_BOOKING_CREATED
+  ROOM_BOOKING_CONFIRMED
+  ROOM_BOOKING_CANCELLED
+  ROOM_BOOKING_CHECKIN
+  ROOM_BOOKING_CHECKOUT
+  
+  // Perk Usage
+  PERK_USED
+  PERK_EXPIRED
+  
+  // Daily Use
+  DAILY_USE_REDEEMED
+  
+  // Admin Actions - User Management
+  ADMIN_USER_CREATED
+  ADMIN_USER_UPDATED
+  ADMIN_USER_DELETED
+  ADMIN_USER_ROLE_CHANGED
+  ADMIN_USER_SUSPENDED
+  ADMIN_USER_ACTIVATED
+  
+  // Admin Actions - Event Management
+  ADMIN_EVENT_CREATED
+  ADMIN_EVENT_UPDATED
+  ADMIN_EVENT_DELETED
+  ADMIN_EVENT_PUBLISHED
+  ADMIN_EVENT_UNPUBLISHED
+  
+  // Admin Actions - Membership Management
+  ADMIN_MEMBERSHIP_CREATED
+  ADMIN_MEMBERSHIP_UPDATED
+  ADMIN_MEMBERSHIP_CANCELLED
+  ADMIN_PLAN_CREATED
+  ADMIN_PLAN_UPDATED
+  ADMIN_PLAN_DELETED
+  
+  // Admin Actions - Payment Management
+  ADMIN_PAYMENT_VERIFIED
+  ADMIN_PAYMENT_REJECTED
+  ADMIN_PAYMENT_REFUNDED
+  
+  // Admin Actions - Meeting Room Management
+  ADMIN_ROOM_CREATED
+  ADMIN_ROOM_UPDATED
+  ADMIN_ROOM_DELETED
+  ADMIN_BOOKING_CREATED
+  ADMIN_BOOKING_CANCELLED
+  
+  // Admin Actions - Settings
+  ADMIN_SETTINGS_UPDATED
+  ADMIN_COUPON_CREATED
+  ADMIN_COUPON_UPDATED
+  ADMIN_COUPON_DELETED
+  
+  // Admin Actions - Category Management
+  ADMIN_CATEGORY_CREATED
+  ADMIN_CATEGORY_UPDATED
+  ADMIN_CATEGORY_DELETED
+  
+  // System Actions
+  SYSTEM_NOTIFICATION_SENT
+  SYSTEM_EMAIL_SENT
+  SYSTEM_ERROR
+}
+
+model ActivityLog {
+  id String @id @default(cuid())
+  
+  // Actor (who performed the action)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // For admin actions
+  adminId String?
+  admin   User?   @relation("AdminActivities", fields: [adminId], references: [id], onDelete: SetNull)
+  
+  // For customer actions (non-registered users)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  
+  // Action details
+  action      ActivityAction
+  description String         @db.Text
+  
+  // Reference to related records
+  referenceId   String? // ID of the related record (payment, event, booking, etc.)
+  referenceType String? // Type of reference: "PAYMENT", "EVENT", "MEMBERSHIP", "BOOKING", etc.
+  
+  // Metadata (stored as JSON for flexibility)
+  metadata String? @db.Text // JSON object with additional context
+  
+  // IP and User Agent (for security tracking)
+  ipAddress String?
+  userAgent String? @db.Text
+  
+  // Status/Result
+  isSuccess Boolean @default(true)
+  errorMessage String? @db.Text
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([adminId])
+  @@index([customerId])
+  @@index([action])
+  @@index([referenceId])
+  @@index([referenceType])
+  @@index([createdAt])
+  @@index([isSuccess])
+  @@map("activity_logs")
 }

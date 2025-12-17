@@ -499,13 +499,21 @@ async function main() {
   const conferenceRoom = await prisma.meetingRoom.create({
     data: {
       name: "Conference Room A",
-      description: "Large conference room perfect for team meetings and presentations",
-      coverPhotoUrl: "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
+      description:
+        "Large conference room perfect for team meetings and presentations",
+      coverPhotoUrl:
+        "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
       hourlyRate: 500,
       capacity: 12,
       startTime: "08:00",
       endTime: "20:00",
-      amenities: JSON.stringify(["Projector", "Whiteboard", "WiFi", "Air Conditioning", "TV Screen"]),
+      amenities: JSON.stringify([
+        "Projector",
+        "Whiteboard",
+        "WiFi",
+        "Air Conditioning",
+        "TV Screen",
+      ]),
       status: "AVAILABLE",
       isActive: true,
       floor: "2nd Floor",
@@ -516,8 +524,10 @@ async function main() {
   const smallMeetingRoom = await prisma.meetingRoom.create({
     data: {
       name: "Small Meeting Room B",
-      description: "Cozy meeting space ideal for 1-on-1 or small team discussions",
-      coverPhotoUrl: "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
+      description:
+        "Cozy meeting space ideal for 1-on-1 or small team discussions",
+      coverPhotoUrl:
+        "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
       hourlyRate: 300,
       capacity: 4,
       startTime: "08:00",
@@ -530,16 +540,25 @@ async function main() {
     },
   });
 
-  const executiveRoom = await prisma.meetingRoom.create({
+  await prisma.meetingRoom.create({
     data: {
       name: "Executive Boardroom",
-      description: "Premium boardroom for executive meetings and client presentations",
-      coverPhotoUrl: "https://images.unsplash.com/photo-1497366412874-3415097a27e7",
+      description:
+        "Premium boardroom for executive meetings and client presentations",
+      coverPhotoUrl:
+        "https://images.unsplash.com/photo-1497366412874-3415097a27e7",
       hourlyRate: 800,
       capacity: 16,
       startTime: "08:00",
       endTime: "20:00",
-      amenities: JSON.stringify(["Projector", "Whiteboard", "WiFi", "Air Conditioning", "Video Conferencing", "Coffee Machine"]),
+      amenities: JSON.stringify([
+        "Projector",
+        "Whiteboard",
+        "WiFi",
+        "Air Conditioning",
+        "Video Conferencing",
+        "Coffee Machine",
+      ]),
       status: "AVAILABLE",
       isActive: true,
       floor: "3rd Floor",
@@ -1286,9 +1305,7 @@ async function main() {
   console.log(`   - Guest Customers: ${guestCustomers.length}`);
   console.log(`   - Membership Plans: ${await prisma.membershipPlan.count()}`);
   console.log(`   - Meeting Rooms: ${await prisma.meetingRoom.count()}`);
-  console.log(
-    `   - User Bookings: ${await prisma.meetingRoomBooking.count()}`
-  );
+  console.log(`   - User Bookings: ${await prisma.meetingRoomBooking.count()}`);
   console.log(
     `   - Customer Bookings: ${await prisma.customerMeetingRoomBooking.count()}`
   );
