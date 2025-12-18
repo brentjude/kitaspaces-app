@@ -52,13 +52,16 @@ export default function CalendarPage() {
   const [bookings, setBookings] = useState<CalendarItem[]>([]);
   const [stats, setStats] = useState<CalendarStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  // Remove unused state since navigation is handled in CalendarView
+  // const [currentDate, setCurrentDate] = useState(new Date());
 
   const fetchCalendarData = async () => {
     setLoading(true);
     try {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1;
+      // Use current date instead of state
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
 
       const params = new URLSearchParams({
         year: year.toString(),
@@ -173,8 +176,7 @@ export default function CalendarPage() {
 
   useEffect(() => {
     fetchCalendarData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDate]);
+  }, []); // Empty dependency array - only fetch once on mount
 
   if (loading) {
     return (
