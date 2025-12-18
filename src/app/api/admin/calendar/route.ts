@@ -1,142 +1,150 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { Prisma } from '@/generated/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-/**
- * GET /api/admin/calendar
- * 
- * @description Get events for calendar view with optional filters
- * @query year - Year to fetch events for (default: current year)
- * @query month - Month to fetch events for (1-12, default: current month)
- * @query showFreeOnly - Filter to show only free events (boolean)
- * @query showMemberOnly - Filter to show only member-exclusive events (boolean)
- * @query showRedemptionOnly - Filter to show only daily use/redemption events (boolean)
- * 
- * @returns {
- *   success: boolean;
- *   data: {
- *     year: number;
- *     month: number;
- *     events: CalendarEvent[];
- *   }
- * }
- * 
- * @example
- * GET /api/admin/calendar?year=2025&month=1&showFreeOnly=true
- * 
- * @note This endpoint requires ADMIN authentication
- * @note Events include combined registration counts from both users and customers
- * @note Date range covers the entire month (1st to last day)
- */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user) {
+    if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    if (session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden - Admin access required' },
-        { status: 403 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
-    const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
-    const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString());
-    const showFreeOnly = searchParams.get('showFreeOnly') === 'true';
-    const showMemberOnly = searchParams.get('showMemberOnly') === 'true';
-    const showRedemptionOnly = searchParams.get('showRedemptionOnly') === 'true';
+    const year = parseInt(
+      searchParams.get("year") || new Date().getFullYear().toString()
+    );
+    const month = parseInt(
+      searchParams.get("month") || (new Date().getMonth() + 1).toString()
+    );
+    const viewMode = searchParams.get("viewMode") || "month";
 
-    // Validate year and month
-    if (year < 2000 || year > 2100) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid year parameter' },
-        { status: 400 }
-      );
+    // Filters
+    const showFreeOnly = searchParams.get("showFreeOnly") === "true";
+    const showMemberOnly = searchParams.get("showMemberOnly") === "true";
+    const showRedemptionOnly =
+      searchParams.get("showRedemptionOnly") === "true";
+    const showEventsOnly = searchParams.get("showEventsOnly") === "true";
+    const showBookingsOnly = searchParams.get("showBookingsOnly") === "true";
+    const categoryId = searchParams.get("categoryId") || undefined;
+
+    // Calculate date range based on view mode
+    let startDate: Date;
+    let endDate: Date;
+
+    if (viewMode === "day") {
+      const day = parseInt(searchParams.get("day") || "1");
+      startDate = new Date(year, month - 1, day, 0, 0, 0);
+      endDate = new Date(year, month - 1, day, 23, 59, 59);
+    } else if (viewMode === "week") {
+      const week = parseInt(searchParams.get("week") || "1");
+      startDate = new Date(year, month - 1, (week - 1) * 7 + 1);
+      endDate = new Date(year, month - 1, week * 7, 23, 59, 59);
+    } else {
+      // Month view
+      startDate = new Date(year, month - 1, 1);
+      endDate = new Date(year, month, 0, 23, 59, 59);
     }
 
-    if (month < 1 || month > 12) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid month parameter (must be 1-12)' },
-        { status: 400 }
-      );
-    }
-
-    // Get start and end dates for the month
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
-
-    // Build type-safe filters using Prisma.EventWhereInput
-    const filters: Prisma.EventWhereInput = {
-      date: {
-        gte: startDate,
-        lte: endDate,
-      },
-    };
-
-    if (showFreeOnly) {
-      filters.isFree = true;
-    }
-
-    if (showMemberOnly) {
-      filters.isMemberOnly = true;
-    }
-
-    if (showRedemptionOnly) {
-      filters.isRedemptionEvent = true;
-    }
-
-    // Fetch events with registration counts using type-safe select
-    const events = await prisma.event.findMany({
-      where: filters,
-      select: {
-        id: true,
-        title: true,
-        date: true,
-        startTime: true,
-        endTime: true,
-        location: true,
-        isFree: true,
-        isMemberOnly: true,
-        isRedemptionEvent: true,
-        maxAttendees: true,
-        _count: {
-          select: {
-            registrations: true,
-            customerRegistrations: true,
+    // Fetch events if not filtering for bookings only
+    const events = !showBookingsOnly
+      ? await prisma.event.findMany({
+          where: {
+            date: {
+              gte: startDate,
+              lte: endDate,
+            },
+            ...(showFreeOnly && { isFree: true }),
+            ...(showMemberOnly && { isMemberOnly: true }),
+            ...(showRedemptionOnly && { isRedemptionEvent: true }),
+            ...(categoryId && { categoryId }),
           },
-        },
-      },
-      orderBy: {
-        date: 'asc',
-      },
-    });
+          include: {
+            category: true,
+            registrations: {
+              select: { id: true },
+            },
+            customerRegistrations: {
+              select: { id: true },
+            },
+          },
+          orderBy: {
+            date: "asc",
+          },
+        })
+      : [];
 
-    // Transform events to include total registration count
-    // Using explicit type for transformed data
-    type CalendarEventResponse = {
-      id: string;
-      title: string;
-      date: Date;
-      startTime: string | null;
-      endTime: string | null;
-      location: string | null;
-      isFree: boolean;
-      isMemberOnly: boolean;
-      isRedemptionEvent: boolean;
-      maxAttendees: number | null;
-      registrationCount: number;
-    };
+    // Fetch meeting room bookings if not filtering for events only
+    const bookings = !showEventsOnly
+      ? await Promise.all([
+          // User bookings
+          prisma.meetingRoomBooking.findMany({
+            where: {
+              bookingDate: {
+                gte: startDate,
+                lte: endDate,
+              },
+            },
+            include: {
+              room: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+            orderBy: {
+              bookingDate: "asc",
+            },
+          }),
+          // Customer bookings
+          prisma.customerMeetingRoomBooking.findMany({
+            where: {
+              bookingDate: {
+                gte: startDate,
+                lte: endDate,
+              },
+            },
+            include: {
+              room: true,
+              customer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+            orderBy: {
+              bookingDate: "asc",
+            },
+          }),
+        ]).then(([userBookings, customerBookings]) => [
+          ...userBookings.map((b) => ({
+            ...b,
+            userName: b.user.name,
+            userEmail: b.user.email,
+            roomName: b.room.name,
+            type: "user" as const,
+          })),
+          ...customerBookings.map((b) => ({
+            ...b,
+            userName: b.customer.name,
+            userEmail: b.customer.email,
+            roomName: b.room.name,
+            type: "customer" as const,
+          })),
+        ])
+      : [];
 
-    const calendarEvents: CalendarEventResponse[] = events.map((event) => ({
+    // Transform events for calendar
+    const calendarEvents = events.map((event) => ({
       id: event.id,
       title: event.title,
       date: event.date,
@@ -146,25 +154,56 @@ export async function GET(request: NextRequest) {
       isFree: event.isFree,
       isMemberOnly: event.isMemberOnly,
       isRedemptionEvent: event.isRedemptionEvent,
+      categoryId: event.categoryId,
+      categoryName: event.category?.name,
+      categoryColor: event.category?.color,
+      registrationCount:
+        event.registrations.length + event.customerRegistrations.length,
       maxAttendees: event.maxAttendees,
-      registrationCount: event._count.registrations + event._count.customerRegistrations,
+      type: "event" as const,
+    }));
+
+    // Transform bookings for calendar
+    const calendarBookings = bookings.map((booking) => ({
+      id: booking.id,
+      title: `${booking.roomName} - ${booking.userName}`,
+      date: booking.bookingDate,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      location: booking.roomName,
+      roomName: booking.roomName,
+      userName: booking.userName,
+      userEmail: booking.userEmail,
+      status: booking.status,
+      numberOfAttendees: booking.numberOfAttendees,
+      type: "booking" as const,
+      bookingType: booking.type,
     }));
 
     return NextResponse.json({
       success: true,
       data: {
-        year,
-        month,
         events: calendarEvents,
+        bookings: calendarBookings,
+        stats: {
+          totalEvents: calendarEvents.length,
+          totalBookings: calendarBookings.length,
+          freeEvents: calendarEvents.filter((e) => e.isFree).length,
+          paidEvents: calendarEvents.filter((e) => !e.isFree).length,
+          totalRegistrations: calendarEvents.reduce(
+            (sum, e) => sum + e.registrationCount,
+            0
+          ),
+        },
       },
     });
   } catch (error) {
-    console.error('Error fetching calendar events:', error);
+    console.error("Calendar fetch error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Failed to fetch calendar data",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

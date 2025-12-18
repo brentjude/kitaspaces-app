@@ -71,7 +71,7 @@ export default function FreebieSelector({
               key={freebie.id}
               className="flex items-start bg-white rounded-lg border border-orange-200 px-3 py-2.5"
             >
-              <CheckCircleIcon className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+              <CheckCircleIcon className="w-5 h-5 text-green-600 mr-3 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">
                   {freebie.name}

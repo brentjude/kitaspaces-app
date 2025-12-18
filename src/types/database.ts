@@ -837,13 +837,6 @@ export type CalendarEvent = {
   maxAttendees?: number | null;
 };
 
-export type CalendarFilters = {
-  showFreeOnly?: boolean;
-  showMemberOnly?: boolean;
-  showRedemptionOnly?: boolean;
-  categoryId?: string; // Added
-};
-
 // Add API response types for categories
 export type EventCategoryResponse = ApiResponse<EventCategory>;
 export type EventCategoriesResponse = ApiResponse<EventCategory[]>;
@@ -969,7 +962,7 @@ export type MeetingRoomUpdateInput = Partial<MeetingRoomCreateInput>;
 
 // Parsed amenities helper type
 export type MeetingRoomAmenity = string;
-export type MeetingRoomWithParsedAmenities = Omit<MeetingRoom, 'amenities'> & {
+export type MeetingRoomWithParsedAmenities = Omit<MeetingRoom, "amenities"> & {
   amenities: MeetingRoomAmenity[];
 };
 
@@ -1021,19 +1014,22 @@ export type MeetingRoomBookingUpdateInput = Partial<
 
 export type CustomerMeetingRoomBooking = PrismaCustomerMeetingRoomBooking;
 
-export type CustomerMeetingRoomBookingWithCustomer = PrismaCustomerMeetingRoomBooking & {
-  customer: Customer;
-};
+export type CustomerMeetingRoomBookingWithCustomer =
+  PrismaCustomerMeetingRoomBooking & {
+    customer: Customer;
+  };
 
-export type CustomerMeetingRoomBookingWithRoom = PrismaCustomerMeetingRoomBooking & {
-  room: MeetingRoom;
-};
+export type CustomerMeetingRoomBookingWithRoom =
+  PrismaCustomerMeetingRoomBooking & {
+    room: MeetingRoom;
+  };
 
-export type CustomerMeetingRoomBookingWithRelations = PrismaCustomerMeetingRoomBooking & {
-  customer?: Customer;
-  room?: MeetingRoom;
-  payment?: CustomerPayment | null;
-};
+export type CustomerMeetingRoomBookingWithRelations =
+  PrismaCustomerMeetingRoomBooking & {
+    customer?: Customer;
+    room?: MeetingRoom;
+    payment?: CustomerPayment | null;
+  };
 
 export type CustomerMeetingRoomBookingCreateInput = {
   customerId: string;
@@ -1086,6 +1082,63 @@ export type CustomerMeetingRoomBookingFilters = {
   status?: BookingStatus;
   dateFrom?: Date;
   dateTo?: Date;
+};
+
+export type CalendarFilters = {
+  showFreeOnly?: boolean;
+  showMemberOnly?: boolean;
+  showRedemptionOnly?: boolean;
+  showEventsOnly?: boolean;
+  showBookingsOnly?: boolean;
+  categoryId?: string;
+};
+
+export type CalendarViewMode = "month" | "week" | "day";
+
+export type CalendarItem = {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  type: "event" | "booking";
+  location?: string;
+  colorClass: string;
+  categoryName?: string;
+  categoryColor?: string;
+  registrationCount?: number;
+  maxAttendees?: number | null;
+  roomName?: string;
+  userName?: string;
+  status?: string;
+};
+
+export type BookingDetails = {
+  id: string;
+  bookingDate: Date;
+  startTime: string;
+  endTime: string;
+  numberOfAttendees: number;
+  purpose: string | null;
+  status: BookingStatus;
+  room: {
+    name: string;
+    capacity: number;
+    location: string | null;
+    amenities: string[];
+  };
+  user?: {
+    name: string;
+    email: string;
+    contactNumber: string | null;
+    isMember: boolean;
+  };
+  customer?: {
+    name: string;
+    email: string;
+    contactNumber: string | null;
+  };
+  createdAt: Date;
+  bookingType: "user" | "customer";
 };
 
 // ============================================
@@ -1159,15 +1212,18 @@ export type BookingStats = {
 export type MeetingRoomResponse = ApiResponse<MeetingRoom>;
 export type MeetingRoomsResponse = ApiResponse<PaginatedResponse<MeetingRoom>>;
 
-export type MeetingRoomBookingResponse = ApiResponse<MeetingRoomBookingWithRelations>;
+export type MeetingRoomBookingResponse =
+  ApiResponse<MeetingRoomBookingWithRelations>;
 export type MeetingRoomBookingsResponse = ApiResponse<
   PaginatedResponse<MeetingRoomBookingWithRelations>
 >;
 
-export type CustomerMeetingRoomBookingResponse = ApiResponse<CustomerMeetingRoomBookingWithRelations>;
+export type CustomerMeetingRoomBookingResponse =
+  ApiResponse<CustomerMeetingRoomBookingWithRelations>;
 export type CustomerMeetingRoomBookingsResponse = ApiResponse<
   PaginatedResponse<CustomerMeetingRoomBookingWithRelations>
 >;
 
-export type MeetingRoomAvailabilityResponse = ApiResponse<MeetingRoomAvailability>;
+export type MeetingRoomAvailabilityResponse =
+  ApiResponse<MeetingRoomAvailability>;
 export type MeetingRoomStatsResponse = ApiResponse<MeetingRoomStats>;
