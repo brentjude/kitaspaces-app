@@ -1,10 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { generateEventSlug } from '@/lib/utils/slug';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { generateEventSlug } from "@/lib/utils/slug";
 
 // Type definition for update request body
+interface FreebieUpdate {
+  id?: string;
+  name: string;
+  description: string | null;
+  quantity: number;
+}
+
 interface UpdateEventBody {
   title?: string;
   description?: string;
@@ -21,6 +28,7 @@ interface UpdateEventBody {
   redemptionLimit?: number | null;
   maxAttendees?: number | null;
   imageUrl?: string | null;
+  freebies?: FreebieUpdate[];
 }
 
 /**
@@ -36,14 +44,14 @@ export async function GET(
 
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    if (session.user.role !== 'ADMIN') {
+    if (session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Forbidden - Admin access required' },
+        { success: false, error: "Forbidden - Admin access required" },
         { status: 403 }
       );
     }
@@ -78,7 +86,7 @@ export async function GET(
 
     if (!event) {
       return NextResponse.json(
-        { success: false, error: 'Event not found' },
+        { success: false, error: "Event not found" },
         { status: 404 }
       );
     }
@@ -88,11 +96,12 @@ export async function GET(
       data: event,
     });
   } catch (error) {
+    console.error("GET event error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -112,29 +121,32 @@ export async function PATCH(
 
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    if (session.user.role !== 'ADMIN') {
+    if (session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Forbidden - Admin access required' },
+        { success: false, error: "Forbidden - Admin access required" },
         { status: 403 }
       );
     }
 
     const { id: eventId } = await context.params;
-    const body = await request.json() as UpdateEventBody;
+    const body = (await request.json()) as UpdateEventBody;
 
     // Check if event exists
     const existingEvent = await prisma.event.findUnique({
       where: { id: eventId },
+      include: {
+        freebies: true,
+      },
     });
 
     if (!existingEvent) {
       return NextResponse.json(
-        { success: false, error: 'Event not found' },
+        { success: false, error: "Event not found" },
         { status: 404 }
       );
     }
@@ -160,7 +172,7 @@ export async function PATCH(
     }
 
     const updateData: EventUpdateData = {};
-    
+
     if (body.title !== undefined) {
       updateData.title = body.title;
       // Regenerate slug if title changes
@@ -209,6 +221,62 @@ export async function PATCH(
       updateData.imageUrl = body.imageUrl;
     }
 
+    // Handle freebies update if provided
+    if (body.freebies !== undefined) {
+      // Get existing freebie IDs
+      const existingFreebieIds = existingEvent.freebies.map((f) => f.id);
+      const incomingFreebieIds = body.freebies
+        .filter((f) => f.id && !f.id.startsWith("new-"))
+        .map((f) => f.id as string);
+
+      // Find freebies to delete (existing but not in incoming)
+      const freebiesToDelete = existingFreebieIds.filter(
+        (id) => !incomingFreebieIds.includes(id)
+      );
+
+      // Delete old freebies and their relations
+      if (freebiesToDelete.length > 0) {
+        // First delete pax freebies
+        await prisma.paxFreebie.deleteMany({
+          where: {
+            freebieId: { in: freebiesToDelete },
+          },
+        });
+
+        // Then delete the freebies
+        await prisma.eventFreebie.deleteMany({
+          where: {
+            id: { in: freebiesToDelete },
+          },
+        });
+      }
+
+      // Update existing and create new freebies
+      for (const freebie of body.freebies) {
+        if (freebie.id && !freebie.id.startsWith("new-")) {
+          // Update existing freebie
+          await prisma.eventFreebie.update({
+            where: { id: freebie.id },
+            data: {
+              name: freebie.name,
+              description: freebie.description,
+              quantity: freebie.quantity,
+            },
+          });
+        } else {
+          // Create new freebie
+          await prisma.eventFreebie.create({
+            data: {
+              eventId: eventId,
+              name: freebie.name,
+              description: freebie.description,
+              quantity: freebie.quantity,
+            },
+          });
+        }
+      }
+    }
+
     // Update event
     const event = await prisma.event.update({
       where: { id: eventId },
@@ -223,14 +291,15 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       data: event,
-      message: 'Event updated successfully',
+      message: "Event updated successfully",
     });
   } catch (error) {
+    console.error("PATCH event error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -250,14 +319,14 @@ export async function DELETE(
 
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    if (session.user.role !== 'ADMIN') {
+    if (session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Forbidden - Admin access required' },
+        { success: false, error: "Forbidden - Admin access required" },
         { status: 403 }
       );
     }
@@ -280,13 +349,13 @@ export async function DELETE(
 
     if (!existingEvent) {
       return NextResponse.json(
-        { success: false, error: 'Event not found' },
+        { success: false, error: "Event not found" },
         { status: 404 }
       );
     }
 
     // Delete in correct order due to foreign key constraints
-    
+
     // 1. Delete pax freebies
     await prisma.paxFreebie.deleteMany({
       where: {
@@ -359,20 +428,25 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Event and all related data deleted successfully',
+      message: "Event and all related data deleted successfully",
       data: {
         registrationsDeleted: existingEvent.registrations.length,
-        customerRegistrationsDeleted: existingEvent.customerRegistrations.length,
-        paxDeleted: existingEvent.registrations.reduce((sum, reg) => sum + reg.pax.length, 0),
+        customerRegistrationsDeleted:
+          existingEvent.customerRegistrations.length,
+        paxDeleted: existingEvent.registrations.reduce(
+          (sum, reg) => sum + reg.pax.length,
+          0
+        ),
         freebiesDeleted: existingEvent.freebies.length,
       },
     });
   } catch (error) {
+    console.error("DELETE event error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to delete event',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Failed to delete event",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
