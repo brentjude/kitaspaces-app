@@ -220,7 +220,7 @@ export default function AttendeeForm({
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1">
               <h3 className="text-lg font-bold text-blue-900 mb-2">
-                🎁 Member Benefits Available
+                KITA Member Benefits Available
               </h3>
               
               {hasMemberDiscount && (
@@ -244,7 +244,7 @@ export default function AttendeeForm({
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                   </svg>
-                  Access to {event.freebies?.length} exclusive event perks
+                  Exclusive event perks for KITA members
                 </div>
               )}
             </div>
