@@ -87,13 +87,40 @@ export async function GET(
       );
     }
 
+    // 🆕 Calculate member pricing if discount exists
+    const hasMemberDiscount = 
+      !event.isFree && 
+      event.price > 0 && 
+      event.memberDiscount && 
+      event.memberDiscount > 0;
+
+    let memberPrice = null;
+    if (hasMemberDiscount && event.memberDiscount) {
+      if (event.memberDiscountType === "PERCENTAGE") {
+        memberPrice = event.price - (event.price * event.memberDiscount) / 100;
+      } else {
+        // FIXED discount
+        memberPrice = Math.max(0, event.price - event.memberDiscount);
+      }
+    }
+
+    // 🆕 Build response with pricing information
     const eventWithCount = {
       ...event,
       registrationCount:
         event.registrations.length + event.customerRegistrations.length,
+      // 🆕 Add calculated member pricing
+      hasMemberDiscount,
+      memberPrice,
+      // 🆕 Add freebie eligibility info
+      freebiesAvailableToAll: event.hasCustomerFreebies,
+      freebiesCount: event.freebies.length,
     };
 
-    return NextResponse.json({ success: true, data: eventWithCount });
+    return NextResponse.json({ 
+      success: true, 
+      data: eventWithCount 
+    });
   } catch (error) {
     console.error('Error fetching event by slug:', error);
     return NextResponse.json(

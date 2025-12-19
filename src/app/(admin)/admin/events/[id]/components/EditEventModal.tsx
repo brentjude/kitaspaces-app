@@ -1020,7 +1020,7 @@ export default function EditEventModal({
                   {!formData.hasCustomerFreebies && (
                     <div className="mt-3 flex items-center gap-2 text-xs text-amber-800">
                       <svg
-                        className="w-4 h-4 flex-shrink-0"
+                        className="w-4 h-4 shrink-0"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >

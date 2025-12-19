@@ -40,10 +40,31 @@ export default function RegistrationSteps({
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [memberId, setMemberId] = useState("");
 
-  const isMember = currentUser?.isMember || false;
+  const isMember = currentUser?.isMember || !!memberId;
+  
+  // 🔧 FIX: Properly type narrow the memberDiscount check
+  const hasMemberDiscount = Boolean(
+    !event.isFree && 
+    event.price > 0 && 
+    event.memberDiscount && 
+    event.memberDiscount > 0 && 
+    isMember
+  );
+  
+  // Calculate discounted price
+  let pricePerAttendee = event.price;
+  if (hasMemberDiscount && event.memberDiscount) {
+    if (event.memberDiscountType === "PERCENTAGE") {
+      pricePerAttendee = event.price - (event.price * event.memberDiscount) / 100;
+    } else {
+      pricePerAttendee = Math.max(0, event.price - event.memberDiscount);
+    }
+  }
+
   const isFreeEvent =
-    event.price === 0 || event.isFree || (event.isFreeForMembers && isMember);
+    event.price === 0 || event.isFree || pricePerAttendee === 0;
 
   const [formData, setFormData] = useState<RegistrationFormData>({
     attendees: [
@@ -74,17 +95,15 @@ export default function RegistrationSteps({
         return false;
       }
 
-      // Validate freebie selections if event has freebies with options (commas in description)
-      if (event.freebies && event.freebies.length > 0) {
+      // Only validate freebie selections if eligible
+      const canSelectFreebies = event.hasCustomerFreebies || isMember;
+      
+      if (canSelectFreebies && event.freebies && event.freebies.length > 0) {
         for (const freebie of event.freebies) {
-          // Check if freebie has options (contains comma in description)
-          const hasOptions =
-            freebie.description && freebie.description.includes(",");
+          const hasOptions = freebie.description && freebie.description.includes(",");
 
           if (hasOptions && !attendee.selectedFreebies[freebie.id]) {
-            setError(
-              `Please select an option for ${freebie.name} for ${attendee.name}`
-            );
+            setError(`Please select an option for ${freebie.name} for ${attendee.name}`);
             return false;
           }
         }
@@ -107,7 +126,6 @@ export default function RegistrationSteps({
   };
 
   const handleSubmit = async () => {
-    // Only require payment proof for GCASH and BANK_TRANSFER
     if (
       !isFreeEvent &&
       (formData.paymentMethod === "GCASH" ||
@@ -118,7 +136,6 @@ export default function RegistrationSteps({
       return;
     }
 
-    // Require reference number for GCASH and BANK_TRANSFER
     if (
       !isFreeEvent &&
       (formData.paymentMethod === "GCASH" ||
@@ -151,6 +168,7 @@ export default function RegistrationSteps({
           paymentMethod: isFreeEvent ? undefined : formData.paymentMethod,
           paymentProofUrl: formData.paymentProofUrl || undefined,
           referenceNumber: formData.referenceNumber || undefined,
+          memberId: memberId || undefined,
         }),
       });
 
@@ -160,13 +178,11 @@ export default function RegistrationSteps({
         throw new Error(data.error || "Failed to register");
       }
 
-      // Store confirmation data in sessionStorage
       sessionStorage.setItem(
         "registrationConfirmation",
         JSON.stringify(data.data)
       );
 
-      // Redirect to confirmation page
       router.push(`/events/${event.slug}/registration/confirmation`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -177,7 +193,7 @@ export default function RegistrationSteps({
 
   const calculateTotal = () => {
     if (isFreeEvent) return 0;
-    return (event.price || 0) * formData.attendees.length;
+    return pricePerAttendee * formData.attendees.length;
   };
 
   return (
@@ -249,6 +265,8 @@ export default function RegistrationSteps({
               setFormData({ ...formData, attendees })
             }
             onLoginRequest={onLoginRequest}
+            onMemberIdChange={setMemberId}
+            memberId={memberId}
           />
         )}
 
@@ -259,6 +277,8 @@ export default function RegistrationSteps({
               event={event}
               isFreeEvent={isFreeEvent}
               total={calculateTotal()}
+              isMemberDiscountApplied={hasMemberDiscount}
+              originalPrice={event.price * formData.attendees.length}
             />
 
             {!isFreeEvent && paymentSettings && (

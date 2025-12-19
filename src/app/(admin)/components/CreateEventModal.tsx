@@ -45,7 +45,7 @@ export default function CreateEventModal({
     endTime: "",
     location: "",
     price: "0",
-    isFree: false, // ✅ Changed from true to false so price input works
+    isFree: false,
     isMemberOnly: false,
     isRedemptionEvent: false,
     redemptionLimit: "1",
@@ -56,10 +56,8 @@ export default function CreateEventModal({
     memberDiscountType: "FIXED" as "FIXED" | "PERCENTAGE",
     hasCustomerFreebies: true,
   });
+const [freebies, setFreebies] = useState<Freebie[]>([]);
 
-  const [freebies, setFreebies] = useState<Freebie[]>([]);
-
-  // Fetch categories when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchCategories();
@@ -153,12 +151,10 @@ export default function CreateEventModal({
     setError(null);
 
     try {
-      // Validate required fields
       if (!formData.title || !formData.description || !formData.date) {
         throw new Error("Please fill in all required fields");
       }
 
-      // Combine date and time
       const eventDateTime = formData.startTime
         ? `${formData.date}T${formData.startTime}`
         : formData.date;
@@ -168,12 +164,7 @@ export default function CreateEventModal({
 
       // Calculate member discounted price
       let memberDiscountedPrice: number | null = null;
-      if (
-        !formData.isFree &&
-        !formData.isFreeForMembers &&
-        memberDiscount > 0 &&
-        originalPrice > 0
-      ) {
+      if (!formData.isFree && memberDiscount > 0 && originalPrice > 0) {
         if (formData.memberDiscountType === "PERCENTAGE") {
           memberDiscountedPrice =
             originalPrice - (originalPrice * memberDiscount) / 100;
@@ -183,6 +174,7 @@ export default function CreateEventModal({
         memberDiscountedPrice = Math.max(0, memberDiscountedPrice);
       }
 
+      // 🔧 REMOVE isFreeForMembers from event data
       const eventData = {
         title: formData.title,
         description: formData.description,
@@ -193,7 +185,6 @@ export default function CreateEventModal({
         price: originalPrice,
         isFree: formData.isFree,
         isMemberOnly: formData.isMemberOnly,
-        isFreeForMembers: formData.isFreeForMembers,
         categoryId: formData.categoryId || null,
         isRedemptionEvent: formData.isRedemptionEvent,
         redemptionLimit: formData.isRedemptionEvent
@@ -244,9 +235,8 @@ export default function CreateEventModal({
         endTime: "",
         location: "",
         price: "0",
-        isFree: true,
+        isFree: false,
         isMemberOnly: false,
-        isFreeForMembers: false,
         isRedemptionEvent: false,
         redemptionLimit: "1",
         maxAttendees: "",
@@ -259,7 +249,6 @@ export default function CreateEventModal({
       setFreebies([]);
       setError(null);
 
-      // Dispatch custom event
       window.dispatchEvent(new Event("eventCreated"));
       onClose();
 
@@ -1019,7 +1008,7 @@ export default function CreateEventModal({
               {!formData.hasCustomerFreebies && (
                 <div className="mt-3 flex items-center gap-2 text-xs text-amber-800">
                   <svg
-                    className="w-4 h-4 flex-shrink-0"
+                    className="w-4 h-4 shrink-0"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >

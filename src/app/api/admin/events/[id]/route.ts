@@ -384,23 +384,36 @@ export async function PATCH(
       },
     });
 
+    const changesSummary: Record<string, unknown> = {};
+    if (Object.keys(changes).length > 0) {
+      Object.entries(changes).forEach(([key, value]) => {
+        changesSummary[key] = {
+          from: value.from,
+          to: value.to,
+        };
+      });
+    }
+
     // 🆕 Log successful event update
     await logAdminActivity(
-      session.user.id,
-      'ADMIN_EVENT_UPDATED',
-      `Updated event "${event.title}" (${event.slug})`,
-      {
-        referenceId: eventId,
-        referenceType: 'EVENT',
-        metadata: {
-          eventId,
-          title: event.title,
-          slug: event.slug,
-          changes,
-          freebiesChanged,
-        },
-      }
-    );
+  session.user.id,
+  'ADMIN_EVENT_UPDATED',
+  `Updated event "${event.title}" (${event.slug})`,
+  {
+    referenceId: eventId,
+    referenceType: 'EVENT',
+    metadata: {
+      eventId,
+      title: event.title,
+      slug: event.slug,
+      changedFields: Object.keys(changes).join(', '),
+      changeCount: Object.keys(changes).length,
+      changesDetail: JSON.stringify(changes),
+      freebiesChanged,
+    },
+  }
+);
+
 
     return NextResponse.json({
       success: true,

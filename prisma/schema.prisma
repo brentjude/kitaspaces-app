@@ -324,7 +324,6 @@ model Event {
   price            Float    @default(0)
   isFree           Boolean  @default(false)
   isMemberOnly     Boolean  @default(false)
-  isFreeForMembers Boolean  @default(false)
 
    // 🆕 NEW: Member discount functionality
   memberDiscount         Float?   @default(0) // Discount amount (e.g., 100 for ₱100 off)

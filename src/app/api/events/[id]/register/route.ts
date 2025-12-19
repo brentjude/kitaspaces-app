@@ -18,6 +18,7 @@ interface RegistrationRequest {
   paymentMethod?: "GCASH" | "BANK_TRANSFER" | "CASH" | "CREDIT_CARD";
   paymentProofUrl?: string;
   referenceNumber?: string;
+  memberId?: string; // For walk-in customers to apply member discount
 }
 
 export async function POST(
@@ -30,7 +31,7 @@ export async function POST(
     const session = await getServerSession(authOptions);
     const body: RegistrationRequest = await request.json();
 
-    const { attendees, paymentMethod, paymentProofUrl, referenceNumber } = body;
+    const { attendees, paymentMethod, paymentProofUrl, referenceNumber, memberId } = body;
 
     // Validate request
     if (!attendees || !Array.isArray(attendees) || attendees.length === 0) {
@@ -80,18 +81,81 @@ export async function POST(
       );
     }
 
+    // 🆕 Determine if user is a member
+    let isMember = false;
+    let verifiedMemberId: string | undefined;
+
+    if (session?.user) {
+      // Logged-in user
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { isMember: true },
+      });
+      isMember = user?.isMember || false;
+      verifiedMemberId = session.user.id;
+    } else if (memberId) {
+      // Walk-in customer with member ID
+      const member = await prisma.user.findUnique({
+        where: { id: memberId },
+        select: { isMember: true },
+      });
+      
+      if (member?.isMember) {
+        isMember = true;
+        verifiedMemberId = memberId;
+      }
+    }
+
     // Check if member-only event
-    if (event.isMemberOnly && (!session?.user || !session.user.isMember)) {
+    if (event.isMemberOnly && !isMember) {
       return NextResponse.json(
         { error: "This event is for members only" },
         { status: 403 }
       );
     }
 
+    // 🆕 Calculate price per attendee with member discount
+    let pricePerAttendee = event.price;
+    let discountAmount = 0;
+    let discountApplied = false;
+
+    if (isMember && !event.isFree && event.price > 0 && event.memberDiscount && event.memberDiscount > 0) {
+      discountApplied = true;
+      
+      if (event.memberDiscountType === "PERCENTAGE") {
+        discountAmount = (event.price * event.memberDiscount) / 100;
+        pricePerAttendee = event.price - discountAmount;
+      } else {
+        // FIXED discount
+        discountAmount = event.memberDiscount;
+        pricePerAttendee = Math.max(0, event.price - event.memberDiscount);
+      }
+    }
+
     // Determine if payment is required
-    const isMember = session?.user?.isMember || false;
     const isFreeEvent =
-      event.price === 0 || event.isFree || (event.isFreeForMembers && isMember);
+      event.price === 0 || 
+      event.isFree || 
+      pricePerAttendee === 0;
+
+    // 🆕 Validate freebies eligibility
+    const canSelectFreebies = event.hasCustomerFreebies || isMember;
+
+    if (!canSelectFreebies) {
+      // Check if any attendee selected freebies
+      const hasFreebieSelections = attendees.some(
+        (attendee) => attendee.freebieSelections && attendee.freebieSelections.length > 0
+      );
+
+      if (hasFreebieSelections) {
+        return NextResponse.json(
+          {
+            error: "Freebies are only available to members for this event",
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // Validate payment for paid events
     if (!isFreeEvent) {
@@ -128,7 +192,18 @@ export async function POST(
     // Determine main payer info
     const mainAttendee = attendees[0];
     const numberOfPax = attendees.length;
-    const totalAmount = isFreeEvent ? 0 : event.price * numberOfPax;
+    const totalAmount = isFreeEvent ? 0 : pricePerAttendee * numberOfPax;
+    const originalTotalAmount = event.price * numberOfPax;
+
+    // 🆕 Build payment notes with discount info
+    let paymentNotes = `Event registration: ${event.title}`;
+    if (discountApplied) {
+      paymentNotes += ` | Member discount applied: ${event.memberDiscountType === 'PERCENTAGE' ? `${event.memberDiscount}%` : `₱${event.memberDiscount}`}`;
+      paymentNotes += ` | Original: ₱${originalTotalAmount.toFixed(2)}, Discounted: ₱${totalAmount.toFixed(2)}`;
+      if (verifiedMemberId) {
+        paymentNotes += ` | Member ID: ${verifiedMemberId}`;
+      }
+    }
 
     // Process registration in transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -159,10 +234,10 @@ export async function POST(
               userId: session.user.id,
               amount: 0,
               paymentMethod: "FREE_MEMBERSHIP",
-              status: "COMPLETED", // ✅ Mark as COMPLETED immediately
+              status: "COMPLETED",
               paymentReference: paymentReferenceNumber,
-              notes: `Free event registration: ${event.title}`,
-              paidAt: new Date(), // ✅ Set paid timestamp
+              notes: `Free event registration: ${event.title}${isMember ? ' (Member)' : ''}`,
+              paidAt: new Date(),
             },
           });
           paymentId = payment.id;
@@ -179,7 +254,7 @@ export async function POST(
               paymentReference: paymentReferenceNumber,
               referenceNumber: referenceNumber || undefined,
               proofImageUrl: paymentProofUrl || undefined,
-              notes: `Event registration: ${event.title}`,
+              notes: paymentNotes,
             },
           });
           paymentId = payment.id;
@@ -207,8 +282,9 @@ export async function POST(
             },
           });
 
-          // Create freebie selections for this pax WITH OPTION
+          // 🆕 Create freebie selections only if eligible
           if (
+            canSelectFreebies &&
             attendee.freebieSelections &&
             attendee.freebieSelections.length > 0
           ) {
@@ -229,6 +305,7 @@ export async function POST(
           registrationId: registration.id,
           paymentReference: paymentReferenceNumber,
           totalAmount,
+          originalAmount: originalTotalAmount,
           type: "user" as const,
         };
       }
@@ -276,10 +353,10 @@ export async function POST(
               customerId: customer.id,
               amount: 0,
               paymentMethod: "FREE_MEMBERSHIP",
-              status: "COMPLETED", // ✅ Mark as COMPLETED immediately
+              status: "COMPLETED",
               paymentReference: paymentReferenceNumber,
-              notes: `Free event registration: ${event.title}`,
-              paidAt: new Date(), // ✅ Set paid timestamp
+              notes: `Free event registration: ${event.title}${isMember ? ` (Member ID: ${verifiedMemberId})` : ''}`,
+              paidAt: new Date(),
             },
           });
           paymentId = payment.id;
@@ -296,7 +373,7 @@ export async function POST(
               paymentReference: paymentReferenceNumber,
               referenceNumber: referenceNumber || undefined,
               proofImageUrl: paymentProofUrl || undefined,
-              notes: `Event registration: ${event.title}`,
+              notes: paymentNotes,
             },
           });
           paymentId = payment.id;
@@ -324,8 +401,9 @@ export async function POST(
             },
           });
 
-          // Create freebie selections for this pax WITH OPTION
+          // 🆕 Create freebie selections only if eligible
           if (
+            canSelectFreebies &&
             attendee.freebieSelections &&
             attendee.freebieSelections.length > 0
           ) {
@@ -346,6 +424,7 @@ export async function POST(
           registrationId: registration.id,
           paymentReference: paymentReferenceNumber,
           totalAmount,
+          originalAmount: originalTotalAmount,
           type: "customer" as const,
         };
       }
@@ -358,7 +437,10 @@ export async function POST(
         registrationId: result.registrationId,
         paymentReference: result.paymentReference,
         totalAmount: result.totalAmount,
-        status: isFreeEvent ? "COMPLETED" : "PENDING", // ✅ Return COMPLETED for free events
+        originalAmount: result.originalAmount,
+        discountAmount: discountApplied ? (result.originalAmount - result.totalAmount) : 0,
+        isMemberDiscountApplied: discountApplied,
+        status: isFreeEvent ? "COMPLETED" : "PENDING",
         attendees: attendees.map((a) => ({
           name: a.name,
           email: a.email,
@@ -370,7 +452,7 @@ export async function POST(
           slug: event.slug,
         },
       },
-      message: `Registration ${isFreeEvent ? "confirmed" : "submitted"}!`,
+      message: `Registration ${isFreeEvent ? "confirmed" : "submitted"}!${discountApplied ? ` Member discount of ₱${(result.originalAmount - result.totalAmount).toFixed(2)} applied.` : ''}`,
     });
   } catch (error) {
     console.error("Registration error:", error);
