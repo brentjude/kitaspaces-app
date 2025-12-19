@@ -6,6 +6,7 @@ import {
   MagnifyingGlassIcon,
   UserIcon,
   XMarkIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import Modal from "@/app/components/Modal";
 import FreebieSelector from "@/app/(public)/events/[slug]/registration/components/FreebieSelector";
@@ -26,7 +27,10 @@ interface AddRegistrantModalProps {
     title: string;
     price: number;
     isFree: boolean;
-    isFreeForMembers: boolean;
+    // 🔧 REMOVE: isFreeForMembers
+    memberDiscount?: number | null;
+    memberDiscountType?: string | null;
+    hasCustomerFreebies: boolean;
     freebies?: Array<{
       id: string;
       name: string;
@@ -80,6 +84,37 @@ export default function AddRegistrantModal({
   const [referenceNumber, setReferenceNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // 🆕 Determine if current registrant is a member
+  const isMember = selectedUser?.isMember || false;
+
+  // 🆕 Calculate member discount
+  const hasMemberDiscount =
+    !event.isFree &&
+    event.price > 0 &&
+    event.memberDiscount &&
+    event.memberDiscount > 0 &&
+    isMember;
+
+  const getMemberPrice = () => {
+    if (!hasMemberDiscount) return event.price;
+
+    const price = event.price;
+    const discount = event.memberDiscount || 0;
+
+    if (event.memberDiscountType === "PERCENTAGE") {
+      return price - (price * discount) / 100;
+    }
+    return Math.max(0, price - discount);
+  };
+
+  const pricePerAttendee = hasMemberDiscount ? getMemberPrice() : event.price;
+  const isFreeEvent = event.isFree || event.price === 0 || pricePerAttendee === 0;
+  const totalAmount = isFreeEvent ? 0 : pricePerAttendee * attendees.length;
+
+  // 🆕 Determine if freebies should be shown
+  const canSelectFreebies = event.hasCustomerFreebies || isMember;
+  const hasFreebies = event.freebies && event.freebies.length > 0;
 
   // Filter users for search
   const filteredUsers = allUsers.filter(
@@ -144,12 +179,6 @@ export default function AddRegistrantModal({
     updateAttendee(attendeeId, "selectedFreebies", updatedFreebies);
   };
 
-  const isFreeEvent =
-    event.isFree ||
-    event.price === 0 ||
-    (event.isFreeForMembers && selectedUser?.isMember);
-  const totalAmount = isFreeEvent ? 0 : event.price * attendees.length;
-
   const validateForm = (): boolean => {
     // Check all attendees have name and email
     for (const attendee of attendees) {
@@ -164,9 +193,9 @@ export default function AddRegistrantModal({
         return false;
       }
 
-      // Validate freebie selections
-      if (event.freebies && event.freebies.length > 0) {
-        for (const freebie of event.freebies) {
+      // 🆕 Only validate freebie selections if user is eligible
+      if (canSelectFreebies && hasFreebies) {
+        for (const freebie of event.freebies!) {
           const hasOptions =
             freebie.description && freebie.description.includes(",");
 
@@ -221,12 +250,16 @@ export default function AddRegistrantModal({
         attendees: attendees.map((a) => ({
           name: a.name,
           email: a.email,
-          freebieSelections: Object.entries(a.selectedFreebies).map(
-            ([freebieId, selectedOption]) => ({
-              freebieId,
-              selectedOption,
-            })
-          ),
+          // 🆕 Only include freebie selections if eligible
+          freebieSelections:
+            canSelectFreebies && hasFreebies
+              ? Object.entries(a.selectedFreebies).map(
+                  ([freebieId, selectedOption]) => ({
+                    freebieId,
+                    selectedOption,
+                  })
+                )
+              : [],
         })),
       };
 
@@ -469,14 +502,99 @@ export default function AddRegistrantModal({
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-blue-700">Event Price</p>
-                    <p className="text-lg font-bold text-blue-900">
-                      {isFreeEvent ? "FREE" : `₱${event.price.toFixed(2)}`}
-                    </p>
+                    <p className="text-xs text-blue-700">Price per person</p>
+                    <div className="space-y-1">
+                      {hasMemberDiscount ? (
+                        <>
+                          <p className="text-xs text-blue-600 line-through">
+                            ₱{event.price.toFixed(2)}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <ShieldCheckIcon className="w-4 h-4 text-green-600" />
+                            <p className="text-lg font-bold text-green-700">
+                              ₱{pricePerAttendee.toFixed(2)}
+                            </p>
+                          </div>
+                          <p className="text-xs text-green-600 font-medium">
+                            Member discount applied
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-lg font-bold text-blue-900">
+                          {isFreeEvent ? "FREE" : `₱${event.price.toFixed(2)}`}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             )}
+
+            {/* 🆕 Member Benefits Applied Banner */}
+            {isMember && hasMemberDiscount && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <ShieldCheckIcon className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-green-900 mb-1">
+                      Member Discount Applied
+                    </p>
+                    <p className="text-xs text-green-700">
+                      This member receives{" "}
+                      {event.memberDiscountType === "PERCENTAGE"
+                        ? `${event.memberDiscount}%`
+                        : `₱${event.memberDiscount?.toFixed(2)}`}{" "}
+                      off the regular price.
+                    </p>
+                    <div className="flex items-center gap-4 mt-2 text-xs">
+                      <div>
+                        <span className="text-green-600">Regular:</span>{" "}
+                        <span className="line-through">
+                          ₱{event.price.toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-green-600">Member Price:</span>{" "}
+                        <span className="font-bold text-green-800">
+                          ₱{pricePerAttendee.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 🆕 Freebies Not Available Notice (for guest customers when freebies are member-only) */}
+            {registrationType === "guest" &&
+              hasFreebies &&
+              !event.hasCustomerFreebies && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <svg
+                      className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-yellow-900 mb-1">
+                        Freebies Not Available for Guest Customers
+                      </p>
+                      <p className="text-xs text-yellow-800">
+                        This event includes member-exclusive perks. Guest
+                        customers will not receive freebies. Only registered
+                        KITA members can access these benefits.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
             {/* Attendees */}
             <div className="space-y-4">
@@ -537,10 +655,10 @@ export default function AddRegistrantModal({
                     </div>
                   </div>
 
-                  {/* Freebies */}
-                  {event.freebies && event.freebies.length > 0 && (
+                  {/* 🆕 Freebies - Only show if eligible */}
+                  {canSelectFreebies && hasFreebies && (
                     <FreebieSelector
-                      freebies={event.freebies}
+                      freebies={event.freebies!}
                       selectedFreebies={attendee.selectedFreebies}
                       onFreebieChange={(freebieId, option) =>
                         updateFreebie(attendee.id, freebieId, option)
@@ -590,9 +708,24 @@ export default function AddRegistrantModal({
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-orange-700">Total Amount</p>
-                  <p className="text-2xl font-bold text-orange-900">
-                    {isFreeEvent ? "FREE" : `₱${totalAmount.toFixed(2)}`}
-                  </p>
+                  {hasMemberDiscount && !isFreeEvent ? (
+                    <div className="space-y-1">
+                      <p className="text-sm text-orange-600 line-through">
+                        ₱{(event.price * attendees.length).toFixed(2)}
+                      </p>
+                      <p className="text-2xl font-bold text-green-700 flex items-center gap-1">
+                        <ShieldCheckIcon className="w-5 h-5" />₱
+                        {totalAmount.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-green-600 font-medium">
+                        Member discount
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-2xl font-bold text-orange-900">
+                      {isFreeEvent ? "FREE" : `₱${totalAmount.toFixed(2)}`}
+                    </p>
+                  )}
                 </div>
               </div>
               {!isFreeEvent && (

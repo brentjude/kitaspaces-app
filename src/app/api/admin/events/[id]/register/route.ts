@@ -13,12 +13,12 @@ interface AttendeeData {
   }>;
 }
 
-interface AdminRegistrationRequest {
-  userId: string;
+interface RegistrationRequest {
   attendees: AttendeeData[];
   paymentMethod?: "GCASH" | "BANK_TRANSFER" | "CASH" | "CREDIT_CARD";
   paymentProofUrl?: string;
   referenceNumber?: string;
+  memberId?: string; // For walk-in customers to apply member discount
 }
 
 export async function POST(
@@ -26,62 +26,19 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    // Check if user is admin
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: eventId } = await context.params;
-    const body: AdminRegistrationRequest = await request.json();
-    const {
-      userId,
-      attendees,
-      paymentMethod,
-      paymentProofUrl,
-      referenceNumber,
-    } = body;
+
+    const session = await getServerSession(authOptions);
+    const body: RegistrationRequest = await request.json();
+
+    const { attendees, paymentMethod, paymentProofUrl, referenceNumber, memberId } = body;
 
     // Validate request
-    if (!userId) {
-      return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
-      );
-    }
-
     if (!attendees || !Array.isArray(attendees) || attendees.length === 0) {
       return NextResponse.json(
         { error: "At least one attendee is required" },
         { status: 400 }
       );
-    }
-
-    // Validate attendee data
-    for (const attendee of attendees) {
-      if (!attendee.name || !attendee.name.trim()) {
-        return NextResponse.json(
-          { error: "All attendees must have a name" },
-          { status: 400 }
-        );
-      }
-
-      if (!attendee.email || !attendee.email.trim()) {
-        return NextResponse.json(
-          { error: "All attendees must have an email" },
-          { status: 400 }
-        );
-      }
-
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(attendee.email)) {
-        return NextResponse.json(
-          { error: `Invalid email format for ${attendee.name}` },
-          { status: 400 }
-        );
-      }
     }
 
     // Get event details
@@ -111,88 +68,96 @@ export async function POST(
       totalRegistrations + attendees.length > event.maxAttendees
     ) {
       return NextResponse.json(
-        {
-          error: `Event is full. Only ${
-            event.maxAttendees - totalRegistrations
-          } spots remaining.`,
-        },
+        { error: "Event is already full" },
         { status: 400 }
       );
     }
 
-    // Get user details
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Check if already registered
-    const existingRegistration = await prisma.eventRegistration.findFirst({
-      where: {
-        userId: user.id,
-        eventId: event.id,
-      },
-    });
-
-    if (existingRegistration) {
+    // Check if event is in the past
+    if (new Date(event.date) < new Date()) {
       return NextResponse.json(
-        { error: `${user.name} is already registered for this event` },
+        { error: "Cannot register for past events" },
         { status: 400 }
       );
     }
 
-    // Determine if free
-    const isFreeEvent =
-      event.price === 0 ||
-      event.isFree ||
-      (event.isFreeForMembers && user.isMember);
+    // 🆕 Determine if user is a member
+    let isMember = false;
+    let verifiedMemberId: string | undefined;
 
-    // Validate freebie selections if event has freebies
-    if (event.freebies && event.freebies.length > 0) {
-      for (const attendee of attendees) {
-        if (
-          !attendee.freebieSelections ||
-          attendee.freebieSelections.length === 0
-        ) {
-          return NextResponse.json(
-            { error: `Freebie selections are required for ${attendee.name}` },
-            { status: 400 }
-          );
-        }
-
-        // Validate each freebie selection
-        for (const selection of attendee.freebieSelections) {
-          const freebie = event.freebies.find(
-            (f) => f.id === selection.freebieId
-          );
-
-          if (!freebie) {
-            return NextResponse.json(
-              { error: `Invalid freebie selected for ${attendee.name}` },
-              { status: 400 }
-            );
-          }
-
-          // Check if freebie has options (description contains comma)
-          const hasOptions =
-            freebie.description && freebie.description.includes(",");
-
-          if (hasOptions && !selection.selectedOption) {
-            return NextResponse.json(
-              {
-                error: `Please select an option for ${freebie.name} for ${attendee.name}`,
-              },
-              { status: 400 }
-            );
-          }
-        }
+    if (session?.user) {
+      // Logged-in user
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { isMember: true },
+      });
+      isMember = user?.isMember || false;
+      verifiedMemberId = session.user.id;
+    } else if (memberId) {
+      // Walk-in customer with member ID
+      const member = await prisma.user.findUnique({
+        where: { id: memberId },
+        select: { isMember: true },
+      });
+      
+      if (member?.isMember) {
+        isMember = true;
+        verifiedMemberId = memberId;
       }
     }
 
-    // Validate payment for paid events
+    // Check if member-only event
+    if (event.isMemberOnly && !isMember) {
+      return NextResponse.json(
+        { error: "This event is for members only" },
+        { status: 403 }
+      );
+    }
+
+    // 🆕 Calculate price per attendee with member discount
+    let pricePerAttendee = event.price;
+    let discountAmount = 0;
+    let discountApplied = false;
+
+    if (isMember && !event.isFree && event.price > 0 && event.memberDiscount && event.memberDiscount > 0) {
+      discountApplied = true;
+      
+      if (event.memberDiscountType === "PERCENTAGE") {
+        discountAmount = (event.price * event.memberDiscount) / 100;
+        pricePerAttendee = event.price - discountAmount;
+      } else {
+        // FIXED discount
+        discountAmount = event.memberDiscount;
+        pricePerAttendee = Math.max(0, event.price - event.memberDiscount);
+      }
+    }
+
+    // Determine if payment is required
+    const isFreeEvent =
+      event.price === 0 || 
+      event.isFree || 
+      pricePerAttendee === 0;
+
+    // 🆕 Validate freebies eligibility
+    const canSelectFreebies = event.hasCustomerFreebies || isMember;
+
+    if (!canSelectFreebies) {
+      // Check if any attendee selected freebies
+      const hasFreebieSelections = attendees.some(
+        (attendee) => attendee.freebieSelections && attendee.freebieSelections.length > 0
+      );
+
+      if (hasFreebieSelections) {
+        return NextResponse.json(
+          {
+            error: "Freebies are only available to members for this event",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 🔧 UPDATED: Validate payment for paid events
     if (!isFreeEvent) {
       if (!paymentMethod) {
         return NextResponse.json(
@@ -224,168 +189,275 @@ export async function POST(
       }
     }
 
+    // Determine main payer info
     const mainAttendee = attendees[0];
     const numberOfPax = attendees.length;
-    const totalAmount = isFreeEvent ? 0 : event.price * numberOfPax;
+    const totalAmount = isFreeEvent ? 0 : pricePerAttendee * numberOfPax;
+    const originalTotalAmount = event.price * numberOfPax;
 
-    // Create registration
+    // 🆕 Build payment notes with discount info
+    let paymentNotes = `Event registration: ${event.title}`;
+    if (discountApplied) {
+      paymentNotes += ` | Member discount applied: ${event.memberDiscountType === 'PERCENTAGE' ? `${event.memberDiscount}%` : `₱${event.memberDiscount}`}`;
+      paymentNotes += ` | Original: ₱${originalTotalAmount.toFixed(2)}, Discounted: ₱${totalAmount.toFixed(2)}`;
+      if (verifiedMemberId) {
+        paymentNotes += ` | Member ID: ${verifiedMemberId}`;
+      }
+    }
+
+    // Process registration in transaction
     const result = await prisma.$transaction(async (tx) => {
       let paymentId: string | undefined;
       let paymentReferenceNumber: string | undefined;
 
-      // Create payment record
-      if (isFreeEvent) {
-        // Free event - COMPLETED immediately
+      // === REGISTERED USER (MEMBER OR NON-MEMBER) ===
+      if (session?.user?.id) {
+        // Check if already registered
+        const existingRegistration = await tx.eventRegistration.findFirst({
+          where: {
+            userId: session.user.id,
+            eventId: event.id,
+          },
+        });
+
+        if (existingRegistration) {
+          throw new Error("You are already registered for this event");
+        }
+
+        // 🔧 UPDATED: Create Payment record
         paymentReferenceNumber = await generateUniqueReference("event");
 
-        const payment = await tx.payment.create({
+        if (isFreeEvent) {
+          // ✅ Free event (price is 0) - create COMPLETED CASH payment with ₱0
+          const payment = await tx.payment.create({
+            data: {
+              userId: session.user.id,
+              amount: 0,
+              paymentMethod: "CASH",
+              status: "COMPLETED",
+              paymentReference: paymentReferenceNumber,
+              notes: `Free event registration: ${event.title}${isMember ? ' (Member)' : ''}${discountApplied ? ' - 100% member discount applied' : ''}`,
+              paidAt: new Date(),
+            },
+          });
+          paymentId = payment.id;
+        } else if (paymentMethod) {
+          // Paid event - create PENDING payment
+          const payment = await tx.payment.create({
+            data: {
+              userId: session.user.id,
+              amount: totalAmount,
+              paymentMethod,
+              status: "PENDING",
+              paymentReference: paymentReferenceNumber,
+              referenceNumber: referenceNumber || undefined,
+              proofImageUrl: paymentProofUrl || undefined,
+              notes: paymentNotes,
+            },
+          });
+          paymentId = payment.id;
+        }
+
+        // Create EventRegistration (main payer only)
+        const registration = await tx.eventRegistration.create({
           data: {
-            userId: user.id,
-            amount: 0,
-            paymentMethod: "FREE_MEMBERSHIP",
-            status: "COMPLETED",
-            paymentReference: paymentReferenceNumber,
-            notes: `Admin registration by ${
-              session.user.name || session.user.email
-            } for event: ${event.title}`,
-            paidAt: new Date(),
-          },
-        });
-        paymentId = payment.id;
-      } else if (paymentMethod) {
-        // Paid event - Status depends on payment method
-        paymentReferenceNumber = await generateUniqueReference("event");
-
-        // Admin cash/card payments are COMPLETED, online payments are PENDING for verification
-        const paymentStatus =
-          paymentMethod === "CASH" || paymentMethod === "CREDIT_CARD"
-            ? "COMPLETED"
-            : "PENDING";
-
-        const payment = await tx.payment.create({
-          data: {
-            userId: user.id,
-            amount: totalAmount,
-            paymentMethod,
-            status: paymentStatus,
-            paymentReference: paymentReferenceNumber,
-            referenceNumber: referenceNumber || undefined,
-            proofImageUrl: paymentProofUrl || undefined,
-            notes: `Admin registration by ${
-              session.user.name || session.user.email
-            } for event: ${event.title}`,
-            paidAt: paymentStatus === "COMPLETED" ? new Date() : undefined,
-          },
-        });
-        paymentId = payment.id;
-      }
-
-      // Create EventRegistration
-      const registration = await tx.eventRegistration.create({
-        data: {
-          userId: user.id,
-          eventId: event.id,
-          attendeeName: mainAttendee.name,
-          attendeeEmail: mainAttendee.email,
-          numberOfPax,
-          paymentId,
-        },
-      });
-
-      // Create EventPax for ALL attendees (including main payer)
-      for (const attendee of attendees) {
-        const pax = await tx.eventPax.create({
-          data: {
-            registrationId: registration.id,
-            name: attendee.name,
-            email: attendee.email,
+            userId: session.user.id,
+            eventId: event.id,
+            attendeeName: mainAttendee.name,
+            attendeeEmail: mainAttendee.email,
+            numberOfPax,
+            paymentId: paymentId || undefined,
           },
         });
 
-        // Create freebie selections WITH OPTION
-        if (
-          attendee.freebieSelections &&
-          attendee.freebieSelections.length > 0
-        ) {
-          for (const selection of attendee.freebieSelections) {
-            await tx.paxFreebie.create({
-              data: {
-                paxId: pax.id,
-                freebieId: selection.freebieId,
-                quantity: 1,
-                option: selection.selectedOption || undefined,
-              },
-            });
+        // Create EventPax for ALL attendees (including main payer)
+        for (const attendee of attendees) {
+          const pax = await tx.eventPax.create({
+            data: {
+              registrationId: registration.id,
+              name: attendee.name,
+              email: attendee.email,
+            },
+          });
+
+          // 🆕 Create freebie selections only if eligible
+          if (
+            canSelectFreebies &&
+            attendee.freebieSelections &&
+            attendee.freebieSelections.length > 0
+          ) {
+            for (const selection of attendee.freebieSelections) {
+              await tx.paxFreebie.create({
+                data: {
+                  paxId: pax.id,
+                  freebieId: selection.freebieId,
+                  quantity: 1,
+                  option: selection.selectedOption || undefined,
+                },
+              });
+            }
           }
         }
-      }
 
-      return {
-        registrationId: registration.id,
-        paymentReference: paymentReferenceNumber,
-        paymentId,
-      };
+        return {
+          registrationId: registration.id,
+          paymentReference: paymentReferenceNumber,
+          totalAmount,
+          originalAmount: originalTotalAmount,
+          type: "user" as const,
+        };
+      }
+      // === GUEST CUSTOMER (NOT LOGGED IN) ===
+      else {
+        // Find or create customer
+        let customer = await tx.customer.findFirst({
+          where: {
+            email: mainAttendee.email,
+          },
+        });
+
+        if (!customer) {
+          customer = await tx.customer.create({
+            data: {
+              name: mainAttendee.name,
+              email: mainAttendee.email,
+              notes: "Walk-in guest registration",
+            },
+          });
+        }
+
+        // Check if customer already registered
+        const existingRegistration =
+          await tx.customerEventRegistration.findFirst({
+            where: {
+              customerId: customer.id,
+              eventId: event.id,
+            },
+          });
+
+        if (existingRegistration) {
+          throw new Error(
+            `${mainAttendee.name} is already registered for this event`
+          );
+        }
+
+        // 🔧 UPDATED: Create Payment record
+        paymentReferenceNumber = await generateUniqueReference("event");
+
+        if (isFreeEvent) {
+          // ✅ Free event (price is 0) - create COMPLETED CASH payment with ₱0
+          const payment = await tx.customerPayment.create({
+            data: {
+              customerId: customer.id,
+              amount: 0,
+              paymentMethod: "CASH",
+              status: "COMPLETED",
+              paymentReference: paymentReferenceNumber,
+              notes: `Free event registration: ${event.title}${isMember ? ` (Member ID: ${verifiedMemberId})` : ''}${discountApplied ? ' - 100% member discount applied' : ''}`,
+              paidAt: new Date(),
+            },
+          });
+          paymentId = payment.id;
+        } else if (paymentMethod) {
+          // Paid event - create PENDING payment
+          const payment = await tx.customerPayment.create({
+            data: {
+              customerId: customer.id,
+              amount: totalAmount,
+              paymentMethod,
+              status: "PENDING",
+              paymentReference: paymentReferenceNumber,
+              referenceNumber: referenceNumber || undefined,
+              proofImageUrl: paymentProofUrl || undefined,
+              notes: paymentNotes,
+            },
+          });
+          paymentId = payment.id;
+        }
+
+        // Create CustomerEventRegistration (main payer only)
+        const registration = await tx.customerEventRegistration.create({
+          data: {
+            customerId: customer.id,
+            eventId: event.id,
+            attendeeName: mainAttendee.name,
+            attendeeEmail: mainAttendee.email,
+            numberOfPax,
+            paymentId: paymentId || undefined,
+          },
+        });
+
+        // Create CustomerEventPax for ALL attendees (including main payer)
+        for (const attendee of attendees) {
+          const pax = await tx.customerEventPax.create({
+            data: {
+              registrationId: registration.id,
+              name: attendee.name,
+              email: attendee.email,
+            },
+          });
+
+          // 🆕 Create freebie selections only if eligible
+          if (
+            canSelectFreebies &&
+            attendee.freebieSelections &&
+            attendee.freebieSelections.length > 0
+          ) {
+            for (const selection of attendee.freebieSelections) {
+              await tx.customerPaxFreebie.create({
+                data: {
+                  paxId: pax.id,
+                  freebieId: selection.freebieId,
+                  quantity: 1,
+                  option: selection.selectedOption || undefined,
+                },
+              });
+            }
+          }
+        }
+
+        return {
+          registrationId: registration.id,
+          paymentReference: paymentReferenceNumber,
+          totalAmount,
+          originalAmount: originalTotalAmount,
+          type: "customer" as const,
+        };
+      }
     });
 
+    // Return confirmation data
     return NextResponse.json({
       success: true,
       data: {
         registrationId: result.registrationId,
         paymentReference: result.paymentReference,
-        paymentId: result.paymentId,
-        totalAmount,
-        isFreeEvent,
-        numberOfPax,
-        paymentStatus: isFreeEvent
-          ? "COMPLETED"
-          : paymentMethod === "CASH" || paymentMethod === "CREDIT_CARD"
-          ? "COMPLETED"
-          : "PENDING",
-        event: {
-          id: event.id,
-          title: event.title,
-          slug: event.slug,
-          date: event.date.toISOString(),
-        },
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          isMember: user.isMember,
-        },
+        totalAmount: result.totalAmount,
+        originalAmount: result.originalAmount,
+        discountAmount: discountApplied ? (result.originalAmount - result.totalAmount) : 0,
+        isMemberDiscountApplied: discountApplied,
+        status: isFreeEvent ? "COMPLETED" : "PENDING",
         attendees: attendees.map((a) => ({
           name: a.name,
           email: a.email,
         })),
+        event: {
+          id: event.id,
+          title: event.title,
+          date: event.date.toISOString(),
+          slug: event.slug,
+        },
       },
-      message: `Successfully registered ${user.name} for ${event.title}`,
+      message: `Registration ${isFreeEvent ? "confirmed" : "submitted"}!${discountApplied ? ` Member discount of ₱${(result.originalAmount - result.totalAmount).toFixed(2)} applied.` : ''}`,
     });
   } catch (error) {
-    console.error("Admin registration error:", error);
-
-    // Handle specific Prisma errors
-    if (error instanceof Error) {
-      if (error.message.includes("Unique constraint")) {
-        return NextResponse.json(
-          { error: "This user is already registered for this event" },
-          { status: 400 }
-        );
-      }
-
-      if (error.message.includes("Foreign key constraint")) {
-        return NextResponse.json(
-          { error: "Invalid user or event reference" },
-          { status: 400 }
-        );
-      }
-    }
-
+    console.error("Registration error:", error);
     return NextResponse.json(
       {
         error:
           error instanceof Error
             ? error.message
-            : "Failed to create registration",
+            : "Failed to process registration",
       },
       { status: 500 }
     );
