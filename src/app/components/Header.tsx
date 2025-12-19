@@ -12,6 +12,7 @@ import {
   PresentationChartBarIcon,
   Bars3Icon,
   XMarkIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
@@ -21,6 +22,7 @@ interface PublicHeaderProps {
     name: string;
     email: string;
     role?: string;
+    isMember?: boolean;
   } | null;
   onLoginClick?: () => void;
 }
@@ -84,8 +86,15 @@ export default function PublicHeader({
   };
 
   const isActive = (path: string) => {
+    // For homepage, only match exact path
+    if (path === '/') {
+      return pathname === '/';
+    }
     return pathname === path || pathname?.startsWith(path + '/');
   };
+
+  // 🔧 UPDATED: Only show for guests (not logged in)
+  const shouldShowMembershipButton = !currentUser;
 
   return (
     <nav className="border-b border-gray-100 bg-white backdrop-blur-md sticky top-0 z-50">
@@ -102,6 +111,18 @@ export default function PublicHeader({
 
         {/* Center Navigation - Desktop Only */}
         <div className="hidden md:flex items-center space-x-1">
+          <Link
+            href="/"
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              isActive('/')
+                ? 'bg-primary/10 text-primary'
+                : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground'
+            }`}
+          >
+            <HomeIcon className="w-4 h-4" />
+            Home
+          </Link>
+
           <Link
             href="/events"
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -127,15 +148,15 @@ export default function PublicHeader({
           </Link>
         </div>
 
-        {/* Right Side */}
-        <div className="flex items-center space-x-2">
+        {/* 🆕 Right Side - Updated Layout */}
+        <div className="flex items-center gap-2">
           {currentUser ? (
             <>
-              {/* Desktop User Menu */}
+              {/* Desktop User Menu Button */}
               <div className="hidden md:block relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center text-sm font-medium text-foreground/70 bg-foreground/5 px-3 py-1.5 rounded-lg hover:bg-foreground/10 transition-colors"
+                  className="flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                 >
                   <UserIcon className="w-4 h-4 mr-2" />
                   <span>{currentUser.name}</span>
@@ -160,9 +181,16 @@ export default function PublicHeader({
                       <p className="text-xs text-gray-500 truncate">
                         {currentUser.email}
                       </p>
-                      <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                        {currentUser.role === 'ADMIN' ? 'Admin' : 'Member'}
-                      </span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+                          {currentUser.role === 'ADMIN' ? 'Admin' : currentUser.isMember ? 'Member' : 'User'}
+                        </span>
+                        {currentUser.isMember && (
+                          <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                            ✓ Active
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Menu Items */}
@@ -230,13 +258,32 @@ export default function PublicHeader({
                           </p>
                         </div>
                       </div>
-                      <span className="inline-block mt-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                        {currentUser.role === 'ADMIN' ? 'Admin' : 'Member'}
-                      </span>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+                          {currentUser.role === 'ADMIN' ? 'Admin' : currentUser.isMember ? 'Member' : 'User'}
+                        </span>
+                        {currentUser.isMember && (
+                          <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                            ✓ Active
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Navigation Links */}
                     <div className="py-2">
+                      <Link
+                        href="/"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                          isActive('/')
+                            ? 'text-primary bg-primary/5'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <HomeIcon className="w-5 h-5" />
+                        Home
+                      </Link>
+
                       <Link
                         href="/events"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
@@ -297,20 +344,31 @@ export default function PublicHeader({
             </>
           ) : (
             <>
+              {/* 🆕 Become a Member Button - Desktop (Beside Login) */}
+              {shouldShowMembershipButton && (
+                <Link
+                  href="/member-registration"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm bg-linear-to-r from-primary to-orange-400 text-white hover:shadow-md hover:scale-105"
+                >
+                  <SparklesIcon className="w-4 h-4" />
+                  Be a KITA Member
+                </Link>
+              )}
+
               {/* Login Button */}
               <button
                 onClick={handleLoginClick}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-all"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-all"
               >
                 <UserIcon className="w-4 h-4" />
                 <span>Login</span>
               </button>
 
               {/* Mobile Menu Button for Non-logged in users */}
-              <div className="md:hidden relative" ref={mobileMenuRef}>
+              <div className="relative" ref={mobileMenuRef}>
                 <button
                   onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="p-2 rounded-lg hover:bg-foreground/5 transition-colors"
+                  className="p-2 rounded-lg hover:bg-foreground/5 transition-colors md:hidden"
                   aria-label="Toggle menu"
                 >
                   {showMobileMenu ? (
@@ -325,6 +383,18 @@ export default function PublicHeader({
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* Navigation Links */}
                     <div className="py-2">
+                      <Link
+                        href="/"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                          isActive('/')
+                            ? 'text-primary bg-primary/5'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <HomeIcon className="w-5 h-5" />
+                        Home
+                      </Link>
+
                       <Link
                         href="/events"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
@@ -347,6 +417,19 @@ export default function PublicHeader({
                       >
                         <PresentationChartBarIcon className="w-5 h-5" />
                         Meeting Rooms
+                      </Link>
+
+                      {/* 🆕 Become a Member for guests - Mobile */}
+                      <Link
+                        href="/member-registration"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${
+                          isActive('/member-registration')
+                            ? 'text-white bg-primary'
+                            : 'text-primary bg-primary/5 hover:bg-primary/10'
+                        }`}
+                      >
+                        <SparklesIcon className="w-5 h-5" />
+                        Be a KITA Member
                       </Link>
                     </div>
 

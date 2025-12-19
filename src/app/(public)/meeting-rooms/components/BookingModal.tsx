@@ -25,13 +25,16 @@ interface BookingModalProps {
 
 export type BookingFormData = {
   bookingDate: string;
-  selectedSlots: number[];
+  startTimeSlot: string;
+  durationHours: number;
   guestDetails: {
-    name: string;
-    email: string;
-    phone: string;
     company: string;
+    name: string;
+    designation: string;
+    email: string;
+    mobile: string;
     purpose: string;
+    numberOfAttendees: number;
   };
 };
 
@@ -45,13 +48,16 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
 
   const [formData, setFormData] = useState<BookingFormData>({
     bookingDate: '',
-    selectedSlots: [],
+    startTimeSlot: '',
+    durationHours: 1,
     guestDetails: {
-      name: currentUser?.name || '',
-      email: currentUser?.email || '',
-      phone: '',
       company: '',
-      purpose: '',
+      name: currentUser?.name || '',
+      designation: '',
+      email: currentUser?.email || '',
+      mobile: '',
+      purpose: 'MEETING',
+      numberOfAttendees: 1,
     },
   });
 
@@ -85,16 +91,25 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
       case 1:
         return formData.bookingDate !== '';
       case 2:
-        return formData.selectedSlots.length > 0;
+        return formData.startTimeSlot !== '' && formData.durationHours > 0;
       case 3:
         return (
           formData.guestDetails.name &&
           formData.guestDetails.email &&
-          formData.guestDetails.phone
+          formData.guestDetails.mobile &&
+          formData.guestDetails.purpose
         );
       default:
         return true;
     }
+  };
+
+  const calculateEndTime = (startTime: string, durationHours: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + durationHours * 60;
+    const endHours = Math.floor(totalMinutes / 60);
+    const endMinutes = totalMinutes % 60;
+    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,23 +119,22 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
     setIsSubmitting(true);
 
     try {
-      const startTime = `${String(Math.min(...formData.selectedSlots)).padStart(2, '0')}:00`;
-      const endTime = `${String(Math.max(...formData.selectedSlots) + 1).padStart(2, '0')}:00`;
-      const duration = formData.selectedSlots.length;
-      const totalAmount = room.hourlyRate * duration;
+      const endTime = calculateEndTime(formData.startTimeSlot, formData.durationHours);
+      const totalAmount = room.hourlyRate * formData.durationHours;
 
       const bookingData = {
         roomId: room.id,
         bookingDate: formData.bookingDate,
-        startTime,
+        startTime: formData.startTimeSlot,
         endTime,
-        duration,
-        numberOfAttendees: 1,
-        purpose: formData.guestDetails.purpose,
-        contactPerson: formData.guestDetails.name,
+        duration: formData.durationHours,
+        company: formData.guestDetails.company || undefined,
+        contactName: formData.guestDetails.name,
+        designation: formData.guestDetails.designation || undefined,
         contactEmail: formData.guestDetails.email,
-        contactPhone: formData.guestDetails.phone,
-        company: formData.guestDetails.company,
+        contactMobile: formData.guestDetails.mobile,
+        numberOfAttendees: formData.guestDetails.numberOfAttendees,
+        purpose: formData.guestDetails.purpose,
         status: 'PENDING' as BookingStatus,
         totalAmount,
         paymentMethod: 'CASH',
@@ -159,8 +173,8 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
         <SuccessStep
           room={room}
           bookingDate={formData.bookingDate}
-          startTime={`${String(Math.min(...formData.selectedSlots)).padStart(2, '0')}:00`}
-          endTime={`${String(Math.max(...formData.selectedSlots) + 1).padStart(2, '0')}:00`}
+          startTime={formData.startTimeSlot}
+          endTime={calculateEndTime(formData.startTimeSlot, formData.durationHours)}
           reference={bookingReference}
           onClose={handleSuccessClose}
         />
@@ -179,16 +193,23 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
         return (
           <TimeStep
             room={room}
-            selectedSlots={formData.selectedSlots}
             selectedDate={formData.bookingDate}
-            onSlotsChange={(slots) => setFormData({ ...formData, selectedSlots: slots })}
+            startTimeSlot={formData.startTimeSlot}
+            durationHours={formData.durationHours}
+            onTimeChange={(startTime, duration) => 
+              setFormData({ 
+                ...formData, 
+                startTimeSlot: startTime,
+                durationHours: duration 
+              })
+            }
           />
         );
       case 3:
         return (
           <DetailsStep
             room={room}
-            selectedSlots={formData.selectedSlots}
+            durationHours={formData.durationHours}
             bookingDate={formData.bookingDate}
             guestDetails={formData.guestDetails}
             onDetailsChange={(details) => setFormData({ ...formData, guestDetails: details })}
@@ -253,7 +274,9 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
         </>
       }
     >
-      <form className="p-6">
+      {/* 🆕 Removed scroll container and scroll indicator detection */}
+      <div className="p-6">
+        {/* Progress Indicator */}
         <div className="flex items-center space-x-1 mb-6">
           {[1, 2, 3].map((i) => (
             <div
@@ -266,7 +289,7 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
         </div>
 
         {renderStepContent()}
-      </form>
+      </div>
     </Modal>
   );
 }

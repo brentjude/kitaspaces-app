@@ -697,7 +697,12 @@ model MeetingRoomBooking {
   endTime     String        // "12:00"
   duration    Float         // Hours (e.g., 3.0)
   
-  // Attendees
+  // Attendees/Booking Details
+  company     String?
+  contactName String        // Name of person booking
+  designation String?       // Job title/position
+  contactEmail String?
+  contactMobile String?
   numberOfAttendees Int     @default(1)
   purpose     String?       @db.Text // Purpose of meeting
   
@@ -750,11 +755,15 @@ model CustomerMeetingRoomBooking {
   duration    Float         // Hours (e.g., 3.0)
   
   // Attendees
-  numberOfAttendees Int     @default(1)
-  purpose     String?       @db.Text // Purpose of meeting
-  contactPerson String      // Name of person booking
+  company       String?
+  contactPerson String      // Name of person booking (kept for backward compatibility)
+  contactName   String      // Same as contactPerson
+  designation   String?     // Job title/position
   contactEmail  String?
-  contactPhone  String?
+  contactPhone  String?     // Mobile number
+  contactMobile String?     // Alias for contactPhone
+  numberOfAttendees Int     @default(1)
+  purpose       String      // Purpose category (e.g., "MEETING", "TRAINING", "OTHER")
   
   // Status
   status      BookingStatus @default(PENDING)

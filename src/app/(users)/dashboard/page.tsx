@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { signOut } from "next-auth/react";
 import {
   DashboardData,
   UserEventRegistration,
@@ -11,18 +10,17 @@ import {
   RedemptionEvent,
   UserPerksData,
 } from "@/types/dashboard";
+import PublicHeader from "@/app/components/Header";
 import WelcomeSection from "./components/WelcomeSection";
 import MyTickets from "./components/MyTickets";
 import RedemptionEvents from "./components/RedemptionEvents";
 import RedemptionPerks from "./components/RedemptionPerks";
 import PastEvents from "./components/PastEvents";
 import {
-  ArrowLeftIcon,
   GiftIcon,
   TicketIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
-import Link from "next/link";
 
 type TabType = "redemptions" | "perks" | "tickets";
 
@@ -154,17 +152,15 @@ export default function UserDashboardPage() {
     alert(data.data.message || "Perk redeemed successfully!");
   };
 
-  const handleLogout = async () => {
-    await signOut({ redirect: false });
-    router.push("/");
-  };
-
   if (loading || status === "loading") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
-          <p className="mt-2 text-sm text-gray-600">Loading dashboard...</p>
+      <div className="min-h-screen bg-gray-50">
+        <PublicHeader currentUser={session?.user} />
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
+            <p className="mt-2 text-sm text-gray-600">Loading dashboard...</p>
+          </div>
         </div>
       </div>
     );
@@ -172,18 +168,21 @@ export default function UserDashboardPage() {
 
   if (error || !dashboardData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
-          <p className="text-gray-600 mb-6">
-            {error || "Failed to load dashboard"}
-          </p>
-          <button
-            onClick={() => router.push("/")}
-            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Return Home
-          </button>
+      <div className="min-h-screen bg-gray-50">
+        <PublicHeader currentUser={session?.user} />
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="text-center max-w-md">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
+            <p className="text-gray-600 mb-6">
+              {error || "Failed to load dashboard"}
+            </p>
+            <button
+              onClick={() => router.push("/")}
+              className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Return Home
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -212,34 +211,15 @@ export default function UserDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
-              K
-            </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900">
-              KITA Spaces
-            </span>
-          </Link>
-
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/"
-              className="text-sm text-gray-500 hover:text-gray-900 flex items-center"
-            >
-              <ArrowLeftIcon className="w-4 h-4 mr-1" /> Back to Home
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-900"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* 🆕 Use centralized Header component */}
+      <PublicHeader 
+        currentUser={{
+          name: session?.user?.name || '',
+          email: session?.user?.email || '',
+          role: session?.user?.role,
+          isMember: dashboardData?.isMember || false,
+        }} 
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">

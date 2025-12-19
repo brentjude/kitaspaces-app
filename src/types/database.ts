@@ -1018,11 +1018,16 @@ export type MeetingRoomBookingCreateInput = {
   userId: string;
   roomId: string;
   bookingDate: Date;
-  startTime: string; // "09:00"
-  endTime: string; // "12:00"
-  duration: number; // Hours
+  startTime: string; // "09:00" or "09:30"
+  endTime: string; // "12:00" or "12:30"
+  duration: number; // Hours (e.g., 1, 1.5, 2, 2.5)
+  company?: string;
+  contactName: string;
+  designation?: string;
+  contactEmail?: string;
+  contactMobile?: string;
   numberOfAttendees?: number;
-  purpose?: string;
+  purpose: string; // "MEETING", "TRAINING", "INTERVIEW", "WORKSHOP", "OTHER"
   status?: BookingStatus;
   totalAmount: number;
   paymentId?: string;
@@ -1062,14 +1067,18 @@ export type CustomerMeetingRoomBookingCreateInput = {
   customerId: string;
   roomId: string;
   bookingDate: Date;
-  startTime: string; // "09:00"
-  endTime: string; // "12:00"
-  duration: number; // Hours
-  numberOfAttendees?: number;
-  purpose?: string;
+  startTime: string; // "09:00" or "09:30"
+  endTime: string; // "12:00" or "12:30"
+  duration: number; // Hours (e.g., 1, 1.5, 2, 2.5)
+  company?: string;
   contactPerson: string;
+  contactName: string; // Same as contactPerson
+  designation?: string;
   contactEmail?: string;
   contactPhone?: string;
+  contactMobile?: string;
+  numberOfAttendees?: number;
+  purpose: string; // "MEETING", "TRAINING", "INTERVIEW", "WORKSHOP", "OTHER"
   status?: BookingStatus;
   totalAmount: number;
   paymentId?: string;

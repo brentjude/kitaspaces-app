@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 
-export type ReferenceType = 'event' | 'membership' | 'meeting-room';
+export type ReferenceType = 'event' | 'membership' | 'meeting-room' | 'room'; // 🔧 Add 'room' as alias
 
 /**
  * Generate payment reference number
@@ -25,9 +25,12 @@ export async function generatePaymentReference(type: ReferenceType): Promise<str
       digits = 4;
       break;
     case 'meeting-room':
+    case 'room': // 🔧 Handle both 'meeting-room' and 'room'
       prefix = 'mrb_kita';
       digits = 3;
       break;
+    default:
+      throw new Error(`Invalid reference type: ${type}`);
   }
 
   const searchPrefix = `${prefix}${year}_`;
