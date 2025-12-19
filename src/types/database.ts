@@ -760,22 +760,40 @@ export type EventFreebieUpdateInput = Partial<
   Omit<EventFreebieCreateInput, "eventId">
 >;
 
-// ============================================
+//// ============================================
 // EVENT TYPES
 // ============================================
 
-export type Event = PrismaEvent;
+export type Event = PrismaEvent & {
+  // 🆕 NEW: Add discount and customer freebies fields
+  memberDiscount?: number | null;
+  memberDiscountType?: "FIXED" | "PERCENTAGE" | null;
+  memberDiscountedPrice?: number | null;
+  hasCustomerFreebies?: boolean;
+};
 
 export type EventWithCategory = PrismaEvent & {
   category?: EventCategory | null;
+  memberDiscount?: number | null;
+  memberDiscountType?: "FIXED" | "PERCENTAGE" | null;
+  memberDiscountedPrice?: number | null;
+  hasCustomerFreebies?: boolean;
 };
 
 export type EventWithFreebies = PrismaEvent & {
   freebies: EventFreebie[];
+  memberDiscount?: number | null;
+  memberDiscountType?: "FIXED" | "PERCENTAGE" | null;
+  memberDiscountedPrice?: number | null;
+  hasCustomerFreebies?: boolean;
 };
 
 export type EventWithRegistrations = PrismaEvent & {
   registrations: EventRegistration[];
+  memberDiscount?: number | null;
+  memberDiscountType?: "FIXED" | "PERCENTAGE" | null;
+  memberDiscountedPrice?: number | null;
+  hasCustomerFreebies?: boolean;
 };
 
 export type EventWithRelations = PrismaEvent & {
@@ -783,6 +801,10 @@ export type EventWithRelations = PrismaEvent & {
   registrations?: EventRegistration[];
   customerRegistrations?: CustomerEventRegistration[];
   freebies?: EventFreebie[];
+  memberDiscount?: number | null;
+  memberDiscountType?: "FIXED" | "PERCENTAGE" | null;
+  memberDiscountedPrice?: number | null;
+  hasCustomerFreebies?: boolean;
 };
 
 export type EventCreateInput = {
@@ -796,11 +818,16 @@ export type EventCreateInput = {
   isFree?: boolean;
   isMemberOnly?: boolean;
   isFreeForMembers?: boolean;
-  categoryId?: string; // Added
+  categoryId?: string;
   isRedemptionEvent?: boolean;
   redemptionLimit?: number;
   maxAttendees?: number;
   imageUrl?: string;
+  // 🆕 NEW: Add discount and customer freebies fields
+  memberDiscount?: number;
+  memberDiscountType?: "FIXED" | "PERCENTAGE";
+  memberDiscountedPrice?: number;
+  hasCustomerFreebies?: boolean;
 };
 
 export type EventUpdateInput = Partial<EventCreateInput>;
@@ -810,7 +837,7 @@ export type EventFilters = {
   isFree?: boolean;
   isMemberOnly?: boolean;
   isRedemptionEvent?: boolean;
-  categoryId?: string; // Added
+  categoryId?: string;
   dateFrom?: Date;
   dateTo?: Date;
   search?: string; // Search by title

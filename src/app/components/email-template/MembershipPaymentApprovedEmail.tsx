@@ -13,6 +13,13 @@ import {
   Img,
 } from '@react-email/components';
 
+interface MembershipBenefit {
+  name: string;
+  description: string;
+  quantity: number;
+  unit: string;
+}
+
 interface MembershipPaymentApprovedEmailProps {
   name: string;
   planName: string;
@@ -20,6 +27,7 @@ interface MembershipPaymentApprovedEmailProps {
   paymentReference: string;
   startDate: string;
   endDate: string;
+  benefits: MembershipBenefit[]; // 🆕 NEW: Dynamic benefits list
 }
 
 export function MembershipPaymentApprovedEmail({
@@ -29,6 +37,7 @@ export function MembershipPaymentApprovedEmail({
   paymentReference,
   startDate,
   endDate,
+  benefits,
 }: MembershipPaymentApprovedEmailProps) {
   return (
     <Html>
@@ -101,32 +110,38 @@ export function MembershipPaymentApprovedEmail({
               </table>
             </Section>
 
-            {/* Benefits */}
-            <Section style={benefitsSection}>
-              <Text style={sectionTitle}>Your Membership Benefits:</Text>
-              <table style={benefitsList}>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>1 free Matcha/Coffee first Monday of the Month</td>
-                </tr>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>Free access to all weekly events (trivia, mixers)</td>
-                </tr>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>4-hour meeting room (6 pax) FREE per month</td>
-                </tr>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>Members-only Discord/Telegram group/ Viber</td>
-                </tr>
-                <tr>
-                  <td style={bulletCell}>✓</td>
-                  <td style={benefitText}>“Founding 25” badge</td>
-                </tr>
-              </table>
-            </Section>
+            {/* 🆕 UPDATED: Dynamic Benefits Section */}
+            {benefits && benefits.length > 0 && (
+              <Section style={benefitsSection}>
+                <Text style={sectionTitle}>Your Membership Benefits:</Text>
+                <table style={benefitsList}>
+                  {benefits.map((benefit, index) => (
+                    <tr key={index}>
+                      <td style={bulletCell}>✓</td>
+                      <td style={benefitText}>
+                        <strong>
+                          {benefit.quantity > 0 && `${benefit.quantity} `}
+                          {benefit.name}
+                        </strong>
+                        {benefit.description && (
+                          <>
+                            <br />
+                            <span style={benefitDescription}>{benefit.description}</span>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </table>
+                
+                {/* Note about perk usage */}
+                <Section style={noteBox}>
+                  <Text style={noteText}>
+                    💡 <strong>Tip:</strong> Track your perk usage and remaining balance in your Member Dashboard.
+                  </Text>
+                </Section>
+              </Section>
+            )}
 
             {/* CTA Button */}
             <Section style={ctaSection}>
@@ -289,6 +304,29 @@ const benefitText = {
   fontSize: '16px',
   lineHeight: '24px',
   padding: '6px 0',
+};
+
+// 🆕 NEW: Style for benefit description
+const benefitDescription = {
+  color: '#6b7280',
+  fontSize: '14px',
+  fontWeight: 'normal' as const,
+};
+
+// 🆕 NEW: Style for note box
+const noteBox = {
+  backgroundColor: '#fff7ed',
+  border: '1px solid #fed7aa',
+  borderRadius: '8px',
+  padding: '16px',
+  margin: '16px 0 0 0',
+};
+
+const noteText = {
+  color: '#92400e',
+  fontSize: '14px',
+  lineHeight: '20px',
+  margin: '0',
 };
 
 const ctaSection = {
