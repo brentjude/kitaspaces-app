@@ -5,11 +5,18 @@ import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import MeetingRoomsList from './components/MeetingRoomsList';
 import { MeetingRoom } from '@/types/database';
+import { 
+  PresentationChartBarIcon, 
+  CalendarIcon,
+  CalendarDaysIcon
+} from '@heroicons/react/24/outline';
+import Link from 'next/link';
 
 export default function MeetingRoomsPage() {
   const { data: session, status } = useSession();
   const [rooms, setRooms] = useState<MeetingRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'rooms' | 'bookings'>('rooms');
 
   // Protect route
   if (status === 'unauthenticated' || (status === 'authenticated' && session?.user?.role !== 'ADMIN')) {
@@ -46,15 +53,91 @@ export default function MeetingRoomsPage() {
     );
   }
 
+  const tabs = [
+    {
+      id: 'rooms' as const,
+      label: 'Rooms',
+      icon: <PresentationChartBarIcon className="w-5 h-5" />,
+      count: rooms.length,
+    },
+    {
+      id: 'bookings' as const,
+      label: 'Bookings',
+      icon: <CalendarIcon className="w-5 h-5" />,
+      count: 0, // Will be updated by MeetingRoomsList
+    },
+    {
+      id: 'calendar' as const,
+      label: 'Calendar View',
+      icon: <CalendarDaysIcon className="w-5 h-5" />,
+      isLink: true,
+      href: '/admin/calendar',
+    },
+  ];
+
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      
-      <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-8">
-        <MeetingRoomsList 
-          rooms={rooms}
-          onRoomsChange={fetchRooms}
-        />
-      </main>
+    <div className="min-h-screen bg-background">
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="space-y-6">
+          {/* Header */}
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Meeting Room Management</h2>
+            <p className="text-foreground/60 text-sm mt-1">
+              Manage bookable spaces and view customer reservations.
+            </p>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-foreground/10">
+            {tabs.map((tab) => {
+              if (tab.isLink && tab.href) {
+                return (
+                  <Link
+                    key={tab.id}
+                    href={tab.href}
+                    className="px-6 py-3 text-sm font-medium transition-all text-foreground/60 hover:text-foreground"
+                  >
+                    <div className="flex items-center gap-2">
+                      {tab.icon}
+                      <span>{tab.label}</span>
+                    </div>
+                  </Link>
+                );
+              }
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-6 py-3 text-sm font-medium transition-all relative ${
+                    activeTab === tab.id
+                      ? 'text-primary'
+                      : 'text-foreground/60 hover:text-foreground'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {tab.icon}
+                    <span>
+                      {tab.label} {tab.count !== undefined && `(${tab.count})`}
+                    </span>
+                  </div>
+                  {activeTab === tab.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full"></div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Content */}
+          <MeetingRoomsList 
+            rooms={rooms}
+            onRoomsChange={fetchRooms}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+        </div>
+      </div>
     </div>
   );
 }
