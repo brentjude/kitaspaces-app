@@ -210,7 +210,7 @@ export default function MeetingRoomsList({
                       <h3 className="font-bold text-lg text-foreground leading-tight">
                         {room.name}
                       </h3>
-                      <div className="text-right flex-shrink-0 ml-4">
+                      <div className="text-right shrink-0 ml-4">
                         <div className="text-xl font-bold text-primary">
                           ₱{room.hourlyRate}
                         </div>

@@ -1,16 +1,17 @@
 'use client';
 
-import { MeetingRoom } from '@/types/database';
-import {
-  UserIcon,
-  EnvelopeIcon,
-  PhoneIcon,
+import { useState } from 'react';
+import { 
+  UserIcon, 
+  EnvelopeIcon, 
+  PhoneIcon, 
   BuildingOfficeIcon,
   BriefcaseIcon,
   UsersIcon,
+  DocumentTextIcon,
   ChatBubbleLeftRightIcon,
-  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
+import type { MeetingRoom } from '@/types/database';
 
 interface DetailsStepProps {
   room: MeetingRoom;
@@ -25,7 +26,9 @@ interface DetailsStepProps {
     purpose: string;
     numberOfAttendees: number;
   };
+  agreedToTerms: boolean;
   onDetailsChange: (details: DetailsStepProps['guestDetails']) => void;
+  onTermsChange: (agreed: boolean) => void;
   isLoggedIn: boolean;
 }
 
@@ -47,7 +50,9 @@ export default function DetailsStep({
   durationHours,
   bookingDate,
   guestDetails,
+  agreedToTerms,
   onDetailsChange,
+  onTermsChange,
   isLoggedIn,
 }: DetailsStepProps) {
   const handleInputChange = (field: keyof typeof guestDetails, value: string | number) => {
@@ -65,7 +70,7 @@ export default function DetailsStep({
     return `${Math.floor(hours)} hour${Math.floor(hours) > 1 ? 's' : ''} 30 mins`;
   };
 
-  // 🆕 Generate attendee options based on room capacity
+  // Generate attendee options based on room capacity
   const getAttendeeOptions = (): number[] => {
     const options: number[] = [];
     for (let i = 1; i <= room.capacity; i++) {
@@ -199,7 +204,7 @@ export default function DetailsStep({
           </select>
         </div>
 
-        {/* 🆕 Number of Attendees - Dropdown */}
+        {/* Number of Attendees - Dropdown */}
         <div>
           <label className="block text-sm font-medium text-foreground/70 mb-2">
             <div className="flex items-center gap-2">
@@ -278,25 +283,54 @@ export default function DetailsStep({
         </div>
       </div>
 
-      {/* Note */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <p className="text-xs text-blue-800 flex items-start gap-2">
-          <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-          </svg>
-          <span>
-            <span className="font-semibold">Note:</span> Your booking will be confirmed once payment is received. 
-            You will receive a confirmation email with payment instructions.
+      {/* Terms and Conditions */}
+      <div className="border rounded-lg p-4 bg-gray-50 border-foreground/20">
+        <h3 className="text-sm font-bold text-foreground mb-3 flex items-center">
+          <DocumentTextIcon className="w-4 h-4 mr-2 text-primary" />
+          Terms & Conditions
+        </h3>
+
+        <div className="space-y-2 mb-4">
+          <div className="flex items-start gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <p className="text-xs text-foreground/70">
+              <span className="font-semibold">Final Booking:</span> Your booking is final upon confirmation
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <p className="text-xs text-foreground/70">
+              <span className="font-semibold">Cancellation Policy:</span> Cancellations should be made at least 2 days in advance
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <p className="text-xs text-foreground/70">
+              <span className="font-semibold">Changes:</span> Any changes to your booking must be communicated with our staff
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <p className="text-xs text-foreground/70">
+              <span className="font-semibold">Payment:</span> Payment can be made before or after your booked session
+            </p>
+          </div>
+        </div>
+
+        {/* Checkbox */}
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={agreedToTerms}
+            onChange={(e) => onTermsChange(e.target.checked)}
+            className="w-4 h-4 mt-0.5 text-primary border-foreground/30 rounded focus:ring-2 focus:ring-primary/20 cursor-pointer"
+          />
+          <span className="text-sm font-medium text-foreground select-none">
+            I agree to these terms and conditions
           </span>
-        </p>
+        </label>
       </div>
 
-      {/* 🆕 Static Scroll Down Indicator */}
-      <div className="flex justify-center pt-2">
-        <div className="animate-bounce bg-primary/10 rounded-full p-2 shadow-sm">
-          <ChevronDownIcon className="w-5 h-5 text-primary" />
-        </div>
-      </div>
     </div>
   );
 }

@@ -208,35 +208,26 @@ export default function EventCard({ event, onClick }: EventCardProps) {
               <span className="text-lg font-bold text-green-600">Free</span>
             ) : (
               <div className="flex flex-col items-end">
-                {/* 🆕 Show member discount info */}
-                {hasMemberDiscount && memberPrice !== null ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-foreground/50 line-through">
-                        ₱{event.price.toFixed(2)}
-                      </span>
-                      <span className="text-lg font-bold text-primary">
-                        ₱{event.price.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full mt-1">
-                      <ShieldCheckIcon className="w-3 h-3 text-blue-600" />
-                      <span className="text-[10px] text-blue-700 font-semibold">
-                        ₱{memberPrice.toFixed(2)} for members
-                      </span>
-                      <span className="text-[9px] text-blue-600 font-medium">
-                        (
-                        {event.memberDiscountType === "PERCENTAGE"
-                          ? `${event.memberDiscount}% off`
-                          : `₱${event.memberDiscount} off`}
-                        )
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-lg font-bold text-primary">
-                    ₱{event.price.toFixed(2)}
-                  </span>
+                {/* Regular price - no strikethrough */}
+                <span className="text-lg font-bold text-primary">
+                  ₱{event.price.toFixed(2)}
+                </span>
+
+                {/* Member discount badge */}
+                {hasMemberDiscount && memberPrice !== null && (
+                  <div className="flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full mt-1">
+                    <ShieldCheckIcon className="w-3 h-3 text-blue-600" />
+                    <span className="text-[10px] text-blue-700 font-semibold">
+                      ₱{memberPrice.toFixed(2)} for members
+                    </span>
+                    <span className="text-[9px] text-blue-600 font-medium">
+                      (
+                      {event.memberDiscountType === "PERCENTAGE"
+                        ? `${event.memberDiscount}% off`
+                        : `₱${event.memberDiscount} off`}
+                      )
+                    </span>
+                  </div>
                 )}
               </div>
             )}

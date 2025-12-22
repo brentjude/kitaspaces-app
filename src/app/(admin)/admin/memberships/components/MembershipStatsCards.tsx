@@ -21,7 +21,7 @@ interface MembershipStatsCardsProps {
   members: MemberWithDetails[];
 }
 
-// ✅ Use default export
+// Use default export
 export default function MembershipStatsCards({
   members,
 }: MembershipStatsCardsProps) {

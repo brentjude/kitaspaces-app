@@ -36,6 +36,7 @@ export type BookingFormData = {
     purpose: string;
     numberOfAttendees: number;
   };
+  agreedToTerms: boolean;
 };
 
 export default function BookingModal({ room, currentUser, onClose, onSuccess }: BookingModalProps) {
@@ -59,6 +60,7 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
       purpose: 'MEETING',
       numberOfAttendees: 1,
     },
+    agreedToTerms: false,
   });
 
   useEffect(() => {
@@ -97,7 +99,8 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
           formData.guestDetails.name &&
           formData.guestDetails.email &&
           formData.guestDetails.mobile &&
-          formData.guestDetails.purpose
+          formData.guestDetails.purpose &&
+          formData.agreedToTerms
         );
       default:
         return true;
@@ -212,7 +215,9 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
             durationHours={formData.durationHours}
             bookingDate={formData.bookingDate}
             guestDetails={formData.guestDetails}
+            agreedToTerms={formData.agreedToTerms}
             onDetailsChange={(details) => setFormData({ ...formData, guestDetails: details })}
+            onTermsChange={(agreed) => setFormData({ ...formData, agreedToTerms: agreed })}
             isLoggedIn={isLoggedIn}
           />
         );
@@ -274,7 +279,6 @@ export default function BookingModal({ room, currentUser, onClose, onSuccess }: 
         </>
       }
     >
-      {/* 🆕 Removed scroll container and scroll indicator detection */}
       <div className="p-6">
         {/* Progress Indicator */}
         <div className="flex items-center space-x-1 mb-6">
