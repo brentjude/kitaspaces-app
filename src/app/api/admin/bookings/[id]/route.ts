@@ -2,6 +2,152 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { BookingStatus } from "@/generated/prisma";
+import { Resend } from "resend";
+import MeetingRoomBookingEmail from "@/app/components/email-template/MeetingRoomBookingEmail";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: bookingId } = await context.params;
+    const { status, type } = await request.json();
+
+    // Validate status
+    if (!Object.values(BookingStatus).includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    // Determine if this is a user or customer booking
+    const isUserBooking = type === "user";
+
+    if (isUserBooking) {
+      // Update user booking
+      const booking = await prisma.meetingRoomBooking.update({
+        where: { id: bookingId },
+        data: { status },
+        include: {
+          room: true,
+          user: true,
+          payment: true,
+        },
+      });
+
+      // Send email notification
+      try {
+        const statusMessages = {
+          CONFIRMED: "Your booking has been confirmed!",
+          CANCELLED: "Your booking has been cancelled.",
+          COMPLETED: "Your booking has been completed. Thank you!",
+          NO_SHOW: "You did not show up for your booking.",
+        };
+
+        const duration = `${booking.duration} ${booking.duration === 1 ? "hour" : "hours"}`;
+
+        await resend.emails.send({
+          from: "KITA Spaces <noreply@notifications.kitaspaces.com>",
+          to: booking.contactEmail || booking.user.email,
+          subject: `Booking ${status} - ${booking.room.name}`,
+          react: MeetingRoomBookingEmail({
+            customerName: booking.contactName,
+            roomName: booking.room.name,
+            bookingDate: new Date(booking.bookingDate).toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            }),
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            duration,
+            totalAmount: booking.totalAmount,
+            paymentReference: booking.payment?.paymentReference || "N/A",
+            paymentMethod: booking.payment?.paymentMethod || "CASH",
+            status: booking.status,
+            company: booking.company || undefined,
+            designation: booking.designation || undefined,
+            purpose: booking.purpose || "Meeting",
+            numberOfAttendees: booking.numberOfAttendees,
+          }),
+        });
+      } catch (emailError) {
+        console.error("Error sending email:", emailError);
+        // Don't fail the request if email fails
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: booking,
+        message: "Booking status updated successfully",
+      });
+    } else {
+      // Update customer booking
+      const booking = await prisma.customerMeetingRoomBooking.update({
+        where: { id: bookingId },
+        data: { status },
+        include: {
+          room: true,
+          customer: true,
+          payment: true,
+        },
+      });
+
+      // Send email notification
+      try {
+        const duration = `${booking.duration} ${booking.duration === 1 ? "hour" : "hours"}`;
+
+        await resend.emails.send({
+          from: "KITA Spaces <noreply@notifications.kitaspaces.com>",
+          to: booking.contactEmail || booking.customer.email || "",
+          subject: `Booking ${status} - ${booking.room.name}`,
+          react: MeetingRoomBookingEmail({
+            customerName: booking.contactName,
+            roomName: booking.room.name,
+            bookingDate: new Date(booking.bookingDate).toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            }),
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            duration,
+            totalAmount: booking.totalAmount,
+            paymentReference: booking.payment?.paymentReference || "N/A",
+            paymentMethod: booking.payment?.paymentMethod || "CASH",
+            status: booking.status,
+            company: booking.company || undefined,
+            designation: booking.designation || undefined,
+            purpose: booking.purpose || "Meeting",
+            numberOfAttendees: booking.numberOfAttendees,
+          }),
+        });
+      } catch (emailError) {
+        console.error("Error sending email:", emailError);
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: booking,
+        message: "Booking status updated successfully",
+      });
+    }
+  } catch (error) {
+    console.error("Error updating booking status:", error);
+    return NextResponse.json(
+      { error: "Failed to update booking status" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function GET(
   request: NextRequest,
@@ -9,138 +155,49 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id: bookingId } = await context.params;
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type");
 
-    // Try to find user booking first
-    const userBooking = await prisma.meetingRoomBooking.findUnique({
-      where: { id: bookingId },
-      include: {
-        room: true,
-        user: {
-          select: {
-            name: true,
-            email: true,
-            contactNumber: true,
-            isMember: true,
-          },
-        },
-      },
-    });
-
-    if (userBooking) {
-      // Parse amenities from JSON string to array
-      let amenities: string[] = [];
-      try {
-        amenities = userBooking.room.amenities
-          ? JSON.parse(userBooking.room.amenities as string)
-          : [];
-      } catch (e) {
-        console.error("Error parsing amenities:", e);
-        amenities = [];
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          id: userBooking.id,
-          bookingDate: userBooking.bookingDate,
-          startTime: userBooking.startTime,
-          endTime: userBooking.endTime,
-          numberOfAttendees: userBooking.numberOfAttendees,
-          purpose: userBooking.purpose,
-          status: userBooking.status,
-          createdAt: userBooking.createdAt,
-          room: {
-            name: userBooking.room.name,
-            capacity: userBooking.room.capacity,
-            location: userBooking.room.roomNumber || null, // Use roomNumber as location fallback
-            amenities,
-          },
-          user: {
-            name: userBooking.user.name,
-            email: userBooking.user.email,
-            contactNumber: userBooking.user.contactNumber,
-            isMember: userBooking.user.isMember,
-          },
-          bookingType: "user",
+    if (type === "user") {
+      const booking = await prisma.meetingRoomBooking.findUnique({
+        where: { id: bookingId },
+        include: {
+          room: true,
+          user: true,
+          payment: true,
         },
       });
-    }
 
-    // If not found, try customer booking
-    const customerBooking = await prisma.customerMeetingRoomBooking.findUnique({
-      where: { id: bookingId },
-      include: {
-        room: true,
-        customer: {
-          select: {
-            name: true,
-            email: true,
-            contactNumber: true,
-          },
-        },
-      },
-    });
-
-    if (customerBooking) {
-      // Parse amenities from JSON string to array
-      let amenities: string[] = [];
-      try {
-        amenities = customerBooking.room.amenities
-          ? JSON.parse(customerBooking.room.amenities as string)
-          : [];
-      } catch (e) {
-        console.error("Error parsing amenities:", e);
-        amenities = [];
+      if (!booking) {
+        return NextResponse.json({ error: "Booking not found" }, { status: 404 });
       }
 
-      return NextResponse.json({
-        success: true,
-        data: {
-          id: customerBooking.id,
-          bookingDate: customerBooking.bookingDate,
-          startTime: customerBooking.startTime,
-          endTime: customerBooking.endTime,
-          numberOfAttendees: customerBooking.numberOfAttendees,
-          purpose: customerBooking.purpose,
-          status: customerBooking.status,
-          createdAt: customerBooking.createdAt,
-          room: {
-            name: customerBooking.room.name,
-            capacity: customerBooking.room.capacity,
-            location: customerBooking.room.roomNumber || null, // Use roomNumber as location fallback
-            amenities,
-          },
-          customer: {
-            name: customerBooking.customer.name,
-            email: customerBooking.customer.email,
-            contactNumber: customerBooking.customer.contactNumber,
-          },
-          bookingType: "customer",
+      return NextResponse.json({ success: true, data: { ...booking, type: "user" } });
+    } else {
+      const booking = await prisma.customerMeetingRoomBooking.findUnique({
+        where: { id: bookingId },
+        include: {
+          room: true,
+          customer: true,
+          payment: true,
         },
       });
-    }
 
-    return NextResponse.json(
-      { success: false, error: "Booking not found" },
-      { status: 404 }
-    );
+      if (!booking) {
+        return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, data: { ...booking, type: "customer" } });
+    }
   } catch (error) {
-    console.error("Booking fetch error:", error);
+    console.error("Error fetching booking:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch booking details",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: "Failed to fetch booking" },
       { status: 500 }
     );
   }

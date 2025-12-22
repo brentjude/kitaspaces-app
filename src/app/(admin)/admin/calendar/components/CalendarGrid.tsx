@@ -107,7 +107,7 @@ export default function CalendarGrid({ currentDate, events }: CalendarGridProps)
                   >
                     <div className="flex items-center justify-between gap-1 mb-1">
                       <span className="truncate flex-1">{event.title}</span>
-                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <div className="flex items-center gap-0.5 shrink-0">
                         {event.isMemberOnly && (
                           <ShieldCheckIcon className="w-3 h-3" />
                         )}

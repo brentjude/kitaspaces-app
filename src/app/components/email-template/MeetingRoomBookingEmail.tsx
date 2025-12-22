@@ -19,7 +19,7 @@ interface MeetingRoomBookingEmailProps {
   bookingDate: string;
   startTime: string;
   endTime: string;
-  duration: string; // ✅ Add this line
+  duration: string;
   totalAmount: number;
   paymentReference: string;
   paymentMethod: string;
@@ -47,12 +47,51 @@ export default function MeetingRoomBookingEmail({
   numberOfAttendees,
 }: MeetingRoomBookingEmailProps) {
   const isPending = status === 'PENDING';
+  const isConfirmed = status === 'CONFIRMED';
+  const isCompleted = status === 'COMPLETED';
+  const isCancelled = status === 'CANCELLED';
+  const isNoShow = status === 'NO_SHOW';
+
+  // Status-specific messages
+  const getStatusMessage = () => {
+    switch (status) {
+      case 'PENDING':
+        return 'Your meeting room booking has been received and is awaiting staff verification.';
+      case 'CONFIRMED':
+        return 'Great news! Your booking has been confirmed by our staff.';
+      case 'COMPLETED':
+        return 'Thank you for using our meeting room. Your booking has been completed.';
+      case 'CANCELLED':
+        return 'Your booking has been cancelled.';
+      case 'NO_SHOW':
+        return 'We noticed you did not show up for your scheduled booking.';
+      default:
+        return 'Your booking status has been updated.';
+    }
+  };
+
+  const getStatusEmoji = () => {
+    switch (status) {
+      case 'PENDING':
+        return '⏳';
+      case 'CONFIRMED':
+        return '✅';
+      case 'COMPLETED':
+        return '🎉';
+      case 'CANCELLED':
+        return '❌';
+      case 'NO_SHOW':
+        return '⚠️';
+      default:
+        return '📋';
+    }
+  };
 
   return (
     <Html>
       <Head />
       <Preview>
-        Meeting Room Booking {isPending ? 'Confirmation' : 'Update'} - {roomName}
+        Meeting Room Booking {status} - {roomName}
       </Preview>
       <Body style={main}>
         <Container style={container}>
@@ -70,12 +109,10 @@ export default function MeetingRoomBookingEmail({
           {/* Hero Section */}
           <Section style={heroSection}>
             <Heading style={h1}>
-              {isPending ? '📅 Booking Confirmed!' : '✅ Booking Update'}
+              {getStatusEmoji()} Booking {status}
             </Heading>
             <Text style={heroText}>
-              {isPending
-                ? 'Your meeting room booking has been received'
-                : 'Your booking status has been updated'}
+              {getStatusMessage()}
             </Text>
           </Section>
 
@@ -83,15 +120,45 @@ export default function MeetingRoomBookingEmail({
             <Text style={text}>Hi {customerName},</Text>
 
             <Text style={text}>
-              {isPending
-                ? `Thank you for booking ${roomName}. Your reservation is confirmed and awaiting payment verification.`
-                : `Your booking for ${roomName} has been updated.`}
+              {isConfirmed && (
+                <>
+                  Your booking for <strong>{roomName}</strong> has been reviewed and confirmed by our staff. 
+                  You're all set for your meeting!
+                </>
+              )}
+              {isPending && (
+                <>
+                  Thank you for booking <strong>{roomName}</strong>. Your reservation has been received 
+                  and is currently being reviewed by our staff. You will receive a confirmation email shortly.
+                </>
+              )}
+              {isCompleted && (
+                <>
+                  Thank you for choosing KITA Spaces! We hope your meeting in <strong>{roomName}</strong> was productive.
+                </>
+              )}
+              {isCancelled && (
+                <>
+                  Your booking for <strong>{roomName}</strong> has been cancelled. If this was a mistake, 
+                  please contact us immediately.
+                </>
+              )}
+              {isNoShow && (
+                <>
+                  We were expecting you at <strong>{roomName}</strong> but you didn't show up. 
+                  Please contact us if there was an issue.
+                </>
+              )}
             </Text>
 
             {/* Booking Details Box */}
             <Section style={bookingBox}>
               <Text style={bookingTitle}>📋 Booking Details</Text>
               <table style={infoTable}>
+                <tr>
+                  <td style={infoLabel}>Booking Status:</td>
+                  <td style={{...infoValue, ...statusBadge(status)}}>{status}</td>
+                </tr>
                 <tr>
                   <td style={infoLabel}>Room:</td>
                   <td style={infoValue}>{roomName}</td>
@@ -135,41 +202,33 @@ export default function MeetingRoomBookingEmail({
               </table>
             </Section>
 
-            {/* Payment Information */}
-            <Section style={paymentBox}>
-              <Text style={paymentTitle}>💳 Payment Information</Text>
-              <table style={infoTable}>
-                <tr>
-                  <td style={infoLabel}>Total Amount:</td>
-                  <td style={infoValue}>₱{totalAmount.toFixed(2)}</td>
-                </tr>
-                <tr>
-                  <td style={infoLabel}>Payment Method:</td>
-                  <td style={infoValue}>{paymentMethod}</td>
-                </tr>
-                <tr>
-                  <td style={infoLabel}>Reference Number:</td>
-                  <td style={infoValue}>{paymentReference}</td>
-                </tr>
-                <tr>
-                  <td style={infoLabel}>Status:</td>
-                  <td style={statusBadge(status)}>{status}</td>
-                </tr>
-              </table>
-            </Section>
-
-            {/* Payment Instructions (if pending) */}
+            {/* Status-specific instructions */}
             {isPending && (
               <Section style={instructionsBox}>
                 <Text style={instructionsTitle}>📝 Next Steps</Text>
                 <Text style={instructionsText}>
-                  1. Complete your payment using the provided payment method
+                  1. Your booking is being reviewed by our staff
                   <br />
                   2. Keep your payment reference number: <strong>{paymentReference}</strong>
                   <br />
-                  3. Your booking will be confirmed once payment is verified
+                  3. You will receive a confirmation email once verified
                   <br />
-                  4. You will receive a confirmation email upon verification
+                  4. Contact us if you need to make any changes
+                </Text>
+              </Section>
+            )}
+
+            {isConfirmed && (
+              <Section style={{...instructionsBox, backgroundColor: '#D1FAE5', border: '2px solid #86EFAC'}}>
+                <Text style={{...instructionsTitle, color: '#065F46'}}>✅ You're All Set!</Text>
+                <Text style={{...instructionsText, color: '#047857'}}>
+                  • Your booking has been <strong>confirmed by our staff</strong>
+                  <br />
+                  • Please arrive 5-10 minutes early for check-in
+                  <br />
+                  • Bring a valid ID for verification
+                  <br />
+                  • Contact us if you need to make changes
                 </Text>
               </Section>
             )}
@@ -224,9 +283,10 @@ export default function MeetingRoomBookingEmail({
 const statusBadge = (status: string) => {
   const baseStyle = {
     fontWeight: 'bold' as const,
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '14px',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    display: 'inline-block',
   };
 
   switch (status) {
@@ -253,6 +313,12 @@ const statusBadge = (status: string) => {
         ...baseStyle,
         backgroundColor: '#FEE2E2',
         color: '#991B1B',
+      };
+    case 'NO_SHOW':
+      return {
+        ...baseStyle,
+        backgroundColor: '#F3F4F6',
+        color: '#374151',
       };
     default:
       return {
@@ -354,7 +420,7 @@ const paymentTitle = {
 
 const instructionsBox = {
   backgroundColor: '#F3F4F6',
-  border: '1px solid #D1D5DB',
+  border: '2px solid #D1D5DB',
   borderRadius: '8px',
   padding: '24px',
   margin: '24px 0',

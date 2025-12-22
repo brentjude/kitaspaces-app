@@ -17,6 +17,7 @@ export default function MeetingRoomsPage() {
   const [rooms, setRooms] = useState<MeetingRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'rooms' | 'bookings'>('rooms');
+  const [bookingCount, setBookingCount] = useState(0);
 
   // Protect route
   if (status === 'unauthenticated' || (status === 'authenticated' && session?.user?.role !== 'ADMIN')) {
@@ -64,7 +65,7 @@ export default function MeetingRoomsPage() {
       id: 'bookings' as const,
       label: 'Bookings',
       icon: <CalendarIcon className="w-5 h-5" />,
-      count: 0, // Will be updated by MeetingRoomsList
+      count: bookingCount,
     },
     {
       id: 'calendar' as const,
@@ -118,7 +119,7 @@ export default function MeetingRoomsPage() {
                   <div className="flex items-center gap-2">
                     {tab.icon}
                     <span>
-                      {tab.label} {tab.count !== undefined && `(${tab.count})`}
+                      {tab.label} ({tab.count})
                     </span>
                   </div>
                   {activeTab === tab.id && (
@@ -135,6 +136,7 @@ export default function MeetingRoomsPage() {
             onRoomsChange={fetchRooms}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            onBookingCountChange={setBookingCount}
           />
         </div>
       </div>

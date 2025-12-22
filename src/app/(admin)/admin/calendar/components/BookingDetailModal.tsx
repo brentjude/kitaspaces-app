@@ -1,297 +1,321 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import Modal from "@/app/components/Modal";
-import { CalendarItem } from "@/types/database";
-import { format } from "date-fns";
+import Modal from '@/app/components/Modal';
 import {
+  CalendarIcon,
   ClockIcon,
-  MapPinIcon,
   UserIcon,
   EnvelopeIcon,
   PhoneIcon,
+  MapPinIcon,
   UsersIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon as PendingIcon,
-} from "@heroicons/react/24/outline";
+  BanknotesIcon,
+} from '@heroicons/react/24/outline';
+
+interface BookingDetails {
+  id: string;
+  type: 'meeting_room';
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  room: {
+    id: string;
+    name: string;
+    capacity: number;
+    hourlyRate: number;
+    floor?: string | null;
+    roomNumber?: string | null;
+    amenities?: string | null; // ✅ This is a JSON string, not an array
+  };
+  contactName: string;
+  contactEmail?: string | null;
+  contactMobile?: string | null;
+  company?: string | null;
+  designation?: string | null;
+  numberOfAttendees: number;
+  purpose?: string | null;
+  totalAmount: number;
+  status: string;
+  bookingType: 'user' | 'customer';
+  paymentReference?: string | null;
+  paymentMethod?: string | null;
+}
 
 interface BookingDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  booking: CalendarItem;
-}
-
-interface BookingDetails {
-  id: string;
-  bookingDate: Date;
-  startTime: string;
-  endTime: string;
-  numberOfAttendees: number;
-  purpose: string | null;
-  status: string;
-  room: {
-    name: string;
-    capacity: number;
-    location: string | null;
-    amenities: string[];
-  };
-  user?: {
-    name: string;
-    email: string;
-    contactNumber: string | null;
-    isMember: boolean;
-  };
-  customer?: {
-    name: string;
-    email: string;
-    contactNumber: string | null;
-  };
-  createdAt: Date;
+  details: BookingDetails | null;
 }
 
 export default function BookingDetailModal({
   isOpen,
   onClose,
-  booking,
+  details,
 }: BookingDetailModalProps) {
-  const [details, setDetails] = useState<BookingDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  if (!details) return null;
 
-  useEffect(() => {
-    if (isOpen && booking.id) {
-      fetchBookingDetails();
-    }
-  }, [isOpen, booking.id]);
-
-  const fetchBookingDetails = async () => {
-    setLoading(true);
-    setError("");
+  // ✅ Parse amenities JSON string
+  const parseAmenities = (amenitiesString: string | null | undefined): string[] => {
+    if (!amenitiesString) return [];
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setDetails(data.data);
-      } else {
-        setError(data.error || "Failed to load booking details");
-      }
-    } catch (err) {
-      console.error("Error fetching booking details:", err);
-      setError("Failed to load booking details");
-    } finally {
-      setLoading(false);
+      const parsed = JSON.parse(amenitiesString);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
   };
 
+  const amenities = parseAmenities(details.room.amenities);
+
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<
-      string,
-      { color: string; icon: React.ReactNode; label: string }
-    > = {
-      CONFIRMED: {
-        color: "bg-green-100 text-green-800 border-green-200",
-        icon: <CheckCircleIcon className="w-4 h-4" />,
-        label: "Confirmed",
-      },
+    const badges = {
       PENDING: {
-        color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-        icon: <PendingIcon className="w-4 h-4" />,
-        label: "Pending",
+        bg: 'bg-yellow-100',
+        text: 'text-yellow-800',
+        border: 'border-yellow-200',
+      },
+      CONFIRMED: {
+        bg: 'bg-green-100',
+        text: 'text-green-800',
+        border: 'border-green-200',
+      },
+      COMPLETED: {
+        bg: 'bg-blue-100',
+        text: 'text-blue-800',
+        border: 'border-blue-200',
       },
       CANCELLED: {
-        color: "bg-red-100 text-red-800 border-red-200",
-        icon: <XCircleIcon className="w-4 h-4" />,
-        label: "Cancelled",
+        bg: 'bg-red-100',
+        text: 'text-red-800',
+        border: 'border-red-200',
+      },
+      NO_SHOW: {
+        bg: 'bg-gray-100',
+        text: 'text-gray-800',
+        border: 'border-gray-200',
       },
     };
 
-    const config = statusConfig[status] || statusConfig.PENDING;
+    const badge = badges[status as keyof typeof badges] || badges.PENDING;
 
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${config.color}`}
+        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.bg} ${badge.text} ${badge.border}`}
       >
-        {config.icon}
-        {config.label}
+        {status}
       </span>
     );
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Booking Details" size="lg">
-      <div className="p-6">
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
-            <p className="mt-2 text-sm text-foreground/60">
-              Loading booking details...
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Booking Details"
+      size="lg"
+    >
+      <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-foreground">{details.title}</h3>
+            <p className="text-sm text-foreground/60 mt-1">
+              Booking ID: {details.id}
             </p>
           </div>
-        ) : error ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-            <XCircleIcon className="w-5 h-5 shrink-0" />
-            {error}
+          {getStatusBadge(details.status)}
+        </div>
+
+        {/* Booking Type Badge */}
+        <div>
+          <span
+            className={`px-2 py-1 rounded text-xs font-medium ${
+              details.bookingType === 'user'
+                ? 'bg-primary/10 text-primary'
+                : 'bg-blue-100 text-blue-700'
+            }`}
+          >
+            {details.bookingType === 'user' ? 'USER BOOKING' : 'GUEST BOOKING'}
+          </span>
+        </div>
+
+        {/* Contact Information */}
+        <div className="bg-white rounded-lg p-4 border border-foreground/10">
+          <h4 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wide">
+            Contact Information
+          </h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-start">
+              <UserIcon className="w-4 h-4 mr-2 text-foreground/40 mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground">{details.contactName}</p>
+                {details.designation && (
+                  <p className="text-xs text-foreground/60">{details.designation}</p>
+                )}
+              </div>
+            </div>
+            {details.contactEmail && (
+              <div className="flex items-center">
+                <EnvelopeIcon className="w-4 h-4 mr-2 text-foreground/40" />
+                <p className="text-foreground/80">{details.contactEmail}</p>
+              </div>
+            )}
+            {details.contactMobile && (
+              <div className="flex items-center">
+                <PhoneIcon className="w-4 h-4 mr-2 text-foreground/40" />
+                <p className="text-foreground/80">{details.contactMobile}</p>
+              </div>
+            )}
+            {details.company && (
+              <div className="flex items-center">
+                <svg className="w-4 h-4 mr-2 text-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <p className="text-foreground/80">{details.company}</p>
+              </div>
+            )}
           </div>
-        ) : details ? (
-          <div className="space-y-6">
-            {/* Status */}
+        </div>
+
+        {/* Booking Schedule */}
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+          <h4 className="text-sm font-bold text-blue-900 mb-3 uppercase tracking-wide">
+            Booking Schedule
+          </h4>
+          <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">
-                {details.room.name}
-              </h3>
-              {getStatusBadge(details.status)}
+              <span className="text-blue-700 flex items-center">
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Date:
+              </span>
+              <span className="font-medium text-blue-900">{details.date}</span>
             </div>
-
-            {/* Date & Time */}
-            <div className="bg-primary/5 rounded-xl p-4 border border-primary/10">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <ClockIcon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-foreground/60 font-medium">
-                      Date
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {format(new Date(details.bookingDate), "MMMM d, yyyy")}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <ClockIcon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-foreground/60 font-medium">
-                      Time
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {details.startTime} - {details.endTime}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="text-blue-700 flex items-center">
+                <ClockIcon className="w-4 h-4 mr-2" />
+                Time:
+              </span>
+              <span className="font-medium text-blue-900">
+                {details.startTime} - {details.endTime}
+              </span>
             </div>
-
-            {/* Room Details */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-foreground">
-                Room Details
-              </h4>
-              <div className="bg-foreground/5 rounded-xl p-4 space-y-3">
-                {details.room.location && (
-                  <div className="flex items-center gap-3">
-                    <MapPinIcon className="w-5 h-5 text-foreground/40" />
-                    <div>
-                      <p className="text-xs text-foreground/60">Location</p>
-                      <p className="text-sm font-medium text-foreground">
-                        {details.room.location}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <UsersIcon className="w-5 h-5 text-foreground/40" />
-                  <div>
-                    <p className="text-xs text-foreground/60">Capacity</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {details.room.capacity} people (Booked for{" "}
-                      {details.numberOfAttendees})
-                    </p>
-                  </div>
-                </div>
-                {details.room.amenities.length > 0 && (
-                  <div>
-                    <p className="text-xs text-foreground/60 mb-2">Amenities</p>
-                    <div className="flex flex-wrap gap-2">
-                      {details.room.amenities.map((amenity, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 bg-white border border-foreground/10 rounded-md text-xs text-foreground"
-                        >
-                          {amenity}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="text-blue-700">Duration:</span>
+              <span className="font-medium text-blue-900">
+                {details.duration} {details.duration === 1 ? 'hour' : 'hours'}
+              </span>
             </div>
-
-            {/* Booker Information */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-foreground">
-                Booked By
-              </h4>
-              <div className="bg-foreground/5 rounded-xl p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <UserIcon className="w-5 h-5 text-foreground/40" />
-                  <div className="flex-1">
-                    <p className="text-xs text-foreground/60">Name</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-foreground">
-                        {details.user?.name || details.customer?.name}
-                      </p>
-                      {details.user?.isMember && (
-                        <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
-                          Member
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <EnvelopeIcon className="w-5 h-5 text-foreground/40" />
-                  <div>
-                    <p className="text-xs text-foreground/60">Email</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {details.user?.email || details.customer?.email}
-                    </p>
-                  </div>
-                </div>
-                {(details.user?.contactNumber ||
-                  details.customer?.contactNumber) && (
-                  <div className="flex items-center gap-3">
-                    <PhoneIcon className="w-5 h-5 text-foreground/40" />
-                    <div>
-                      <p className="text-xs text-foreground/60">
-                        Contact Number
-                      </p>
-                      <p className="text-sm font-medium text-foreground">
-                        {details.user?.contactNumber ||
-                          details.customer?.contactNumber}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="text-blue-700 flex items-center">
+                <UsersIcon className="w-4 h-4 mr-2" />
+                Attendees:
+              </span>
+              <span className="font-medium text-blue-900">
+                {details.numberOfAttendees}{' '}
+                {details.numberOfAttendees === 1 ? 'person' : 'people'}
+              </span>
             </div>
-
-            {/* Purpose */}
             {details.purpose && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-foreground">
-                  Purpose
-                </h4>
-                <div className="bg-foreground/5 rounded-xl p-4">
-                  <p className="text-sm text-foreground/70">
-                    {details.purpose}
-                  </p>
+              <div className="flex items-center justify-between">
+                <span className="text-blue-700">Purpose:</span>
+                <span className="font-medium text-blue-900">{details.purpose}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Room Details */}
+        <div className="bg-white rounded-lg p-4 border border-foreground/10">
+          <h4 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wide">
+            Room Details
+          </h4>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-foreground/60">Room Name:</span>
+              <span className="font-medium text-foreground">{details.room.name}</span>
+            </div>
+            {details.room.floor && (
+              <div className="flex items-center justify-between">
+                <span className="text-foreground/60 flex items-center">
+                  <MapPinIcon className="w-4 h-4 mr-2" />
+                  Floor:
+                </span>
+                <span className="font-medium text-foreground">{details.room.floor}</span>
+              </div>
+            )}
+            {details.room.roomNumber && (
+              <div className="flex items-center justify-between">
+                <span className="text-foreground/60">Room Number:</span>
+                <span className="font-medium text-foreground">
+                  {details.room.roomNumber}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-foreground/60">Capacity:</span>
+              <span className="font-medium text-foreground">
+                {details.room.capacity} people
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-foreground/60">Hourly Rate:</span>
+              <span className="font-medium text-foreground">
+                ₱{details.room.hourlyRate.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Amenities */}
+            {amenities.length > 0 && (
+              <div className="pt-2 border-t border-foreground/10">
+                <p className="text-xs text-foreground/60 mb-2">Amenities</p>
+                <div className="flex flex-wrap gap-2">
+                  {amenities.map((amenity, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-white border border-foreground/10 rounded-md text-xs text-foreground"
+                    >
+                      {amenity}
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
-
-            {/* Booking Info */}
-            <div className="pt-4 border-t border-foreground/10">
-              <p className="text-xs text-foreground/50">
-                Booked on {format(new Date(details.createdAt), "PPp")}
-              </p>
-            </div>
           </div>
-        ) : null}
+        </div>
+
+        {/* Payment Information */}
+        <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
+          <h4 className="text-sm font-bold text-orange-900 mb-3 uppercase tracking-wide flex items-center">
+            <BanknotesIcon className="w-4 h-4 mr-2" />
+            Payment Information
+          </h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-orange-700">Total Amount:</span>
+              <span className="font-bold text-xl text-orange-900">
+                ₱{details.totalAmount.toFixed(2)}
+              </span>
+            </div>
+            {details.paymentMethod && (
+              <div className="flex items-center justify-between pt-2 border-t border-orange-200">
+                <span className="text-orange-700">Payment Method:</span>
+                <span className="font-medium text-orange-900">
+                  {details.paymentMethod}
+                </span>
+              </div>
+            )}
+            {details.paymentReference && (
+              <div className="flex items-center justify-between">
+                <span className="text-orange-700">Reference:</span>
+                <span className="font-medium text-orange-900 font-mono text-xs">
+                  {details.paymentReference}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </Modal>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Modal from "@/app/components/Modal";
 import {
   CalendarIcon,
@@ -15,6 +16,7 @@ import {
   ClockIcon as ClockOutlineIcon,
 } from "@heroicons/react/24/outline";
 import type { MeetingRoomBookingWithRelations, CustomerMeetingRoomBookingWithRelations } from "@/types/database";
+import { BookingStatus } from "@/types/database";
 
 type CombinedBooking = 
   | (MeetingRoomBookingWithRelations & { type: 'user' })
@@ -24,14 +26,52 @@ interface BookingDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: CombinedBooking | null;
+  onRefresh?: () => void;
 }
 
 export default function BookingDetailsModal({
   isOpen,
   onClose,
   booking,
+  onRefresh,
 }: BookingDetailsModalProps) {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState("");
+
   if (!booking) return null;
+
+  const handleStatusUpdate = async (newStatus: BookingStatus) => {
+    if (!booking) return;
+
+    setIsUpdating(true);
+    setUpdateError("");
+
+    try {
+      const response = await fetch(`/api/admin/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          status: newStatus,
+          type: booking.type 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update booking status");
+      }
+
+      if (onRefresh) {
+        onRefresh();
+      }
+      onClose();
+    } catch (error) {
+      setUpdateError(error instanceof Error ? error.message : "Failed to update booking");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -114,6 +154,8 @@ export default function BookingDetailsModal({
   const company = booking.company;
   const designation = booking.designation;
 
+  const canUpdateStatus = booking.status !== "COMPLETED" && booking.status !== "CANCELLED";
+
   return (
     <Modal
       isOpen={isOpen}
@@ -121,15 +163,60 @@ export default function BookingDetailsModal({
       title="Booking Details"
       size="lg"
       footer={
-        <button
-          onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-foreground/60 hover:text-foreground transition-colors"
-        >
-          Close
-        </button>
+        <>
+          <button
+            onClick={onClose}
+            disabled={isUpdating}
+            className="px-4 py-2 text-sm font-medium text-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            Close
+          </button>
+          {canUpdateStatus && booking.status === "PENDING" && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleStatusUpdate("CANCELLED")}
+                disabled={isUpdating}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                Cancel Booking
+              </button>
+              <button
+                onClick={() => handleStatusUpdate("CONFIRMED")}
+                disabled={isUpdating}
+                className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                Confirm Booking
+              </button>
+            </div>
+          )}
+          {canUpdateStatus && booking.status === "CONFIRMED" && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleStatusUpdate("NO_SHOW")}
+                disabled={isUpdating}
+                className="px-4 py-2 bg-gray-600 text-white text-sm font-bold rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                Mark as No Show
+              </button>
+              <button
+                onClick={() => handleStatusUpdate("COMPLETED")}
+                disabled={isUpdating}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                Mark as Completed
+              </button>
+            </div>
+          )}
+        </>
       }
     >
       <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        {updateError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            {updateError}
+          </div>
+        )}
+
         {/* Header Info */}
         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
           <div className="flex items-start justify-between mb-3">

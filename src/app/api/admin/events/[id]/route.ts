@@ -396,23 +396,23 @@ export async function PATCH(
 
     // 🆕 Log successful event update
     await logAdminActivity(
-  session.user.id,
-  'ADMIN_EVENT_UPDATED',
-  `Updated event "${event.title}" (${event.slug})`,
-  {
-    referenceId: eventId,
-    referenceType: 'EVENT',
-    metadata: {
-      eventId,
-      title: event.title,
-      slug: event.slug,
-      changedFields: Object.keys(changes).join(', '),
-      changeCount: Object.keys(changes).length,
-      changesDetail: JSON.stringify(changes),
-      freebiesChanged,
-    },
-  }
-);
+      session.user.id,
+      'ADMIN_EVENT_UPDATED',
+      `Updated event "${event.title}" (${event.slug})`,
+      {
+        referenceId: eventId,
+        referenceType: 'EVENT',
+        metadata: {
+          eventId,
+          title: event.title,
+          slug: event.slug,
+          changedFields: Object.keys(changes).join(', '),
+          changeCount: Object.keys(changes).length,
+          changesDetail: JSON.stringify(changes),
+          freebiesChanged,
+        },
+      }
+    );
 
 
     return NextResponse.json({

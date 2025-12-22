@@ -33,13 +33,15 @@ interface MeetingRoomsListProps {
   onRoomsChange: () => void;
   activeTab: 'rooms' | 'bookings';
   onTabChange: (tab: 'rooms' | 'bookings') => void;
+  onBookingCountChange?: (count: number) => void;
 }
 
 export default function MeetingRoomsList({ 
   rooms, 
   onRoomsChange,
   activeTab,
-  onTabChange
+  onTabChange,
+  onBookingCountChange
 }: MeetingRoomsListProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<MeetingRoom | undefined>(undefined);
@@ -54,6 +56,13 @@ export default function MeetingRoomsList({
     }
   }, [activeTab]);
 
+  // Update booking count when bookings change
+  useEffect(() => {
+    if (onBookingCountChange) {
+      onBookingCountChange(bookings.length);
+    }
+  }, [bookings, onBookingCountChange]);
+
   const handleCreate = () => {
     setEditingRoom(undefined);
     setIsModalOpen(true);
@@ -62,11 +71,6 @@ export default function MeetingRoomsList({
   const handleEdit = (room: MeetingRoom) => {
     setEditingRoom(room);
     setIsModalOpen(true);
-  };
-
-  const handleTabChange = (tab: 'rooms' | 'bookings') => {
-    onTabChange(tab);
-    setSearchTerm("");
   };
 
   const fetchBookings = async () => {
@@ -184,7 +188,6 @@ export default function MeetingRoomsList({
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-50 text-foreground/20">
                         <BuildingOffice2Icon className="w-12 h-12" />
-                        
                       </div>
                     )}
                     <div className="absolute top-3 right-3">
@@ -416,6 +419,7 @@ export default function MeetingRoomsList({
         isOpen={!!selectedBooking}
         onClose={() => setSelectedBooking(null)}
         booking={selectedBooking}
+        onRefresh={fetchBookings}
       />
     </>
   );
