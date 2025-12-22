@@ -64,7 +64,7 @@ export default function AdminSidebar() {
       icon: <UserGroupIcon className="w-5 h-5" />,
     },
     {
-      name: 'Membership Plan',
+      name: 'Memberships',
       href: '/admin/memberships',
       icon: <CreditCardIcon className="w-5 h-5" />,
     },
