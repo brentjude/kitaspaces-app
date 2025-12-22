@@ -76,6 +76,18 @@ export async function PATCH(
     const { id } = await context.params;
     const body: MeetingRoomUpdateInput = await request.json();
 
+    // ✅ Validate hourly rate if provided
+    if (body.hourlyRate !== undefined) {
+      const rate = Number(body.hourlyRate);
+      if (isNaN(rate) || rate <= 0) {
+        return NextResponse.json(
+          { success: false, error: 'Hourly rate must be a number greater than 0' },
+          { status: 400 }
+        );
+      }
+      body.hourlyRate = rate;
+    }
+
     // Check if room exists
     const existingRoom = await prisma.meetingRoom.findUnique({
       where: { id },
@@ -102,14 +114,15 @@ export async function PATCH(
       }
     }
 
+    // ✅ Update with validated data
     const room = await prisma.meetingRoom.update({
       where: { id },
       data: {
         name: body.name,
         description: body.description,
         coverPhotoUrl: body.coverPhotoUrl,
-        hourlyRate: body.hourlyRate,
-        capacity: body.capacity,
+        hourlyRate: body.hourlyRate, // ✅ Already validated above
+        capacity: body.capacity ? Number(body.capacity) : undefined,
         startTime: body.startTime,
         endTime: body.endTime,
         amenities: body.amenities,
@@ -118,6 +131,7 @@ export async function PATCH(
         floor: body.floor,
         roomNumber: body.roomNumber,
         notes: body.notes,
+        updatedAt: new Date(),
       },
     });
 
@@ -158,10 +172,6 @@ export async function DELETE(
     // Check if room exists
     const room = await prisma.meetingRoom.findUnique({
       where: { id },
-      include: {
-        userBookings: { where: { status: 'CONFIRMED' } },
-        customerBookings: { where: { status: 'CONFIRMED' } },
-      },
     });
 
     if (!room) {
@@ -171,28 +181,52 @@ export async function DELETE(
       );
     }
 
-    // Check for active bookings
-    const hasActiveBookings = 
-      room.userBookings.length > 0 || 
-      room.customerBookings.length > 0;
+    // ✅ Check for upcoming user bookings (not just confirmed, but also pending)
+    const upcomingUserBookings = await prisma.meetingRoomBooking.count({
+      where: {
+        roomId: id,
+        bookingDate: {
+          gte: new Date(),
+        },
+        status: {
+          in: ['PENDING', 'CONFIRMED'],
+        },
+      },
+    });
 
-    if (hasActiveBookings) {
+    // ✅ Check for upcoming customer bookings
+    const upcomingCustomerBookings = await prisma.customerMeetingRoomBooking.count({
+      where: {
+        roomId: id,
+        bookingDate: {
+          gte: new Date(),
+        },
+        status: {
+          in: ['PENDING', 'CONFIRMED'],
+        },
+      },
+    });
+
+    const totalUpcomingBookings = upcomingUserBookings + upcomingCustomerBookings;
+
+    if (totalUpcomingBookings > 0) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Cannot delete room with confirmed bookings. Please cancel all bookings first.' 
+        {
+          success: false,
+          error: `Cannot delete room with ${totalUpcomingBookings} upcoming booking${totalUpcomingBookings === 1 ? '' : 's'}. Please cancel or complete all upcoming bookings first.`,
         },
         { status: 400 }
       );
     }
 
+    // ✅ Delete the room (cascade will handle past bookings)
     await prisma.meetingRoom.delete({
       where: { id },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Meeting room deleted successfully',
+      message: `Meeting room "${room.name}" deleted successfully`,
     });
   } catch (error) {
     console.error('Error deleting meeting room:', error);

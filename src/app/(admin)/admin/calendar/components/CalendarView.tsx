@@ -277,7 +277,7 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
                     {format(day, "d")}
                   </span>
                 </div>
-                <div className="space-y-1.5 overflow-y-auto max-h-[80px] scrollbar-thin scrollbar-thumb-foreground/20 scrollbar-track-transparent">
+                <div className="space-y-1.5 overflow-y-auto max-h-20 scrollbar-thin scrollbar-thumb-foreground/20 scrollbar-track-transparent">
                   {dayItems.map((item) => (
                     <button
                       key={item.id}
@@ -296,7 +296,7 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
                         {item.type === "event" &&
                           item.registrationCount !== undefined &&
                           item.maxAttendees && (
-                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <div className="flex items-center gap-0.5 shrink-0">
                               <UsersIcon className="w-3 h-3" />
                               <span className="text-[10px]">
                                 {item.registrationCount}/{item.maxAttendees}
@@ -330,7 +330,7 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
       <div className="flex-1 bg-white rounded-xl shadow-sm border border-foreground/10 flex flex-col overflow-hidden h-[calc(100vh-220px)]">
         {/* Header: Days */}
         <div className="flex border-b border-foreground/10 overflow-x-auto scrollbar-thin scrollbar-thumb-foreground/20 scrollbar-track-transparent">
-          <div className="w-16 flex-shrink-0 border-r border-foreground/10 bg-foreground/5 sticky left-0 z-10"></div>
+          <div className="w-16 shrink-0 border-r border-foreground/10 bg-foreground/5 sticky left-0 z-10"></div>
           {days.map((day) => {
             const isToday = isSameDay(day, new Date());
             return (
@@ -361,7 +361,7 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-foreground/20 scrollbar-track-transparent relative">
           <div className="flex relative min-h-[1440px]">
             {/* Time Axis */}
-            <div className="w-16 flex-shrink-0 border-r border-foreground/10 bg-foreground/5 select-none sticky left-0 z-10">
+            <div className="w-16 shrink-0 border-r border-foreground/10 bg-foreground/5 select-none sticky left-0 z-10">
               {hours.map((hour) => (
                 <div
                   key={hour}
@@ -455,7 +455,7 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
                         top: `${getHours(new Date()) * 60 + getMinutes(new Date())}px`,
                       }}
                     >
-                      <div className="w-2 h-2 bg-red-400 rounded-full -mt-[5px] -ml-[1px]"></div>
+                      <div className="w-2 h-2 bg-red-400 rounded-full -mt-[5px] -ml-px"></div>
                     </div>
                   )}
                 </div>

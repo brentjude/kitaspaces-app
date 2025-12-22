@@ -20,7 +20,7 @@ export async function GET(
 
     const { id } = await context.params;
 
-    // Try to find as User first
+    // ✅ Try to find as User first (registered customer)
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
@@ -55,7 +55,7 @@ export async function GET(
       const activeMembership = user.memberships[0];
 
       const customerInfo: CustomerDetailInfo = {
-        id: user.id,
+        id: user.id, // ✅ User ID (e.g., "2025001")
         name: user.name,
         email: user.email,
         contactNumber: user.contactNumber,
@@ -63,6 +63,8 @@ export async function GET(
         isRegistered: true,
         isMember: user.isMember,
         role: user.role,
+        userId: user.id, // ✅ Explicitly set userId for display (same as id for users)
+        avatar: null, // ✅ Add avatar field (can be populated later)
         referralSource: user.referralSource,
         joinedDate: user.createdAt,
         membershipType: activeMembership?.plan?.name || null,
@@ -79,7 +81,7 @@ export async function GET(
       return NextResponse.json({ success: true, data: customerInfo });
     }
 
-    // Try to find as Customer
+    // ✅ Try to find as Customer (guest customer)
     const customer = await prisma.customer.findUnique({
       where: { id },
       include: {
@@ -106,14 +108,16 @@ export async function GET(
         .reduce((sum, p) => sum + p.amount, 0);
 
       const customerInfo: CustomerDetailInfo = {
-        id: customer.id,
+        id: customer.id, // ✅ Customer CUID
         name: customer.name,
         email: customer.email,
         contactNumber: customer.contactNumber,
         company: customer.company,
         isRegistered: false,
         isMember: false,
-        role: "guest",
+        role: "GUEST",
+        userId: customer.userId, // ✅ Link to User if they later registered (nullable)
+        avatar: null, // ✅ Add avatar field
         referralSource: customer.referralSource,
         joinedDate: customer.createdAt,
         membershipType: null,
@@ -138,6 +142,78 @@ export async function GET(
     console.error("Failed to fetch customer details:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update customer/user details
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await context.params;
+    const body = await request.json();
+
+    // ✅ Try to update as User first
+    const user = await prisma.user.findUnique({ where: { id } });
+
+    if (user) {
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: {
+          name: body.name,
+          email: body.email,
+          contactNumber: body.contactNumber,
+          company: body.company,
+          updatedAt: new Date(),
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: updatedUser,
+        message: "User updated successfully",
+      });
+    }
+
+    // ✅ Otherwise update as Customer
+    const updatedCustomer = await prisma.customer.update({
+      where: { id },
+      data: {
+        name: body.name,
+        email: body.email,
+        contactNumber: body.contactNumber,
+        company: body.company,
+        updatedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedCustomer,
+      message: "Customer updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating customer:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update customer",
+      },
       { status: 500 }
     );
   }

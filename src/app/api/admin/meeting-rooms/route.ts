@@ -71,10 +71,19 @@ export async function POST(request: NextRequest) {
 
     const body: MeetingRoomCreateInput = await request.json();
 
-    // Validate required fields
-    if (!body.name || body.hourlyRate === undefined || !body.capacity) {
+    // ✅ Validate required fields
+    if (!body.name || !body.capacity) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: 'Name and capacity are required' },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Validate and convert hourly rate
+    const hourlyRate = body.hourlyRate !== undefined ? Number(body.hourlyRate) : 0;
+    if (isNaN(hourlyRate) || hourlyRate <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Hourly rate must be a number greater than 0' },
         { status: 400 }
       );
     }
@@ -91,21 +100,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ✅ Create room with validated hourly rate
     const room = await prisma.meetingRoom.create({
       data: {
         name: body.name,
-        description: body.description,
-        coverPhotoUrl: body.coverPhotoUrl,
-        hourlyRate: body.hourlyRate,
-        capacity: body.capacity,
-        startTime: body.startTime,
-        endTime: body.endTime,
-        amenities: body.amenities,
+        description: body.description || null,
+        coverPhotoUrl: body.coverPhotoUrl || null,
+        hourlyRate: hourlyRate, // ✅ Use validated number
+        capacity: Number(body.capacity),
+        startTime: body.startTime || '09:00',
+        endTime: body.endTime || '18:00',
+        amenities: body.amenities || null,
         status: 'AVAILABLE',
         isActive: body.isActive ?? true,
-        floor: body.floor,
-        roomNumber: body.roomNumber,
-        notes: body.notes,
+        floor: body.floor || null,
+        roomNumber: body.roomNumber || null,
+        notes: body.notes || null,
       },
     });
 

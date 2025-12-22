@@ -10,6 +10,7 @@ import {
   ClockIcon,
   CurrencyDollarIcon,
   TagIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 
 interface MeetingRoomModalProps {
@@ -21,6 +22,8 @@ interface MeetingRoomModalProps {
 
 export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialData }: MeetingRoomModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
@@ -75,6 +78,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
       });
     }
     setError(null);
+    setShowDeleteConfirm(false);
   }, [initialData, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,6 +87,11 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
     setError(null);
 
     try {
+      // ✅ Validate hourly rate
+      if (!formData.hourlyRate || formData.hourlyRate <= 0) {
+        throw new Error('Hourly rate must be greater than 0');
+      }
+
       const amenitiesList = formData.amenities
         .split(',')
         .map(s => s.trim())
@@ -92,7 +101,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
         name: formData.name,
         description: formData.description || undefined,
         capacity: formData.capacity,
-        hourlyRate: formData.hourlyRate,
+        hourlyRate: Number(formData.hourlyRate), // ✅ Ensure it's a number
         coverPhotoUrl: formData.coverPhotoUrl || undefined,
         amenities: JSON.stringify(amenitiesList),
         startTime: formData.startTime,
@@ -122,10 +131,38 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
       }
 
       onSuccess();
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!initialData) return;
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/admin/meeting-rooms/${initialData.id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to delete room');
+      }
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -137,23 +174,64 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
       size="xl"
       footer={
         <>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-foreground/70 hover:bg-foreground/5 rounded-lg transition-colors font-medium"
-            disabled={isSubmitting}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            form="roomForm"
-            disabled={isSubmitting}
-            className="px-6 py-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg shadow-sm transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <CheckCircleIcon className="w-4 h-4 mr-2" />
-            {isSubmitting ? 'Saving...' : 'Save Room'}
-          </button>
+          {/* Delete Button (only for existing rooms) */}
+          {initialData && !showDeleteConfirm && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="mr-auto px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium flex items-center"
+              disabled={isSubmitting || isDeleting}
+            >
+              <TrashIcon className="w-4 h-4 mr-2" />
+              Delete Room
+            </button>
+          )}
+
+          {/* Delete Confirmation Buttons */}
+          {showDeleteConfirm && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="mr-auto px-4 py-2 text-foreground/70 hover:bg-foreground/5 rounded-lg transition-colors font-medium"
+                disabled={isDeleting}
+              >
+                Cancel Delete
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-sm transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <TrashIcon className="w-4 h-4 mr-2" />
+                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </>
+          )}
+
+          {/* Regular Action Buttons */}
+          {!showDeleteConfirm && (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-foreground/70 hover:bg-foreground/5 rounded-lg transition-colors font-medium"
+                disabled={isSubmitting || isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="roomForm"
+                disabled={isSubmitting || isDeleting}
+                className="px-6 py-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg shadow-sm transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CheckCircleIcon className="w-4 h-4 mr-2" />
+                {isSubmitting ? 'Saving...' : 'Save Room'}
+              </button>
+            </>
+          )}
         </>
       }
     >
@@ -161,6 +239,26 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {error}
+          </div>
+        )}
+
+        {/* Delete Confirmation Warning */}
+        {showDeleteConfirm && (
+          <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <TrashIcon className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+              <div>
+                <h4 className="text-sm font-bold text-red-900 mb-1">
+                  Confirm Room Deletion
+                </h4>
+                <p className="text-sm text-red-700 mb-2">
+                  Are you sure you want to delete <strong>{formData.name}</strong>?
+                </p>
+                <p className="text-xs text-red-600">
+                  This action cannot be undone. The room will only be deleted if there are no upcoming bookings.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -176,6 +274,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
             placeholder="e.g. The Brainstorm Pod"
             value={formData.name}
             onChange={e => setFormData({ ...formData, name: e.target.value })}
+            disabled={showDeleteConfirm}
           />
         </div>
 
@@ -190,6 +289,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
             rows={3}
             value={formData.description}
             onChange={e => setFormData({ ...formData, description: e.target.value })}
+            disabled={showDeleteConfirm}
           />
         </div>
 
@@ -202,6 +302,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
           helpText="PNG, JPG, WEBP up to 5MB"
           aspectRatio="16/9"
           maxSize="1920x1080"
+          disabled={showDeleteConfirm}
         />
 
         {/* Hourly Rate and Capacity */}
@@ -214,14 +315,19 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
               <CurrencyDollarIcon className="absolute left-3 top-2.5 w-4 h-4 text-foreground/40" />
               <input
                 type="number"
-                min="0"
-                step="0.01"
+                min="1"
+                step="1"
                 required
                 className="w-full rounded-lg border border-foreground/20 pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                value={formData.hourlyRate}
+                placeholder="e.g. 500"
+                value={formData.hourlyRate || ''}
                 onChange={e => setFormData({ ...formData, hourlyRate: parseFloat(e.target.value) || 0 })}
+                disabled={showDeleteConfirm}
               />
             </div>
+            <p className="text-xs text-foreground/60 mt-1">
+              Enter the price per hour in Philippine Pesos
+            </p>
           </div>
           
           <div>
@@ -235,8 +341,10 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
                 min="1"
                 required
                 className="w-full rounded-lg border border-foreground/20 pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                placeholder="e.g. 8"
                 value={formData.capacity}
                 onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) || 1 })}
+                disabled={showDeleteConfirm}
               />
             </div>
           </div>
@@ -255,6 +363,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
                 className="w-full rounded-lg border border-foreground/20 pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 value={formData.startTime}
                 onChange={e => setFormData({ ...formData, startTime: e.target.value })}
+                disabled={showDeleteConfirm}
               />
             </div>
           </div>
@@ -270,6 +379,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
                 className="w-full rounded-lg border border-foreground/20 pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 value={formData.endTime}
                 onChange={e => setFormData({ ...formData, endTime: e.target.value })}
+                disabled={showDeleteConfirm}
               />
             </div>
           </div>
@@ -287,6 +397,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
               placeholder="e.g. 2nd Floor"
               value={formData.floor}
               onChange={e => setFormData({ ...formData, floor: e.target.value })}
+              disabled={showDeleteConfirm}
             />
           </div>
 
@@ -300,6 +411,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
               placeholder="e.g. Room 201"
               value={formData.roomNumber}
               onChange={e => setFormData({ ...formData, roomNumber: e.target.value })}
+              disabled={showDeleteConfirm}
             />
           </div>
         </div>
@@ -317,6 +429,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
               placeholder="WiFi, Projector, Whiteboard, TV, Coffee Machine"
               value={formData.amenities}
               onChange={e => setFormData({ ...formData, amenities: e.target.value })}
+              disabled={showDeleteConfirm}
             />
           </div>
           <p className="text-xs text-foreground/60 mt-1">
@@ -335,6 +448,7 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
             rows={2}
             value={formData.notes}
             onChange={e => setFormData({ ...formData, notes: e.target.value })}
+            disabled={showDeleteConfirm}
           />
         </div>
 
@@ -347,8 +461,9 @@ export default function MeetingRoomModal({ isOpen, onClose, onSuccess, initialDa
                 className="sr-only peer"
                 checked={formData.isActive}
                 onChange={e => setFormData({ ...formData, isActive: e.target.checked })}
+                disabled={showDeleteConfirm}
               />
-              <div className="w-10 h-6 bg-foreground/20 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-foreground/30 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              <div className="w-10 h-6 bg-foreground/20 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-foreground/30 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-disabled:opacity-50"></div>
             </div>
             <span className="ml-3 text-sm font-medium text-foreground">
               Room is Active and Bookable

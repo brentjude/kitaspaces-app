@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import Image  from "next/image";
 import Link from "next/link";
 import {
   HomeIcon,
@@ -114,12 +115,13 @@ export default function AdminSidebar() {
         {/* Logo */}
         <div className="flex items-center h-16 px-6 border-b border-foreground/10">
           <Link href="/admin" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-linear-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">K</span>
-            </div>
-            <h1 className="text-xl font-semibold font-display text-primary">
-              Kitaspaces
-            </h1>
+            <Image 
+                src="/logo/kita-secondary-logo.png" 
+                alt="KITA Spaces Logo" 
+                width={280} 
+                height={180}
+                priority
+              />
           </Link>
         </div>
 

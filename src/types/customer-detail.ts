@@ -2,19 +2,21 @@ import { ActivityAction } from "@/generated/prisma";
 
 export interface CustomerDetailInfo {
   id: string;
+  type?: 'user' | 'customer';
   name: string;
-  email: string | null;
+  email: string | null; // ✅ Allow null
   contactNumber: string | null;
   company: string | null;
   isRegistered: boolean;
   isMember: boolean;
   role: string;
+  userId?: string | null;
+  avatar?: string | null;
   referralSource: string | null;
   joinedDate: Date;
   membershipType: string | null;
   membershipStatus: string | null;
   membershipEndDate: Date | null;
-  avatar?: string | null;
   stats: {
     totalEvents: number;
     totalPayments: number;
