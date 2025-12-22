@@ -21,6 +21,7 @@ import {
   getHours,
   getMinutes,
   differenceInMinutes,
+  differenceInHours,
 } from "date-fns";
 import {
   ChevronLeftIcon,
@@ -66,13 +67,55 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
     return items.sort((a, b) => a.start.getTime() - b.start.getTime());
   }, [events, bookings, filters]);
 
+  // ✅ Transform CalendarItem to BookingDetails
+  const getBookingDetails = (item: CalendarItem) => {
+    // ✅ Check for 'booking' type instead of 'meeting_room'
+    if (item.type !== 'booking') return null;
+
+    // ✅ Calculate duration from start/end dates if not provided
+    const calculatedDuration = item.duration 
+      ? item.duration 
+      : Math.max(1, Math.round(differenceInHours(item.end, item.start) * 10) / 10);
+
+    return {
+      id: item.id,
+      type: 'meeting_room' as const,
+      title: item.title,
+      date: format(item.start, 'EEEE, MMMM d, yyyy'),
+      startTime: format(item.start, 'HH:mm'),
+      endTime: format(item.end, 'HH:mm'),
+      duration: calculatedDuration,
+      room: item.room || {
+        id: '',
+        name: item.roomName || 'Unknown Room',
+        capacity: 0,
+        hourlyRate: 0,
+        floor: null,
+        roomNumber: null,
+        amenities: null,
+      },
+      contactName: item.contactName || item.userName || 'Unknown',
+      contactEmail: item.contactEmail || null,
+      contactMobile: item.contactMobile || null,
+      company: item.company || null,
+      designation: item.designation || null,
+      numberOfAttendees: item.numberOfAttendees || 1,
+      purpose: item.purpose || null,
+      totalAmount: item.totalAmount || 0,
+      status: item.status || 'PENDING',
+      bookingType: item.bookingType || 'customer',
+      paymentReference: item.paymentReference || null,
+      paymentMethod: item.paymentMethod || null,
+    };
+  };
+
   // Handle item click
   const handleItemClick = (item: CalendarItem) => {
     if (item.type === "event") {
       // Navigate to event detail page
       router.push(`/admin/events/${item.id}`);
     } else if (item.type === "booking") {
-      // Open booking detail modal
+      // ✅ Open booking detail modal for bookings
       setSelectedBooking(item);
       setIsBookingModalOpen(true);
     }
@@ -93,7 +136,7 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
 
   const today = () => setCurrentDate(new Date());
 
-  // Header (unchanged)
+  // Header
   const renderHeader = () => {
     const dateFormat = "MMMM yyyy";
 
@@ -432,14 +475,14 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
       </div>
 
       {/* Booking Detail Modal */}
-      {selectedBooking && (
+      {selectedBooking && selectedBooking.type === 'booking' && (
         <BookingDetailModal
           isOpen={isBookingModalOpen}
           onClose={() => {
             setIsBookingModalOpen(false);
             setSelectedBooking(null);
           }}
-          booking={selectedBooking}
+          details={getBookingDetails(selectedBooking)}
         />
       )}
     </>

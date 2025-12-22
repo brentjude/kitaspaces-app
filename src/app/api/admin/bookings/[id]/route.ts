@@ -43,13 +43,7 @@ export async function PATCH(
 
       // Send email notification
       try {
-        const statusMessages = {
-          CONFIRMED: "Your booking has been confirmed!",
-          CANCELLED: "Your booking has been cancelled.",
-          COMPLETED: "Your booking has been completed. Thank you!",
-          NO_SHOW: "You did not show up for your booking.",
-        };
-
+        // ✅ Remove unused statusMessages variable
         const duration = `${booking.duration} ${booking.duration === 1 ? "hour" : "hours"}`;
 
         await resend.emails.send({

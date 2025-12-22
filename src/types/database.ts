@@ -1143,9 +1143,34 @@ export type CalendarItem = {
   categoryColor?: string;
   registrationCount?: number;
   maxAttendees?: number | null;
+  
+  // ✅ Booking-specific fields
   roomName?: string;
   userName?: string;
   status?: string;
+  duration?: number; // ✅ Add this
+  
+  // ✅ NEW: Additional booking fields for detail modal
+  room?: {
+    id: string;
+    name: string;
+    capacity: number;
+    hourlyRate: number;
+    floor?: string | null;
+    roomNumber?: string | null;
+    amenities?: string | null;
+  };
+  contactName?: string;
+  contactEmail?: string | null;
+  contactMobile?: string | null;
+  company?: string | null;
+  designation?: string | null;
+  numberOfAttendees?: number;
+  purpose?: string | null;
+  totalAmount?: number;
+  bookingType?: 'user' | 'customer';
+  paymentReference?: string | null;
+  paymentMethod?: string | null;
 };
 
 export type BookingDetails = {

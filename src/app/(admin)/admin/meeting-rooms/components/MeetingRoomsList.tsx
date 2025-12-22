@@ -40,7 +40,7 @@ export default function MeetingRoomsList({
   rooms, 
   onRoomsChange,
   activeTab,
-  onTabChange,
+  onTabChange: _onTabChange,
   onBookingCountChange
 }: MeetingRoomsListProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,7 +54,7 @@ export default function MeetingRoomsList({
     if (activeTab === 'bookings' && bookings.length === 0) {
       fetchBookings();
     }
-  }, [activeTab]);
+  }, [activeTab, bookings.length]);
 
   // Update booking count when bookings change
   useEffect(() => {
@@ -310,9 +310,6 @@ export default function MeetingRoomsList({
                           Booking Period
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-foreground/60 uppercase tracking-wider">
-                          Total
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-foreground/60 uppercase tracking-wider">
                           Status
                         </th>
                         <th className="relative px-6 py-3">
@@ -366,11 +363,6 @@ export default function MeetingRoomsList({
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-bold text-foreground">
-                                ₱{booking.totalAmount.toFixed(2)}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
                               {getStatusBadge(booking.status)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -390,7 +382,7 @@ export default function MeetingRoomsList({
                       {filteredBookings.length === 0 && (
                         <tr>
                           <td
-                            colSpan={6}
+                            colSpan={5}
                             className="px-6 py-12 text-center text-foreground/40 text-sm italic"
                           >
                             {searchTerm

@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -11,41 +11,41 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch user bookings
+    // ✅ Fetch user bookings
     const userBookings = await prisma.meetingRoomBooking.findMany({
       include: {
-        user: true,
         room: true,
+        user: true,
         payment: true,
-        perkUsage: true,
       },
       orderBy: {
-        bookingDate: "desc",
+        createdAt: "desc",
       },
     });
 
-    // Fetch customer bookings
+    // ✅ Fetch customer bookings
     const customerBookings = await prisma.customerMeetingRoomBooking.findMany({
       include: {
-        customer: true,
         room: true,
+        customer: true,
         payment: true,
       },
       orderBy: {
-        bookingDate: "desc",
+        createdAt: "desc",
       },
     });
 
-    // Combine and type bookings
+    // ✅ Combine and tag bookings
     const combinedBookings = [
-      ...userBookings.map(b => ({ ...b, type: 'user' as const })),
-      ...customerBookings.map(b => ({ ...b, type: 'customer' as const })),
-    ];
-
-    // Sort by date
-    combinedBookings.sort((a, b) => 
-      new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime()
-    );
+      ...userBookings.map((booking) => ({
+        ...booking,
+        type: "user" as const,
+      })),
+      ...customerBookings.map((booking) => ({
+        ...booking,
+        type: "customer" as const,
+      })),
+    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     return NextResponse.json({
       success: true,

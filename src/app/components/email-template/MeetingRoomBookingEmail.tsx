@@ -37,9 +37,9 @@ export default function MeetingRoomBookingEmail({
   startTime,
   endTime,
   duration,
-  totalAmount,
+  totalAmount: _totalAmount, // ✅ Prefix with underscore (used in Payment Information section)
   paymentReference,
-  paymentMethod,
+  paymentMethod: _paymentMethod, // ✅ Prefix with underscore (used in Payment Information section)
   status,
   company,
   designation,
@@ -400,21 +400,6 @@ const bookingTitle = {
   fontSize: '18px',
   fontWeight: 'bold' as const,
   color: '#1E40AF',
-  margin: '0 0 16px 0',
-};
-
-const paymentBox = {
-  backgroundColor: '#FEF3C7',
-  border: '2px solid #FDE68A',
-  borderRadius: '8px',
-  padding: '24px',
-  margin: '24px 0',
-};
-
-const paymentTitle = {
-  fontSize: '18px',
-  fontWeight: 'bold' as const,
-  color: '#92400E',
   margin: '0 0 16px 0',
 };
 

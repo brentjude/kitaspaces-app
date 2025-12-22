@@ -67,13 +67,6 @@ export default function MeetingRoomsPage() {
       icon: <CalendarIcon className="w-5 h-5" />,
       count: bookingCount,
     },
-    {
-      id: 'calendar' as const,
-      label: 'Calendar View',
-      icon: <CalendarDaysIcon className="w-5 h-5" />,
-      isLink: true,
-      href: '/admin/calendar',
-    },
   ];
 
   return (
@@ -81,53 +74,49 @@ export default function MeetingRoomsPage() {
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="space-y-6">
           {/* Header */}
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Meeting Room Management</h2>
-            <p className="text-foreground/60 text-sm mt-1">
-              Manage bookable spaces and view customer reservations.
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">Meeting Room Management</h2>
+              <p className="text-foreground/60 text-sm mt-1">
+                Manage bookable spaces and view customer reservations.
+              </p>
+            </div>
+            
+            {/* Calendar Button - Only show on bookings tab */}
+            {activeTab === 'bookings' && (
+              <Link
+                href="/admin/calendar"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+              >
+                <CalendarDaysIcon className="w-5 h-5" />
+                Calendar View
+              </Link>
+            )}
           </div>
 
           {/* Tabs */}
           <div className="flex border-b border-foreground/10">
-            {tabs.map((tab) => {
-              if (tab.isLink && tab.href) {
-                return (
-                  <Link
-                    key={tab.id}
-                    href={tab.href}
-                    className="px-6 py-3 text-sm font-medium transition-all text-foreground/60 hover:text-foreground"
-                  >
-                    <div className="flex items-center gap-2">
-                      {tab.icon}
-                      <span>{tab.label}</span>
-                    </div>
-                  </Link>
-                );
-              }
-
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-3 text-sm font-medium transition-all relative ${
-                    activeTab === tab.id
-                      ? 'text-primary'
-                      : 'text-foreground/60 hover:text-foreground'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {tab.icon}
-                    <span>
-                      {tab.label} ({tab.count})
-                    </span>
-                  </div>
-                  {activeTab === tab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full"></div>
-                  )}
-                </button>
-              );
-            })}
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-3 text-sm font-medium transition-all relative ${
+                  activeTab === tab.id
+                    ? 'text-primary'
+                    : 'text-foreground/60 hover:text-foreground'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {tab.icon}
+                  <span>
+                    {tab.label} ({tab.count})
+                  </span>
+                </div>
+                {activeTab === tab.id && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full"></div>
+                )}
+              </button>
+            ))}
           </div>
 
           {/* Content */}
