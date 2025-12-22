@@ -13,12 +13,20 @@ import {
   Img,
 } from '@react-email/components';
 
+interface MembershipBenefit {
+  name: string;
+  description: string;
+  quantity: number;
+  unit: string;
+}
+
 interface MembershipFreeRegistrationEmailProps {
   name: string;
   planName: string;
   couponCode: string;
   startDate: string;
   endDate: string;
+  benefits?: MembershipBenefit[]; // 🆕 Add optional benefits
 }
 
 export function MembershipFreeRegistrationEmail({
@@ -27,11 +35,12 @@ export function MembershipFreeRegistrationEmail({
   couponCode,
   startDate,
   endDate,
+  benefits,
 }: MembershipFreeRegistrationEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Welcome to KITA Spaces! Your membership is now active.</Preview>
+      <Preview>Welcome to KITA Spaces! Your free membership is active.</Preview>
       <Body style={main}>
         <Container style={container}>
           {/* Header with Logo */}
@@ -47,7 +56,7 @@ export function MembershipFreeRegistrationEmail({
 
           {/* Hero Section */}
           <Section style={heroSection}>
-            <Heading style={h1}>🎉 Welcome to KITA Spaces!</Heading>
+            <Heading style={h1}>🎉 Welcome to KITA!</Heading>
             <Text style={heroText}>Your membership is now active</Text>
           </Section>
           
@@ -55,7 +64,7 @@ export function MembershipFreeRegistrationEmail({
             <Text style={text}>Hi {name},</Text>
             
             <Text style={text}>
-              Congratulations! Your <strong>{planName}</strong> membership has been successfully activated using coupon code <strong>{couponCode}</strong>.
+              Congratulations! You've successfully registered for a <strong>{planName}</strong> membership using the coupon code <strong>{couponCode}</strong>.
             </Text>
 
             {/* Success Box */}
@@ -95,44 +104,53 @@ export function MembershipFreeRegistrationEmail({
               </table>
             </Section>
 
-            {/* Benefits */}
-            <Section style={benefitsSection}>
-              <Text style={sectionTitle}>Your Membership Includes:</Text>
-              <table style={benefitsList}>
-                 <tr>
-                    <td style={bulletCell}>✓</td>
-                    <td style={benefitText}>1 free Matcha/Coffee first Monday of the Month</td>
-                  </tr>
-                  <tr>
-                    <td style={bulletCell}>✓</td>
-                    <td style={benefitText}>Free access to all weekly events (trivia, mixers)</td>
-                  </tr>
-                  <tr>
-                    <td style={bulletCell}>✓</td>
-                    <td style={benefitText}>4-hour meeting room (6 pax) FREE per month</td>
-                  </tr>
-                  <tr>
-                    <td style={bulletCell}>✓</td>
-                    <td style={benefitText}>Members-only Discord/Telegram group/ Viber</td>
-                  </tr>
-                  <tr>
-                    <td style={bulletCell}>✓</td>
-                    <td style={benefitText}>“Founding 25” badge</td>
-                  </tr>
-              </table>
-            </Section>
+            {/* 🆕 Dynamic Benefits Section */}
+            {benefits && benefits.length > 0 && (
+              <Section style={benefitsSection}>
+                <Text style={sectionTitle}>Your Membership Benefits:</Text>
+                <table style={benefitsList}>
+                  {benefits.map((benefit, index) => (
+                    <tr key={index}>
+                      <td style={bulletCell}>✓</td>
+                      <td style={benefitText}>
+                        <strong>
+                          {benefit.quantity > 0 && `${benefit.quantity} `}
+                          {benefit.name}
+                        </strong>
+                        {benefit.description && (
+                          <>
+                            <br />
+                            <span style={benefitDescription}>{benefit.description}</span>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </table>
+                
+                <Section style={noteBox}>
+                  <Text style={noteText}>
+                    💡 <strong>Tip:</strong> Track your perk usage and remaining balance in your Member Dashboard.
+                  </Text>
+                </Section>
+              </Section>
+            )}
 
             {/* CTA Button */}
             <Section style={ctaSection}>
               <Button style={button} href="https://community.kitaspaces.com/dashboard">
-                View My Dashboard
+                Access Member Dashboard
               </Button>
             </Section>
 
             <Hr style={hr} />
 
+            <Text style={readyText}>
+              Ready to start working? Visit us anytime during operating hours!
+            </Text>
+
             <Text style={helpText}>
-              Have questions? We're here to help! Contact us anytime at{' '}
+              Questions? Contact us at{' '}
               <a href="mailto:support@kitaspaces.com" style={link}>
                 support@kitaspaces.com
               </a>
@@ -281,6 +299,27 @@ const benefitText = {
   padding: '6px 0',
 };
 
+const benefitDescription = {
+  color: '#6b7280',
+  fontSize: '14px',
+  fontWeight: 'normal' as const,
+};
+
+const noteBox = {
+  backgroundColor: '#fff7ed',
+  border: '1px solid #fed7aa',
+  borderRadius: '8px',
+  padding: '16px',
+  margin: '16px 0 0 0',
+};
+
+const noteText = {
+  color: '#92400e',
+  fontSize: '14px',
+  lineHeight: '20px',
+  margin: '0',
+};
+
 const ctaSection = {
   textAlign: 'center' as const,
   margin: '32px 0',
@@ -303,6 +342,15 @@ const button = {
 const hr = {
   borderColor: '#e5e7eb',
   margin: '32px 0',
+};
+
+const readyText = {
+  color: '#343535',
+  fontSize: '16px',
+  lineHeight: '24px',
+  textAlign: 'center' as const,
+  margin: '16px 0',
+  fontWeight: '500' as const,
 };
 
 const helpText = {

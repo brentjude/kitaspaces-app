@@ -6,6 +6,7 @@ import {
   MapPinIcon,
   ArrowRightIcon,
   GiftIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import type { EventWithRelations } from "@/types";
 import Image from "next/image";
@@ -25,13 +26,35 @@ interface EventCardProps {
       description?: string | null;
     }>;
   };
-  onClick: (id: string, title: string) => void; // Updated signature
+  onClick: (id: string, title: string) => void;
 }
 
 export default function EventCard({ event, onClick }: EventCardProps) {
   const isCompleted = new Date(event.date) < new Date();
   const isFree = event.price === 0 || event.isFree;
   const hasFreebies = event.freebies && event.freebies.length > 0;
+
+  // 🆕 Check if event has member discount
+  const hasMemberDiscount =
+    !isFree &&
+    event.price > 0 &&
+    event.memberDiscount &&
+    event.memberDiscount > 0;
+
+  // 🆕 Calculate member discounted price
+  const getMemberPrice = () => {
+    if (!hasMemberDiscount) return null;
+
+    const price = event.price;
+    const discount = event.memberDiscount || 0;
+
+    if (event.memberDiscountType === "PERCENTAGE") {
+      return price - (price * discount) / 100;
+    }
+    return Math.max(0, price - discount);
+  };
+
+  const memberPrice = getMemberPrice();
 
   const getCategoryColor = (color: string | null) => {
     if (!color) return "bg-gray-100 text-gray-800";
@@ -106,7 +129,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
 
       {/* Content Section */}
       <div className="p-6 flex-1 flex flex-col">
-        <div className="flex flex-row gap-1">
+        <div className="flex flex-row gap-1 flex-wrap">
           {/* Category Badge Above Title */}
           {event.category && (
             <div className="mb-2">
@@ -122,13 +145,14 @@ export default function EventCard({ event, onClick }: EventCardProps) {
               </span>
             </div>
           )}
-          <div className="mb-2">
-            {event.isMemberOnly && (
+          {event.isMemberOnly && (
+            <div className="mb-2">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <ShieldCheckIcon className="w-3 h-3 mr-1" />
                 Members-Only
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Title */}
@@ -175,7 +199,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
             </div>
           )}
 
-          {/* Price or Free for Members Badge */}
+          {/* Price Section */}
           <div className="flex items-center justify-between pt-2">
             <span className="text-sm font-medium text-foreground/60">
               Price per person
@@ -184,12 +208,34 @@ export default function EventCard({ event, onClick }: EventCardProps) {
               <span className="text-lg font-bold text-green-600">Free</span>
             ) : (
               <div className="flex flex-col items-end">
-                <span className="text-lg font-bold text-primary">
-                  ₱{event.price}
-                </span>
-                {event.isFreeForMembers && (
-                  <span className="text-[10px] text-blue-600 font-semibold">
-                    Free for members
+                {/* 🆕 Show member discount info */}
+                {hasMemberDiscount && memberPrice !== null ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-foreground/50 line-through">
+                        ₱{event.price.toFixed(2)}
+                      </span>
+                      <span className="text-lg font-bold text-primary">
+                        ₱{event.price.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full mt-1">
+                      <ShieldCheckIcon className="w-3 h-3 text-blue-600" />
+                      <span className="text-[10px] text-blue-700 font-semibold">
+                        ₱{memberPrice.toFixed(2)} for members
+                      </span>
+                      <span className="text-[9px] text-blue-600 font-medium">
+                        (
+                        {event.memberDiscountType === "PERCENTAGE"
+                          ? `${event.memberDiscount}% off`
+                          : `₱${event.memberDiscount} off`}
+                        )
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-lg font-bold text-primary">
+                    ₱{event.price.toFixed(2)}
                   </span>
                 )}
               </div>

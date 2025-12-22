@@ -6,6 +6,14 @@ import { EmailTemplate } from '@/app/components/email-template/EmailTemplate';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// 🆕 Define common benefit interface
+interface MembershipBenefit {
+  name: string;
+  description: string;
+  quantity: number;
+  unit: string;
+}
+
 export interface SendEmailOptions {
   to: string;
   subject: string;
@@ -63,6 +71,7 @@ export async function sendMembershipFreeEmail(data: {
   couponCode: string;
   startDate: string;
   endDate: string;
+  benefits?: MembershipBenefit[]; // 🔧 Use proper type
 }) {
   return sendEmail({
     to: data.to,
@@ -73,6 +82,26 @@ export async function sendMembershipFreeEmail(data: {
       couponCode: data.couponCode,
       startDate: data.startDate,
       endDate: data.endDate,
+      benefits: data.benefits || [
+        {
+          name: 'Coworking Space Access',
+          description: 'Access during operating hours',
+          quantity: 1,
+          unit: 'membership',
+        },
+        {
+          name: 'High-Speed WiFi',
+          description: 'Unlimited internet access',
+          quantity: 1,
+          unit: 'connection',
+        },
+        {
+          name: 'Community Events',
+          description: 'Access to networking events',
+          quantity: 1,
+          unit: 'membership',
+        },
+      ],
     }),
   });
 }
@@ -86,6 +115,7 @@ export async function sendMembershipApprovedEmail(data: {
   paymentReference: string;
   startDate: string;
   endDate: string;
+  benefits?: MembershipBenefit[]; // 🔧 Use proper type
 }) {
   return sendEmail({
     to: data.to,
@@ -97,6 +127,38 @@ export async function sendMembershipApprovedEmail(data: {
       paymentReference: data.paymentReference,
       startDate: data.startDate,
       endDate: data.endDate,
+      benefits: data.benefits || [
+        {
+          name: 'Coworking Space Access',
+          description: 'Access during operating hours',
+          quantity: 1,
+          unit: 'membership',
+        },
+        {
+          name: 'High-Speed WiFi',
+          description: 'Unlimited internet connectivity',
+          quantity: 1,
+          unit: 'connection',
+        },
+        {
+          name: 'Community Events',
+          description: 'Access to networking and workshops',
+          quantity: 1,
+          unit: 'membership',
+        },
+        {
+          name: 'Event Discounts',
+          description: 'Special member pricing on events',
+          quantity: 1,
+          unit: 'membership',
+        },
+        {
+          name: 'Meeting Room Privileges',
+          description: 'Discounted booking rates',
+          quantity: 1,
+          unit: 'membership',
+        },
+      ],
     }),
   });
 }
@@ -129,4 +191,19 @@ export async function sendEventConfirmationEmail(data: {
     subject: `✅ Event Registration Confirmed - ${data.eventTitle}`,
     react: EmailTemplate({ firstName: data.name }), // Temporary, replace with proper template
   });
+}
+
+// 🆕 Helper to convert plan perks to email benefits
+export function convertPerksToEmailBenefits(perks: Array<{
+  name: string;
+  description: string | null;
+  quantity: number;
+  unit: string;
+}>): MembershipBenefit[] {
+  return perks.map(perk => ({
+    name: perk.name,
+    description: perk.description || '',
+    quantity: perk.quantity,
+    unit: perk.unit,
+  }));
 }
