@@ -19,10 +19,12 @@ import type {
   Event,
   EventFreebie,
   EventRegistration,
+  CustomerEventRegistration,
 } from "@/generated/prisma";
 
 interface EventWithRelations extends Event {
   registrations: EventRegistration[];
+  customerRegistrations: CustomerEventRegistration[];
   freebies: EventFreebie[];
 }
 
@@ -46,13 +48,16 @@ export default function EventDetailsCard({
   const status = getEventStatus();
 
   const getAttendeesDisplay = () => {
-    const registrationCount = event.registrations.length;
+    // 🔧 FIXED: Count both user and customer registrations
+    const userRegistrationCount = event.registrations.length;
+    const customerRegistrationCount = event.customerRegistrations.length;
+    const totalRegistrationCount = userRegistrationCount + customerRegistrationCount;
 
     if (!event.maxAttendees || event.maxAttendees === 0) {
-      return `${registrationCount} registered (No limit)`;
+      return `${totalRegistrationCount} registered (No limit)`;
     }
 
-    return `${registrationCount} / ${event.maxAttendees} attendees`;
+    return `${totalRegistrationCount} / ${event.maxAttendees} attendees`;
   };
 
   // Calculate member discount details
@@ -78,6 +83,7 @@ export default function EventDetailsCard({
 
   return (
     <>
+      {/* ... rest of the component remains the same ... */}
       <div className="bg-white rounded-xl shadow-sm border border-foreground/10 overflow-hidden h-fit">
         {/* Cover Image */}
         <div className="relative h-48 sm:h-64 bg-gray-100">

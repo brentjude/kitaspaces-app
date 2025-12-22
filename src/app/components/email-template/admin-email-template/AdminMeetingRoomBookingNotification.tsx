@@ -13,13 +13,14 @@ import {
   Img,
 } from '@react-email/components';
 
-interface MeetingRoomBookingEmailProps {
+interface AdminMeetingRoomBookingNotificationProps {
   customerName: string;
+  customerEmail: string;
   roomName: string;
   bookingDate: string;
   startTime: string;
   endTime: string;
-  duration: string; // ✅ Add this line
+  duration: string;
   totalAmount: number;
   paymentReference: string;
   paymentMethod: string;
@@ -28,10 +29,12 @@ interface MeetingRoomBookingEmailProps {
   designation?: string;
   purpose: string;
   numberOfAttendees: number;
+  bookingId: string;
 }
 
-export default function MeetingRoomBookingEmail({
+export default function AdminMeetingRoomBookingNotification({
   customerName,
+  customerEmail,
   roomName,
   bookingDate,
   startTime,
@@ -45,14 +48,13 @@ export default function MeetingRoomBookingEmail({
   designation,
   purpose,
   numberOfAttendees,
-}: MeetingRoomBookingEmailProps) {
-  const isPending = status === 'PENDING';
-
+  bookingId,
+}: AdminMeetingRoomBookingNotificationProps) {
   return (
     <Html>
       <Head />
       <Preview>
-        Meeting Room Booking {isPending ? 'Confirmation' : 'Update'} - {roomName}
+        New Meeting Room Booking - {roomName} by {customerName}
       </Preview>
       <Body style={main}>
         <Container style={container}>
@@ -69,29 +71,54 @@ export default function MeetingRoomBookingEmail({
 
           {/* Hero Section */}
           <Section style={heroSection}>
-            <Heading style={h1}>
-              {isPending ? '📅 Booking Confirmed!' : '✅ Booking Update'}
-            </Heading>
+            <Heading style={h1}>🔔 New Booking Alert</Heading>
             <Text style={heroText}>
-              {isPending
-                ? 'Your meeting room booking has been received'
-                : 'Your booking status has been updated'}
+              A new meeting room booking has been created
             </Text>
           </Section>
 
           <Section style={content}>
-            <Text style={text}>Hi {customerName},</Text>
+            <Text style={text}>Hello Admin,</Text>
 
             <Text style={text}>
-              {isPending
-                ? `Thank you for booking ${roomName}. Your reservation is confirmed and awaiting payment verification.`
-                : `Your booking for ${roomName} has been updated.`}
+              A new meeting room booking has been submitted and requires your attention.
             </Text>
+
+            {/* Customer Information */}
+            <Section style={customerBox}>
+              <Text style={customerTitle}>👤 Customer Information</Text>
+              <table style={infoTable}>
+                <tr>
+                  <td style={infoLabel}>Name:</td>
+                  <td style={infoValue}>{customerName}</td>
+                </tr>
+                <tr>
+                  <td style={infoLabel}>Email:</td>
+                  <td style={infoValue}>{customerEmail}</td>
+                </tr>
+                {company && (
+                  <tr>
+                    <td style={infoLabel}>Company:</td>
+                    <td style={infoValue}>{company}</td>
+                  </tr>
+                )}
+                {designation && (
+                  <tr>
+                    <td style={infoLabel}>Designation:</td>
+                    <td style={infoValue}>{designation}</td>
+                  </tr>
+                )}
+              </table>
+            </Section>
 
             {/* Booking Details Box */}
             <Section style={bookingBox}>
               <Text style={bookingTitle}>📋 Booking Details</Text>
               <table style={infoTable}>
+                <tr>
+                  <td style={infoLabel}>Booking ID:</td>
+                  <td style={infoValue}>{bookingId}</td>
+                </tr>
                 <tr>
                   <td style={infoLabel}>Room:</td>
                   <td style={infoValue}>{roomName}</td>
@@ -120,18 +147,6 @@ export default function MeetingRoomBookingEmail({
                   <td style={infoLabel}>Purpose:</td>
                   <td style={infoValue}>{purpose}</td>
                 </tr>
-                {company && (
-                  <tr>
-                    <td style={infoLabel}>Company:</td>
-                    <td style={infoValue}>{company}</td>
-                  </tr>
-                )}
-                {designation && (
-                  <tr>
-                    <td style={infoLabel}>Designation:</td>
-                    <td style={infoValue}>{designation}</td>
-                  </tr>
-                )}
               </table>
             </Section>
 
@@ -158,39 +173,36 @@ export default function MeetingRoomBookingEmail({
               </table>
             </Section>
 
-            {/* Payment Instructions (if pending) */}
-            {isPending && (
-              <Section style={instructionsBox}>
-                <Text style={instructionsTitle}>📝 Next Steps</Text>
-                <Text style={instructionsText}>
-                  1. Complete your payment using the provided payment method
-                  <br />
-                  2. Keep your payment reference number: <strong>{paymentReference}</strong>
-                  <br />
-                  3. Your booking will be confirmed once payment is verified
-                  <br />
-                  4. You will receive a confirmation email upon verification
+            {/* Action Required (if pending) */}
+            {status === 'PENDING' && (
+              <Section style={alertBox}>
+                <Text style={alertTitle}>⚠️ Action Required</Text>
+                <Text style={alertText}>
+                  This booking is pending payment verification. Please review the payment details and update the booking status accordingly.
                 </Text>
               </Section>
             )}
 
-            {/* CTA Button */}
+            {/* CTA Buttons */}
             <Section style={ctaSection}>
               <Button
-                style={button}
-                href="https://community.kitaspaces.com/dashboard"
+                style={buttonPrimary}
+                href={`https://community.kitaspaces.com/admin/bookings/${bookingId}`}
               >
-                View My Bookings
+                View Booking Details
+              </Button>
+              <Button
+                style={buttonSecondary}
+                href="https://community.kitaspaces.com/admin/bookings"
+              >
+                Manage All Bookings
               </Button>
             </Section>
 
             <Hr style={hr} />
 
             <Text style={helpText}>
-              Questions about your booking? Contact us at{' '}
-              <a href="mailto:support@kitaspaces.com" style={link}>
-                support@kitaspaces.com
-              </a>
+              This is an automated notification from the KITA Spaces booking system.
             </Text>
           </Section>
 
@@ -199,20 +211,7 @@ export default function MeetingRoomBookingEmail({
             <Text style={footerText}>
               © {new Date().getFullYear()} KITA Spaces. All rights reserved.
             </Text>
-            <Text style={footerText}>Your Creative Workspace</Text>
-            <Text style={footerLinks}>
-              <a href="https://kitaspaces.com" style={footerLink}>
-                Website
-              </a>{' '}
-              |{' '}
-              <a href="https://kitaspaces.com/about" style={footerLink}>
-                About
-              </a>{' '}
-              |{' '}
-              <a href="https://kitaspaces.com/contact" style={footerLink}>
-                Contact
-              </a>
-            </Text>
+            <Text style={footerText}>Admin Notification System</Text>
           </Section>
         </Container>
       </Body>
@@ -322,6 +321,21 @@ const text = {
   margin: '16px 0',
 };
 
+const customerBox = {
+  backgroundColor: '#F3E8FF',
+  border: '2px solid #D8B4FE',
+  borderRadius: '8px',
+  padding: '24px',
+  margin: '24px 0',
+};
+
+const customerTitle = {
+  fontSize: '18px',
+  fontWeight: 'bold' as const,
+  color: '#6B21A8',
+  margin: '0 0 16px 0',
+};
+
 const bookingBox = {
   backgroundColor: '#F0F9FF',
   border: '2px solid #BFDBFE',
@@ -352,23 +366,23 @@ const paymentTitle = {
   margin: '0 0 16px 0',
 };
 
-const instructionsBox = {
-  backgroundColor: '#F3F4F6',
-  border: '1px solid #D1D5DB',
+const alertBox = {
+  backgroundColor: '#FEE2E2',
+  border: '2px solid #FCA5A5',
   borderRadius: '8px',
   padding: '24px',
   margin: '24px 0',
 };
 
-const instructionsTitle = {
+const alertTitle = {
   fontSize: '18px',
   fontWeight: 'bold' as const,
-  color: '#374151',
+  color: '#991B1B',
   margin: '0 0 12px 0',
 };
 
-const instructionsText = {
-  color: '#4B5563',
+const alertText = {
+  color: '#7F1D1D',
   fontSize: '14px',
   lineHeight: '24px',
   margin: '0',
@@ -399,7 +413,7 @@ const ctaSection = {
   margin: '32px 0',
 };
 
-const button = {
+const buttonPrimary = {
   backgroundColor: '#FF8E49',
   borderRadius: '8px',
   color: '#ffffff',
@@ -411,6 +425,22 @@ const button = {
   padding: '14px 40px',
   border: 'none',
   cursor: 'pointer',
+  margin: '0 8px 8px 8px',
+};
+
+const buttonSecondary = {
+  backgroundColor: '#6B7280',
+  borderRadius: '8px',
+  color: '#ffffff',
+  fontSize: '16px',
+  fontWeight: 'bold' as const,
+  textDecoration: 'none',
+  textAlign: 'center' as const,
+  display: 'inline-block',
+  padding: '14px 40px',
+  border: 'none',
+  cursor: 'pointer',
+  margin: '0 8px 8px 8px',
 };
 
 const hr = {
@@ -423,11 +453,7 @@ const helpText = {
   fontSize: '14px',
   lineHeight: '20px',
   textAlign: 'center' as const,
-};
-
-const link = {
-  color: '#FF8E49',
-  textDecoration: 'underline',
+  fontStyle: 'italic' as const,
 };
 
 const footer = {
@@ -442,15 +468,4 @@ const footerText = {
   fontSize: '12px',
   lineHeight: '16px',
   margin: '4px 0',
-};
-
-const footerLinks = {
-  color: '#6b7280',
-  fontSize: '12px',
-  margin: '12px 0 0 0',
-};
-
-const footerLink = {
-  color: '#6b7280',
-  textDecoration: 'none',
 };

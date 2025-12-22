@@ -78,9 +78,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate time slots (must be in 30-minute increments)
+    // 🔧 FIXED: Validate time slots (must be in 30-minute increments)
     const validateTimeSlot = (time: string): boolean => {
-      const [hours, minutes] = time.split(':').map(Number);
+      const [, minutes] = time.split(':').map(Number);
       return minutes === 0 || minutes === 30;
     };
 
@@ -179,7 +179,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🔧 FIX: Use 'meeting-room' or 'room' as the type
     const paymentReference = await generateUniqueReference('meeting-room');
 
     const paymentNotes = `Meeting room booking: ${room.name} | ${bookingDate} ${startTime}-${endTime} | ${duration}hr | Purpose: ${purpose}`;

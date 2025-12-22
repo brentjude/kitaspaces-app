@@ -64,13 +64,17 @@ interface CustomerRegistrationFull extends CustomerEventRegistration {
   >;
 }
 
+// 🔧 UPDATED: Added new schema fields
 interface EventRegistrantsListProps {
   event: {
     id: string;
     title: string;
     price: number;
     isFree: boolean;
-    isFreeForMembers: boolean;
+    memberDiscount?: number | null;
+    memberDiscountType?: string | null;
+    memberDiscountedPrice?: number | null;
+    hasCustomerFreebies: boolean;
     registrations: RegistrationWithUser[];
     customerRegistrations: CustomerRegistrationFull[];
     freebies: Array<{

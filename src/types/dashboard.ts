@@ -17,6 +17,7 @@ export interface DashboardData {
     paidAt: Date | null;
     paymentMethod: string;
   } | null;
+  isMember: boolean;
 }
 
 export interface UserEventRegistration {

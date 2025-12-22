@@ -27,7 +27,6 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is admin
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -75,12 +74,8 @@ export async function POST(
       where: { id: eventId },
       include: {
         freebies: true,
-        registrations: {
-          select: { id: true },
-        },
-        customerRegistrations: {
-          select: { id: true },
-        },
+        registrations: { select: { id: true } },
+        customerRegistrations: { select: { id: true } },
       },
     });
 
@@ -109,25 +104,21 @@ export async function POST(
     // Determine if free
     const isFreeEvent = event.price === 0 || event.isFree;
 
-    // Validate freebie selections if event has freebies
-    if (event.freebies && event.freebies.length > 0) {
+    // 🆕 Check if guest customers can select freebies
+    const canSelectFreebies = event.hasCustomerFreebies;
+
+    // Validate freebie selections
+    if (canSelectFreebies && event.freebies && event.freebies.length > 0) {
       for (const attendee of attendees) {
-        if (
-          !attendee.freebieSelections ||
-          attendee.freebieSelections.length === 0
-        ) {
+        if (!attendee.freebieSelections || attendee.freebieSelections.length === 0) {
           return NextResponse.json(
             { error: `Freebie selections are required for ${attendee.name}` },
             { status: 400 }
           );
         }
 
-        // Validate each freebie selection
         for (const selection of attendee.freebieSelections) {
-          const freebie = event.freebies.find(
-            (f) => f.id === selection.freebieId
-          );
-
+          const freebie = event.freebies.find((f) => f.id === selection.freebieId);
           if (!freebie) {
             return NextResponse.json(
               { error: `Invalid freebie selected for ${attendee.name}` },
@@ -135,19 +126,26 @@ export async function POST(
             );
           }
 
-          // Check if freebie has options (description contains comma)
-          const hasOptions =
-            freebie.description && freebie.description.includes(",");
-
+          const hasOptions = freebie.description && freebie.description.includes(",");
           if (hasOptions && !selection.selectedOption) {
             return NextResponse.json(
-              {
-                error: `Please select an option for ${freebie.name} for ${attendee.name}`,
-              },
+              { error: `Please select an option for ${freebie.name} for ${attendee.name}` },
               { status: 400 }
             );
           }
         }
+      }
+    } else if (!canSelectFreebies) {
+      // Check if any attendee tried to select freebies
+      const hasFreebieSelections = attendees.some(
+        (attendee) => attendee.freebieSelections && attendee.freebieSelections.length > 0
+      );
+
+      if (hasFreebieSelections) {
+        return NextResponse.json(
+          { error: "Freebies are only available to members for this event" },
+          { status: 400 }
+        );
       }
     }
 
@@ -293,8 +291,9 @@ export async function POST(
           },
         });
 
-        // Create freebie selections WITH OPTION
+        // 🆕 Only create freebie selections if allowed
         if (
+          canSelectFreebies &&
           attendee.freebieSelections &&
           attendee.freebieSelections.length > 0
         ) {

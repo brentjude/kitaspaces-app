@@ -188,6 +188,7 @@ async function main() {
   // Clear existing data
   console.log("\n🗑️  Clearing existing data...");
   await prisma.passwordResetToken.deleteMany();
+  await prisma.activityLog.deleteMany();
   await prisma.customerMeetingRoomBooking.deleteMany();
   await prisma.meetingRoomBooking.deleteMany();
   await prisma.meetingRoom.deleteMany();
@@ -888,6 +889,10 @@ async function main() {
       price: 0,
       isFree: true,
       isMemberOnly: true,
+      memberDiscount: 0,
+      memberDiscountType: "FIXED",
+      memberDiscountedPrice: 0,
+      hasCustomerFreebies: false,
       isRedemptionEvent: true,
       redemptionLimit: 1,
       categoryId: dailyPerksCategory.id,
@@ -921,6 +926,10 @@ async function main() {
       price: 0,
       isFree: true,
       isMemberOnly: true,
+      memberDiscount: 0,
+      memberDiscountType: "FIXED",
+      memberDiscountedPrice: 0,
+      hasCustomerFreebies: false,
       maxAttendees: 30,
       categoryId: workshopCategory.id,
     },
@@ -960,6 +969,10 @@ async function main() {
       price: 0,
       isFree: true,
       isMemberOnly: false,
+      memberDiscount: 0,
+      memberDiscountType: "FIXED",
+      memberDiscountedPrice: 0,
+      hasCustomerFreebies: true,
       maxAttendees: 100,
       categoryId: networkingCategory.id,
     },
@@ -985,13 +998,14 @@ async function main() {
     `✅ Created free event: ${freeNetworking.title} (slug: ${freeNetworkingSlug})`
   );
 
+  // 🆕 NEW: Event with member discount (₱800 regular, ₱600 for members - 25% off)
   const paidWorkshopSlug = generateEventSlug("Team Building Workshop");
   const paidWorkshop = await prisma.event.create({
     data: {
       title: "Team Building Workshop",
       slug: paidWorkshopSlug,
       description:
-        "Paid workshop but FREE for KITA Spaces members! Bring your team and learn effective collaboration strategies.",
+        "Professional team building workshop. Members get 25% discount! Bring your team and learn effective collaboration strategies.",
       date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
       startTime: "09:00",
       endTime: "17:00",
@@ -999,7 +1013,10 @@ async function main() {
       price: 800,
       isFree: false,
       isMemberOnly: false,
-      isFreeForMembers: true,
+      memberDiscount: 25, // 25% discount
+      memberDiscountType: "PERCENTAGE",
+      memberDiscountedPrice: 600, // ₱800 - 25% = ₱600
+      hasCustomerFreebies: true,
       maxAttendees: 50,
       categoryId: workshopCategory.id,
     },
@@ -1028,24 +1045,28 @@ async function main() {
     ],
   });
   console.log(
-    `✅ Created paid/free-for-members event: ${paidWorkshop.title} (slug: ${paidWorkshopSlug})`
+    `✅ Created paid event with member discount: ${paidWorkshop.title} (₱800 regular, ₱600 for members - 25% off)`
   );
 
+  // 🆕 NEW: Event with fixed member discount (₱500 regular, ₱400 for members - ₱100 off)
   const coffeeSocialSlug = generateEventSlug("Morning Coffee Social");
   const coffeeSocial = await prisma.event.create({
     data: {
       title: "Morning Coffee Social",
       slug: coffeeSocialSlug,
       description:
-        "Start your day right! Join us for a casual coffee morning. Choose your favorite coffee style!",
+        "Start your day right! Join us for a casual coffee morning. Members save ₱100! Choose your favorite coffee style!",
       date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
       startTime: "08:00",
       endTime: "10:00",
       location: "Kitaspaces Café",
-      price: 150,
+      price: 500,
       isFree: false,
       isMemberOnly: false,
-      isFreeForMembers: true,
+      memberDiscount: 100, // Fixed ₱100 discount
+      memberDiscountType: "FIXED",
+      memberDiscountedPrice: 400, // ₱500 - ₱100 = ₱400
+      hasCustomerFreebies: false, // Members only get freebies
       maxAttendees: 40,
       categoryId: socialCategory.id,
     },
@@ -1055,12 +1076,12 @@ async function main() {
     data: {
       eventId: coffeeSocial.id,
       name: "Coffee Choice",
-      description: "Choose one: Latte, Americano",
+      description: "Choose one: Latte, Americano, Cappuccino",
       quantity: 1,
     },
   });
   console.log(
-    `✅ Created coffee event with options: ${coffeeSocial.title} (slug: ${coffeeSocialSlug})`
+    `✅ Created coffee event with fixed member discount: ${coffeeSocial.title} (₱500 regular, ₱400 for members - ₱100 off)`
   );
 
   // Create Meeting Room Bookings
@@ -1091,6 +1112,9 @@ async function main() {
       startTime: "09:00",
       endTime: "12:00",
       duration: 3,
+      contactName: monthlyMembers[0].name,
+      contactEmail: monthlyMembers[0].email,
+      contactMobile: monthlyMembers[0].contactNumber,
       numberOfAttendees: 8,
       purpose: "Team strategy meeting",
       status: "CONFIRMED",
@@ -1125,11 +1149,13 @@ async function main() {
       startTime: "14:00",
       endTime: "16:00",
       duration: 2,
-      numberOfAttendees: 3,
-      purpose: "Client presentation",
       contactPerson: guestCustomers[0].name,
+      contactName: guestCustomers[0].name,
       contactEmail: guestCustomers[0].email!,
       contactPhone: guestCustomers[0].contactNumber!,
+      contactMobile: guestCustomers[0].contactNumber!,
+      numberOfAttendees: 3,
+      purpose: "MEETING",
       status: "PENDING",
       totalAmount: smallMeetingRoom.hourlyRate * 2,
       paymentId: customerBookingPayment.id,
@@ -1139,11 +1165,28 @@ async function main() {
     `✅ Created customer booking for ${smallMeetingRoom.name} (Ref: ${customerBookingPaymentRef})`
   );
 
-  // Event registrations (existing logic)
+  // Event registrations
   console.log("\n📝 Creating event registrations...");
 
   const workshopFreebies = await prisma.eventFreebie.findMany({
     where: { eventId: paidWorkshop.id },
+  });
+
+  // 🆕 Member registration with discount
+  const memberEventPaymentRef = await generateEventPaymentReference();
+  const memberEventPayment = await prisma.payment.create({
+    data: {
+      userId: monthlyMembers[0].id,
+      amount: 600 * 2, // Member price (₱600) for 2 people
+      paymentMethod: "GCASH",
+      status: "COMPLETED",
+      paymentReference: memberEventPaymentRef,
+      referenceNumber: `GCASH${Date.now()}`,
+      paidAt: new Date(),
+      notes: `Event registration: ${paidWorkshop.title} | Member discount applied: 25% | Original: ₱${
+        800 * 2
+      }, Discounted: ₱${600 * 2}`,
+    },
   });
 
   const memberReg1 = await prisma.eventRegistration.create({
@@ -1153,6 +1196,7 @@ async function main() {
       attendeeName: monthlyMembers[0].name,
       attendeeEmail: monthlyMembers[0].email,
       numberOfPax: 2,
+      paymentId: memberEventPayment.id,
     },
   });
 
@@ -1181,20 +1225,70 @@ async function main() {
     });
   }
   console.log(
-    `✅ Member ${monthlyMembers[0].name} registered for ${paidWorkshop.title} with 2 people`
+    `✅ Member ${monthlyMembers[0].name} registered for ${paidWorkshop.title} with 25% discount (₱1,200 paid instead of ₱1,600)`
   );
 
-  const dailyEventPaymentRef = await generateEventPaymentReference();
-  const dailyPayment = await prisma.payment.create({
+  // Guest registration (paying full price)
+  const guestEventPaymentRef = await generateEventPaymentReference();
+  const guestEventPayment = await prisma.customerPayment.create({
+    data: {
+      customerId: guestCustomers[0].id,
+      amount: 800, // Full price
+      paymentMethod: "BANK_TRANSFER",
+      status: "COMPLETED",
+      paymentReference: guestEventPaymentRef,
+      referenceNumber: `BANK${Date.now()}`,
+      paidAt: new Date(),
+      notes: `Event registration: ${paidWorkshop.title} | Full price (no member discount)`,
+    },
+  });
+
+  const guestReg = await prisma.customerEventRegistration.create({
+    data: {
+      customerId: guestCustomers[0].id,
+      eventId: paidWorkshop.id,
+      attendeeName: guestCustomers[0].name,
+      attendeeEmail: guestCustomers[0].email!,
+      attendeePhone: guestCustomers[0].contactNumber!,
+      numberOfPax: 1,
+      paymentId: guestEventPayment.id,
+    },
+  });
+
+  const guestPax = await prisma.customerEventPax.create({
+    data: {
+      registrationId: guestReg.id,
+      name: guestCustomers[0].name,
+      email: guestCustomers[0].email!,
+      phone: guestCustomers[0].contactNumber!,
+    },
+  });
+
+  for (const freebie of workshopFreebies) {
+    await prisma.customerPaxFreebie.create({
+      data: {
+        paxId: guestPax.id,
+        freebieId: freebie.id,
+        quantity: 1,
+      },
+    });
+  }
+  console.log(
+    `✅ Guest ${guestCustomers[0].name} registered for ${paidWorkshop.title} at full price (₱800)`
+  );
+
+  // Coffee event with member discount
+  const coffeeEventPaymentRef = await generateEventPaymentReference();
+  const coffeeEventPayment = await prisma.payment.create({
     data: {
       userId: dailyMembers[0].id,
-      amount: coffeeSocial.price,
+      amount: 400, // Member price (₱400)
       paymentMethod: "GCASH",
       status: "COMPLETED",
-      paymentReference: dailyEventPaymentRef,
+      paymentReference: coffeeEventPaymentRef,
       referenceNumber: `GCASH${Date.now()}`,
       paidAt: new Date(),
-      notes: `Event registration: ${coffeeSocial.title}`,
+      notes: `Event registration: ${coffeeSocial.title} | Member discount applied: ₱100 | Original: ₱500, Discounted: ₱400`,
     },
   });
 
@@ -1205,7 +1299,7 @@ async function main() {
       attendeeName: dailyMembers[0].name,
       attendeeEmail: dailyMembers[0].email,
       numberOfPax: 1,
-      paymentId: dailyPayment.id,
+      paymentId: coffeeEventPayment.id,
     },
   });
 
@@ -1232,16 +1326,17 @@ async function main() {
     });
   }
   console.log(
-    `✅ Daily member ${dailyMembers[0].name} registered for ${coffeeSocial.title} (Ref: ${dailyEventPaymentRef})`
+    `✅ Daily member ${dailyMembers[0].name} registered for ${coffeeSocial.title} with ₱100 discount (₱400 paid instead of ₱500)`
   );
 
+  // Free event registration
   const guestFreeReg = await prisma.customerEventRegistration.create({
     data: {
-      customerId: guestCustomers[0].id,
+      customerId: guestCustomers[1].id,
       eventId: freeNetworking.id,
-      attendeeName: guestCustomers[0].name,
-      attendeeEmail: guestCustomers[0].email!,
-      attendeePhone: guestCustomers[0].contactNumber!,
+      attendeeName: guestCustomers[1].name,
+      attendeeEmail: guestCustomers[1].email!,
+      attendeePhone: guestCustomers[1].contactNumber!,
       numberOfPax: 1,
     },
   });
@@ -1249,9 +1344,9 @@ async function main() {
   const guestFreePax = await prisma.customerEventPax.create({
     data: {
       registrationId: guestFreeReg.id,
-      name: guestCustomers[0].name,
-      email: guestCustomers[0].email!,
-      phone: guestCustomers[0].contactNumber!,
+      name: guestCustomers[1].name,
+      email: guestCustomers[1].email!,
+      phone: guestCustomers[1].contactNumber!,
     },
   });
 
@@ -1270,7 +1365,7 @@ async function main() {
   }
 
   console.log(
-    `✅ Guest ${guestCustomers[0].name} registered for ${freeNetworking.title}`
+    `✅ Guest ${guestCustomers[1].name} registered for ${freeNetworking.title}`
   );
 
   // Daily use redemptions
@@ -1329,20 +1424,33 @@ async function main() {
       slug: true,
       isMemberOnly: true,
       isFree: true,
-      isFreeForMembers: true,
       price: true,
+      memberDiscount: true,
+      memberDiscountType: true,
+      memberDiscountedPrice: true,
+      hasCustomerFreebies: true,
     },
   });
   events.forEach((e) => {
-    const type = e.isMemberOnly
-      ? "[Members Only]"
-      : e.isFree
-      ? "[Free]"
-      : e.isFreeForMembers
-      ? `[₱${e.price} / Free for Members]`
-      : `[₱${e.price}]`;
+    let type = "";
+    if (e.isMemberOnly) {
+      type = "[Members Only]";
+    } else if (e.isFree) {
+      type = "[Free]";
+    } else if (e.memberDiscount && e.memberDiscount > 0) {
+      const discountText =
+        e.memberDiscountType === "PERCENTAGE"
+          ? `${e.memberDiscount}% off`
+          : `₱${e.memberDiscount} off`;
+      type = `[₱${e.price} / ₱${e.memberDiscountedPrice} for Members (${discountText})]`;
+    } else {
+      type = `[₱${e.price}]`;
+    }
     console.log(`   - ${e.title} ${type}`);
     console.log(`     Slug: ${e.slug}`);
+    console.log(
+      `     Customer Freebies: ${e.hasCustomerFreebies ? "Yes" : "Members Only"}`
+    );
   });
 
   console.log("\n💰 Payment References:");
@@ -1365,6 +1473,17 @@ async function main() {
   sampleCustomerPayments.forEach((p) => {
     console.log(`   - ${p.paymentReference} (₱${p.amount}) ${p.notes || ""}`);
   });
+
+  console.log("\n💳 Member Discount Examples:");
+  console.log(
+    `   - Team Building Workshop: ₱800 → ₱600 for members (25% off)`
+  );
+  console.log(
+    `   - Morning Coffee Social: ₱500 → ₱400 for members (₱100 off)`
+  );
+  console.log(
+    `   - Member saved: ₱200 (Workshop) + ₱100 (Coffee) = ₱300 total savings`
+  );
 }
 
 main()
