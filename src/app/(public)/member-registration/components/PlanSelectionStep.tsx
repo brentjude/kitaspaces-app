@@ -7,7 +7,6 @@ import {
   PlusIcon,
   ArrowRightIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
 
 interface PlanSelectionStepProps {
   plans: MembershipPlanPublic[];
@@ -28,8 +27,6 @@ export default function PlanSelectionStep({
   onDecrement,
   onNext,
 }: PlanSelectionStepProps) {
-  const [durationType, setDurationType] = useState<"days" | "months">("days");
-
   const handleContinue = () => {
     if (!selectedPlanId) {
       alert("Please select a membership plan");
@@ -43,10 +40,6 @@ export default function PlanSelectionStep({
   // Calculate total days based on duration type
   const getTotalDays = () => {
     if (!selectedPlan) return 0;
-
-    if (durationType === "months") {
-      return selectedPlan.durationDays * quantity;
-    }
     return selectedPlan.durationDays * quantity;
   };
 
