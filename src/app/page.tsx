@@ -10,12 +10,12 @@ import { CalendarIcon } from "@heroicons/react/24/outline";
 import type { EventWithRelations } from "@/types";
 import { generateEventSlug } from "@/lib/utils/slug";
 
-// 🆕 Event Skeleton Component
+// Event Skeleton Component
 function EventCardSkeleton() {
   return (
     <div className="bg-white rounded-2xl border border-foreground/10 shadow-sm overflow-hidden flex flex-col h-full animate-pulse">
       {/* Image Skeleton */}
-      <div className="h-48 bg-gradient-to-br from-gray-200 to-gray-300 relative">
+      <div className="h-48 bg-linear-to-br from-gray-200 to-gray-300 relative">
         <div className="absolute top-4 right-4">
           <div className="w-24 h-6 bg-gray-300 rounded-full" />
         </div>
@@ -68,7 +68,7 @@ function EventCardSkeleton() {
   );
 }
 
-// 🆕 Events Section Skeleton
+// Events Section Skeleton
 function EventsSectionSkeleton() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
