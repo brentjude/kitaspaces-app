@@ -21,6 +21,7 @@ import {
   TicketIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
+import { MembershipPerk } from "@/types/dashboard";
 
 type TabType = "redemptions" | "perks" | "tickets";
 
@@ -152,6 +153,24 @@ export default function UserDashboardPage() {
     alert(data.data.message || "Perk redeemed successfully!");
   };
 
+  // Helper function to check if perk is available all week
+  const isAllWeekPerk = (perk: MembershipPerk): boolean => {
+    if (!perk.daysOfWeek) return true; // No restriction = all week
+
+    try {
+      const days = JSON.parse(perk.daysOfWeek) as string[];
+      return days.length === 7; // All 7 days = all week
+    } catch {
+      return true;
+    }
+  };
+
+  // Filter perks based on tab
+  const dailyPerks =
+    perksData?.perks.filter((perk) => !isAllWeekPerk(perk)) || [];
+  const memberPerks =
+    perksData?.perks.filter((perk) => isAllWeekPerk(perk)) || [];
+
   if (loading || status === "loading") {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -193,13 +212,13 @@ export default function UserDashboardPage() {
       id: "redemptions" as TabType,
       label: "Daily Perks",
       icon: <GiftIcon className="w-5 h-5" />,
-      count: redemptionEvents.length,
+      count: redemptionEvents.length + dailyPerks.length,
     },
     {
       id: "perks" as TabType,
       label: "Member Perks",
       icon: <SparklesIcon className="w-5 h-5" />,
-      count: perksData?.perks.length || 0,
+      count: memberPerks.length,
     },
     {
       id: "tickets" as TabType,
@@ -211,14 +230,13 @@ export default function UserDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 🆕 Use centralized Header component */}
-      <PublicHeader 
+      <PublicHeader
         currentUser={{
-          name: session?.user?.name || '',
-          email: session?.user?.email || '',
+          name: session?.user?.name || "",
+          email: session?.user?.email || "",
           role: session?.user?.role,
           isMember: dashboardData?.isMember || false,
-        }} 
+        }}
       />
 
       {/* Main Content */}
@@ -264,21 +282,55 @@ export default function UserDashboardPage() {
           {/* Tab Content */}
           <div className="p-6">
             {activeTab === "redemptions" && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
+              <div className="space-y-8">
+                {/* Redemption Events Section */}
+                {redemptionEvents.length > 0 && (
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">
-                      Daily Redemption Events
-                    </h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Free perks available on specific days
-                    </p>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-lg font-bold text-gray-900">
+                          Daily Redemption Events
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Free events available on specific days
+                        </p>
+                      </div>
+                    </div>
+                    <RedemptionEvents
+                      events={redemptionEvents}
+                      onRedeem={handleRedeemEvent}
+                    />
                   </div>
-                </div>
-                <RedemptionEvents
-                  events={redemptionEvents}
-                  onRedeem={handleRedeemEvent}
-                />
+                )}
+
+                {/* Daily Perks Section */}
+                {dailyPerks.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-lg font-bold text-gray-900">
+                          Day-Specific Perks
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Perks available on certain days of the week
+                        </p>
+                      </div>
+                    </div>
+                    <RedemptionPerks
+                      perks={dailyPerks}
+                      membershipName={perksData?.membership?.planName || ""}
+                      onRedeem={handleRedeemPerk}
+                    />
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {redemptionEvents.length === 0 && dailyPerks.length === 0 && (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+                    <GiftIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                    <p className="text-gray-500">No daily perks available</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -290,15 +342,13 @@ export default function UserDashboardPage() {
                       {perksData?.membership?.planName || "Membership Perks"}
                     </h2>
                     <p className="text-sm text-gray-600 mt-1">
-                      Recurring perks included in your membership plan
+                      Perks available every day of the week
                     </p>
                   </div>
                 </div>
-                {perksData &&
-                perksData.perks.length > 0 &&
-                perksData.membership ? (
+                {perksData && memberPerks.length > 0 && perksData.membership ? (
                   <RedemptionPerks
-                    perks={perksData.perks}
+                    perks={memberPerks}
                     membershipName={perksData.membership.planName}
                     onRedeem={handleRedeemPerk}
                   />
@@ -308,7 +358,7 @@ export default function UserDashboardPage() {
                     <p className="text-gray-500">
                       {perksData && !perksData.membership
                         ? "No active membership found"
-                        : "No membership perks available"}
+                        : "No all-week membership perks available"}
                     </p>
                   </div>
                 )}

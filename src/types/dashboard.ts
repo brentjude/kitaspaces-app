@@ -107,3 +107,29 @@ export interface UserPerksData {
   } | null;
   perks: MembershipPerk[];
 }
+
+export type MembershipPerkRedemption = {
+  perkId: string;
+  perkName: string;
+  perkType: string;
+  quantityAvailable: number;
+  unit: string;
+  usedToday: number;
+  usedThisWeek: number;
+  maxPerDay?: number;
+  maxPerWeek?: number;
+  totalUsed: number;
+};
+
+export type MeetingRoomPerkRedemptionData = {
+  perk: MembershipPerk;
+  availableHours: number;
+  usedHours: number;
+  rooms: Array<{
+    id: string;
+    name: string;
+    capacity: number;
+    hourlyRate: number;
+    amenities: string[];
+  }>;
+};

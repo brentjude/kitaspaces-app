@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { MembershipPerk } from "@/types/dashboard";
 
-/**
- * GET /api/user/perks
- * Fetch user's membership perks with upcoming redemption dates
- */
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -18,15 +15,15 @@ export async function GET() {
       );
     }
 
-    const userId = session.user.id;
+    const now = new Date();
 
-    // Get user's active membership with perks
-    const membership = await prisma.membership.findFirst({
+    // Get active membership with proper date validation
+    const activeMembership = await prisma.membership.findFirst({
       where: {
-        userId,
+        userId: session.user.id,
         status: "ACTIVE",
-        startDate: { lte: new Date() },
-        endDate: { gte: new Date() },
+        startDate: { lte: now },
+        OR: [{ endDate: null }, { endDate: { gte: now } }],
       },
       include: {
         plan: {
@@ -35,9 +32,12 @@ export async function GET() {
           },
         },
       },
+      orderBy: {
+        startDate: "desc",
+      },
     });
 
-    if (!membership || !membership.plan) {
+    if (!activeMembership || !activeMembership.plan) {
       return NextResponse.json({
         success: true,
         data: {
@@ -47,174 +47,184 @@ export async function GET() {
       });
     }
 
-    const now = new Date();
-    const currentDayOfWeek = [
-      "SUNDAY",
-      "MONDAY",
-      "TUESDAY",
-      "WEDNESDAY",
-      "THURSDAY",
-      "FRIDAY",
-      "SATURDAY",
-    ][now.getDay()];
+    // Calculate perk availability
+    const perksWithAvailability: MembershipPerk[] = await Promise.all(
+      activeMembership.plan.perks.map(async (perk) => {
+        // Get today's start and end
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(todayStart);
+        todayEnd.setDate(todayEnd.getDate() + 1);
 
-    // Get today's date range
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+        // Get this week's start and end (Sunday to Saturday)
+        const weekStart = new Date(todayStart);
+        weekStart.setDate(todayStart.getDate() - todayStart.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 7);
 
-    // Helper function to get next occurrence of a day
-    const getNextOccurrence = (dayName: string): Date => {
-      const daysOfWeek = [
-        "SUNDAY",
-        "MONDAY",
-        "TUESDAY",
-        "WEDNESDAY",
-        "THURSDAY",
-        "FRIDAY",
-        "SATURDAY",
-      ];
-      const targetDay = daysOfWeek.indexOf(dayName);
-      const currentDay = now.getDay();
-
-      let daysUntilTarget = targetDay - currentDay;
-      if (daysUntilTarget <= 0) {
-        daysUntilTarget += 7; // Next week
-      }
-
-      const nextDate = new Date(now);
-      nextDate.setDate(now.getDate() + daysUntilTarget);
-      nextDate.setHours(0, 0, 0, 0);
-      return nextDate;
-    };
-
-    // Process each perk to check availability
-    const perksWithAvailability = await Promise.all(
-      membership.plan.perks.map(async (perk) => {
-        let isAvailable = true;
-        let unavailableReason = "";
-        let nextAvailableDate: Date | null = null;
-
-        // Check day-specific availability
-        if (perk.daysOfWeek) {
-          try {
-            const allowedDays = JSON.parse(perk.daysOfWeek) as string[];
-
-            if (!allowedDays.includes(currentDayOfWeek)) {
-              isAvailable = false;
-
-              // Get next available date
-              const upcomingDates = allowedDays.map((day) =>
-                getNextOccurrence(day)
-              );
-              upcomingDates.sort((a, b) => a.getTime() - b.getTime());
-              nextAvailableDate = upcomingDates[0] || null;
-
-              unavailableReason = `Next available: ${nextAvailableDate?.toLocaleDateString(
-                "en-US",
-                {
-                  weekday: "long",
-                  month: "short",
-                  day: "numeric",
-                }
-              )}`;
-            }
-          } catch (e) {
-            console.error("Error parsing daysOfWeek:", e);
-          }
-        }
-
-        // Check time validity (only if day is available)
-        if (perk.validFrom && perk.validUntil && isAvailable) {
-          const currentTime = now.toTimeString().slice(0, 5);
-          if (currentTime < perk.validFrom) {
-            isAvailable = false;
-            unavailableReason = `Available from ${perk.validFrom}`;
-          } else if (currentTime > perk.validUntil) {
-            isAvailable = false;
-            // If it's a recurring perk, show next occurrence
-            if (perk.isRecurring && perk.daysOfWeek) {
-              try {
-                const allowedDays = JSON.parse(perk.daysOfWeek) as string[];
-                const upcomingDates = allowedDays.map((day) =>
-                  getNextOccurrence(day)
-                );
-                upcomingDates.sort((a, b) => a.getTime() - b.getTime());
-                nextAvailableDate = upcomingDates[0] || null;
-
-                unavailableReason = `Next available: ${nextAvailableDate?.toLocaleDateString(
-                  "en-US",
-                  {
-                    weekday: "long",
-                    month: "short",
-                    day: "numeric",
-                  }
-                )}`;
-              } catch (_e) {
-                unavailableReason = "Time window closed for today";
-              }
-            } else {
-              unavailableReason = "Time window closed for today";
-            }
-          }
-        }
-
-        // Check daily usage
-        const todayUsage = await prisma.membershipPerkUsage.count({
+        // Count usage today
+        const todayUsage = await prisma.membershipPerkUsage.aggregate({
           where: {
-            membershipId: membership.id,
+            membershipId: activeMembership.id,
             perkId: perk.id,
             usedAt: {
-              gte: today,
-              lt: tomorrow,
+              gte: todayStart,
+              lt: todayEnd,
             },
+          },
+          _sum: {
+            quantityUsed: true,
           },
         });
 
-        const hasReachedDailyLimit = perk.maxPerDay
-          ? todayUsage >= perk.maxPerDay
-          : false;
+        // Count usage this week
+        const weekUsage = await prisma.membershipPerkUsage.aggregate({
+          where: {
+            membershipId: activeMembership.id,
+            perkId: perk.id,
+            usedAt: {
+              gte: weekStart,
+              lt: weekEnd,
+            },
+          },
+          _sum: {
+            quantityUsed: true,
+          },
+        });
 
-        if (hasReachedDailyLimit) {
-          isAvailable = false;
-
-          // Show next available date for recurring perks
-          if (perk.isRecurring && perk.daysOfWeek) {
-            try {
-              const allowedDays = JSON.parse(perk.daysOfWeek) as string[];
-              const upcomingDates = allowedDays.map((day) =>
-                getNextOccurrence(day)
-              );
-              upcomingDates.sort((a, b) => a.getTime() - b.getTime());
-              nextAvailableDate = upcomingDates[0] || null;
-
-              unavailableReason = `Daily limit reached. Next: ${nextAvailableDate?.toLocaleDateString(
-                "en-US",
-                {
-                  weekday: "long",
-                  month: "short",
-                  day: "numeric",
-                }
-              )}`;
-            } catch (_e) {
-              unavailableReason = "Daily limit reached";
-            }
-          } else {
-            unavailableReason = "Daily limit reached";
-          }
-        }
-
-        // Get last usage date
+        // Get last usage
         const lastUsage = await prisma.membershipPerkUsage.findFirst({
           where: {
-            membershipId: membership.id,
+            membershipId: activeMembership.id,
             perkId: perk.id,
           },
           orderBy: {
             usedAt: "desc",
           },
         });
+
+        const usedToday = todayUsage._sum.quantityUsed || 0;
+        const usedThisWeek = weekUsage._sum.quantityUsed || 0;
+
+        // Check availability conditions
+        let isAvailable = true;
+        let unavailableReason = "";
+        let nextAvailableDate: Date | null = null;
+
+        // 1. Check day of week
+        if (perk.daysOfWeek) {
+          try {
+            const daysOfWeekStr = perk.daysOfWeek.trim();
+
+            if (
+              daysOfWeekStr &&
+              daysOfWeekStr !== '""' &&
+              daysOfWeekStr !== "''"
+            ) {
+              const allowedDays = JSON.parse(daysOfWeekStr) as string[];
+              const currentDay = now.getDay();
+
+              // Normalize allowed days - trim and ensure they're strings
+              const normalizedAllowedDays = allowedDays
+                .map((d) => String(d).trim())
+                .filter((d) => d !== "");
+
+              // Only check if it's not all 7 days
+              if (
+                normalizedAllowedDays.length > 0 &&
+                normalizedAllowedDays.length < 7
+              ) {
+                const currentDayStr = String(currentDay);
+
+                if (!normalizedAllowedDays.includes(currentDayStr)) {
+                  isAvailable = false;
+                  const dayNames = [
+                    "Sunday",
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                  ];
+
+                  const allowedDayNames = normalizedAllowedDays
+                    .map((d) => {
+                      const dayNum = parseInt(d);
+                      return !isNaN(dayNum) && dayNum >= 0 && dayNum <= 6
+                        ? dayNames[dayNum]
+                        : null;
+                    })
+                    .filter((d): d is string => d !== null)
+                    .sort((a, b) => {
+                      const aIndex = dayNames.indexOf(a);
+                      const bIndex = dayNames.indexOf(b);
+                      return aIndex - bIndex;
+                    });
+
+                  unavailableReason = `Available on ${allowedDayNames.join(", ")}`;
+                }
+              }
+            }
+          } catch (e) {
+            console.error(`Error parsing daysOfWeek for ${perk.name}:`, e);
+            console.error("daysOfWeek value:", perk.daysOfWeek);
+          }
+        }
+
+        // 2. Check time range
+        if (isAvailable && perk.validFrom && perk.validUntil) {
+          const currentTime = now.toTimeString().slice(0, 5);
+
+          if (currentTime < perk.validFrom || currentTime > perk.validUntil) {
+            isAvailable = false;
+            unavailableReason = `Available ${perk.validFrom} - ${perk.validUntil}`;
+          }
+        }
+
+        // 3. Check daily limit
+        if (isAvailable && perk.maxPerDay !== null) {
+          if (usedToday >= perk.maxPerDay) {
+            isAvailable = false;
+            unavailableReason = `Daily limit reached`;
+            const tomorrow = new Date(todayEnd);
+            nextAvailableDate = tomorrow;
+          }
+        }
+
+        // 4. Check weekly limit
+        if (isAvailable && perk.maxPerWeek !== null) {
+          if (usedThisWeek >= perk.maxPerWeek) {
+            isAvailable = false;
+            unavailableReason = `Weekly limit reached`;
+            nextAvailableDate = new Date(weekEnd);
+          }
+        }
+
+        // 5. For meeting room hours, check remaining quantity
+        if (isAvailable && perk.perkType === "MEETING_ROOM_HOURS") {
+          const remainingQuantity = perk.quantity - usedToday;
+
+          if (remainingQuantity <= 0) {
+            isAvailable = false;
+            unavailableReason = perk.isRecurring
+              ? "No hours remaining today"
+              : "All hours used";
+            if (perk.isRecurring) {
+              nextAvailableDate = new Date(todayEnd);
+            }
+          }
+        }
+
+        // 6. Check membership expiry
+        if (
+          isAvailable &&
+          activeMembership.endDate &&
+          activeMembership.endDate < now
+        ) {
+          isAvailable = false;
+          unavailableReason = "Membership expired";
+        }
 
         return {
           id: perk.id,
@@ -232,9 +242,9 @@ export async function GET() {
           isAvailable,
           unavailableReason,
           nextAvailableDate,
-          usedToday: todayUsage,
+          usedToday,
           lastUsedAt: lastUsage?.usedAt || null,
-        };
+        } as MembershipPerk;
       })
     );
 
@@ -242,18 +252,23 @@ export async function GET() {
       success: true,
       data: {
         membership: {
-          id: membership.id,
-          planName: membership.plan.name,
-          status: membership.status,
-          endDate: membership.endDate,
+          id: activeMembership.id,
+          planName: activeMembership.plan.name,
+          status: activeMembership.status,
+          startDate: activeMembership.startDate,
+          endDate: activeMembership.endDate,
         },
         perks: perksWithAvailability,
       },
     });
   } catch (error) {
-    console.error("Error fetching perks:", error);
+    console.error("Error fetching user perks:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch perks" },
+      {
+        success: false,
+        error: "Failed to fetch perks",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
