@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Modal from "@/app/components/Modal";
-import ImageUpload from "@/app/components/ImageUpload";
 import {
   MeetingRoom,
   MeetingRoomCreateInput,
