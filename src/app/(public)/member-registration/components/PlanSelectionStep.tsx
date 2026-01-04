@@ -131,7 +131,7 @@ export default function PlanSelectionStep({
                 <ul className="space-y-2">
                   {plan.perks.slice(0, 5).map((perk) => (
                     <li key={perk.id} className="flex items-start text-sm">
-                      <CheckCircleIcon className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <CheckCircleIcon className="w-4 h-4 text-green-500 mr-2 mt-0.5 shrink-0" />
                       <span className="text-foreground/80">
                         {perk.quantity} {perk.unit} {perk.name}
                       </span>
@@ -159,7 +159,7 @@ export default function PlanSelectionStep({
 
       {/* Duration Selector - Only shows when a plan is selected */}
       {selectedPlanId && selectedPlan && (
-        <div className="bg-gradient-to-br from-primary/5 to-orange-50 rounded-2xl p-6 mb-8 border border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="bg-linear-to-br from-primary/5 to-orange-50 rounded-2xl p-6 mb-8 border border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="text-center mb-4">
             <h3 className="text-lg font-bold text-foreground mb-1">
               How long would you like to avail?
