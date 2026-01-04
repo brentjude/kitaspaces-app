@@ -50,7 +50,7 @@ export default function RedemptionPerks({
 
   const getPerkIcon = (type: string) => {
     const icons: Record<string, string> = {
-      CUSTOM: "🍵",
+      CUSTOM: "💎",
       COFFEE_VOUCHERS: "☕",
       MEETING_ROOM_HOURS: "🏢",
       PRINTING_CREDITS: "🖨️",
@@ -85,17 +85,15 @@ export default function RedemptionPerks({
 
     try {
       const allowedDays = JSON.parse(daysJson) as string[];
-      if (allowedDays.length === 7) return null; // Available every day
+      if (allowedDays.length === 7) return null;
 
       const now = new Date();
       const currentDay = now.getDay();
 
-      // Convert to numbers and sort
       const allowedDayNumbers = allowedDays
         .map((d) => parseInt(d))
         .sort((a, b) => a - b);
 
-      // Find next available day
       let daysToAdd = 1;
       for (let i = 0; i < 7; i++) {
         const checkDay = (currentDay + daysToAdd) % 7;
@@ -113,10 +111,17 @@ export default function RedemptionPerks({
     }
   };
 
-  const formatNextAvailableDate = (date: Date | null): string => {
-    if (!date) return "";
+  const formatAvailabilityMessage = (perk: MembershipPerk): string => {
+    if (!perk.nextAvailableDate) {
+      return perk.unavailableReason || "Not available";
+    }
 
-    const d = new Date(date);
+    // ✅ Handle both Date objects and ISO strings
+    const nextDate =
+      typeof perk.nextAvailableDate === "string"
+        ? new Date(perk.nextAvailableDate)
+        : perk.nextAvailableDate;
+
     const months = [
       "Jan",
       "Feb",
@@ -131,7 +136,8 @@ export default function RedemptionPerks({
       "Nov",
       "Dec",
     ];
-    return `${months[d.getMonth()]} ${d.getDate()}`;
+
+    return `Available ${months[nextDate.getMonth()]} ${nextDate.getDate()}`;
   };
 
   const handleMeetingRoomSuccess = async () => {
@@ -142,12 +148,12 @@ export default function RedemptionPerks({
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {perks.map((perk) => {
-          // Backend already calculated isAvailable
           const isAvailable = perk.isAvailable;
           const isMeetingRoom = perk.type === "MEETING_ROOM_HOURS";
           const hasUnlimitedDaily = perk.maxPerDay === null;
+          const hasUnlimitedWeekly = perk.maxPerWeek === null;
+          const hasUnlimitedMonthly = perk.maxPerMonth === null;
 
-          // Get next available day for day-restricted perks
           const nextAvailableDay = !isAvailable
             ? getNextAvailableDay(perk.daysOfWeek)
             : null;
@@ -252,20 +258,48 @@ export default function RedemptionPerks({
                   </div>
                 )}
 
-                {/* Daily Usage */}
-                {perk.maxPerDay && !isMeetingRoom && (
-                  <div className="flex items-center text-xs text-gray-500">
-                    <span>
-                      {perk.usedToday}/{perk.maxPerDay} used today
-                    </span>
-                  </div>
-                )}
+                {/* Usage Info - Only show non-meeting room perks */}
+                {!isMeetingRoom && (
+                  <>
+                    {/* Daily Usage */}
+                    {perk.maxPerDay !== null && (
+                      <div className="flex items-center text-xs text-gray-500">
+                        <span>
+                          {perk.usedToday || 0}/{perk.maxPerDay} used today
+                        </span>
+                      </div>
+                    )}
 
-                {/* Unlimited Indicator */}
-                {hasUnlimitedDaily && !isMeetingRoom && (
-                  <div className="flex items-center text-xs text-green-600">
-                    <span>✓ Unlimited use per day</span>
-                  </div>
+                    {/* Weekly Usage */}
+                    {perk.maxPerWeek !== null && (
+                      <div className="flex items-center text-xs text-gray-500">
+                        <span>
+                          {perk.usedThisWeek || 0}/{perk.maxPerWeek} used this
+                          week
+                        </span>
+                      </div>
+                    )}
+
+                    {/* ✅ Monthly Usage - Only show if maxPerMonth is NOT null */}
+                    {perk.maxPerMonth !== null &&
+                      perk.maxPerMonth !== undefined && (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <span>
+                            {perk.usedThisMonth || 0}/{perk.maxPerMonth} used
+                            this month
+                          </span>
+                        </div>
+                      )}
+
+                    {/* Unlimited Indicator */}
+                    {hasUnlimitedDaily &&
+                      hasUnlimitedWeekly &&
+                      hasUnlimitedMonthly && (
+                        <div className="flex items-center text-xs text-green-600">
+                          <span>✓ Unlimited use</span>
+                        </div>
+                      )}
+                  </>
                 )}
               </div>
 
@@ -288,7 +322,7 @@ export default function RedemptionPerks({
               ) : displayNextDate ? (
                 <div className="w-full py-2 px-4 bg-purple-50 text-purple-600 font-medium rounded-lg text-sm text-center flex items-center justify-center">
                   <ClockIcon className="w-4 h-4 mr-2" />
-                  Available {formatNextAvailableDate(displayNextDate)}
+                  {formatAvailabilityMessage(perk)}
                 </div>
               ) : (
                 <div className="w-full py-2 px-4 bg-gray-100 text-gray-500 font-medium rounded-lg text-sm text-center flex items-center justify-center">
@@ -301,7 +335,11 @@ export default function RedemptionPerks({
               {perk.lastUsedAt && (
                 <p className="text-xs text-gray-400 mt-2 text-center">
                   Last used:{" "}
-                  {new Date(perk.lastUsedAt).toLocaleDateString(undefined, {
+                  {new Date(
+                    typeof perk.lastUsedAt === "string"
+                      ? perk.lastUsedAt
+                      : perk.lastUsedAt
+                  ).toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
                   })}

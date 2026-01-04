@@ -17,7 +17,6 @@ export async function GET() {
 
     const now = new Date();
 
-    // Get active membership with proper date validation
     const activeMembership = await prisma.membership.findFirst({
       where: {
         userId: session.user.id,
@@ -47,52 +46,94 @@ export async function GET() {
       });
     }
 
-    // Calculate perk availability
     const perksWithAvailability: MembershipPerk[] = await Promise.all(
       activeMembership.plan.perks.map(async (perk) => {
-        // Get today's start and end
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
         const todayEnd = new Date(todayStart);
         todayEnd.setDate(todayEnd.getDate() + 1);
 
-        // Get this week's start and end (Sunday to Saturday)
         const weekStart = new Date(todayStart);
         weekStart.setDate(todayStart.getDate() - todayStart.getDay());
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 7);
 
-        // Count usage today
-        const todayUsage = await prisma.membershipPerkUsage.aggregate({
-          where: {
-            membershipId: activeMembership.id,
-            perkId: perk.id,
-            usedAt: {
-              gte: todayStart,
-              lt: todayEnd,
-            },
-          },
-          _sum: {
-            quantityUsed: true,
-          },
-        });
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        monthStart.setHours(0, 0, 0, 0);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        monthEnd.setHours(0, 0, 0, 0);
 
-        // Count usage this week
-        const weekUsage = await prisma.membershipPerkUsage.aggregate({
-          where: {
-            membershipId: activeMembership.id,
-            perkId: perk.id,
-            usedAt: {
-              gte: weekStart,
-              lt: weekEnd,
-            },
-          },
-          _sum: {
-            quantityUsed: true,
-          },
-        });
+        // ✅ For meeting room hours, use SUM (aggregate hours)
+        // ✅ For other perks, use COUNT (number of redemptions)
+        const isMeetingRoomHours = perk.perkType === "MEETING_ROOM_HOURS";
 
-        // Get last usage
+        let usedToday = 0;
+        let usedThisWeek = 0;
+        let usedThisMonth = 0;
+
+        if (isMeetingRoomHours) {
+          // Use aggregate SUM for meeting room hours
+          const [todayUsage, weekUsage, monthUsage] = await Promise.all([
+            prisma.membershipPerkUsage.aggregate({
+              where: {
+                membershipId: activeMembership.id,
+                perkId: perk.id,
+                usedAt: { gte: todayStart, lt: todayEnd },
+              },
+              _sum: { quantityUsed: true },
+            }),
+            prisma.membershipPerkUsage.aggregate({
+              where: {
+                membershipId: activeMembership.id,
+                perkId: perk.id,
+                usedAt: { gte: weekStart, lt: weekEnd },
+              },
+              _sum: { quantityUsed: true },
+            }),
+            prisma.membershipPerkUsage.aggregate({
+              where: {
+                membershipId: activeMembership.id,
+                perkId: perk.id,
+                usedAt: { gte: monthStart, lt: monthEnd },
+              },
+              _sum: { quantityUsed: true },
+            }),
+          ]);
+
+          usedToday = todayUsage._sum.quantityUsed || 0;
+          usedThisWeek = weekUsage._sum.quantityUsed || 0;
+          usedThisMonth = monthUsage._sum.quantityUsed || 0;
+        } else {
+          // Use COUNT for regular perks (number of redemptions)
+          const [todayCount, weekCount, monthCount] = await Promise.all([
+            prisma.membershipPerkUsage.count({
+              where: {
+                membershipId: activeMembership.id,
+                perkId: perk.id,
+                usedAt: { gte: todayStart, lt: todayEnd },
+              },
+            }),
+            prisma.membershipPerkUsage.count({
+              where: {
+                membershipId: activeMembership.id,
+                perkId: perk.id,
+                usedAt: { gte: weekStart, lt: weekEnd },
+              },
+            }),
+            prisma.membershipPerkUsage.count({
+              where: {
+                membershipId: activeMembership.id,
+                perkId: perk.id,
+                usedAt: { gte: monthStart, lt: monthEnd },
+              },
+            }),
+          ]);
+
+          usedToday = todayCount;
+          usedThisWeek = weekCount;
+          usedThisMonth = monthCount;
+        }
+
         const lastUsage = await prisma.membershipPerkUsage.findFirst({
           where: {
             membershipId: activeMembership.id,
@@ -103,10 +144,6 @@ export async function GET() {
           },
         });
 
-        const usedToday = todayUsage._sum.quantityUsed || 0;
-        const usedThisWeek = weekUsage._sum.quantityUsed || 0;
-
-        // Check availability conditions
         let isAvailable = true;
         let unavailableReason = "";
         let nextAvailableDate: Date | null = null;
@@ -124,12 +161,10 @@ export async function GET() {
               const allowedDays = JSON.parse(daysOfWeekStr) as string[];
               const currentDay = now.getDay();
 
-              // Normalize allowed days - trim and ensure they're strings
               const normalizedAllowedDays = allowedDays
                 .map((d) => String(d).trim())
                 .filter((d) => d !== "");
 
-              // Only check if it's not all 7 days
               if (
                 normalizedAllowedDays.length > 0 &&
                 normalizedAllowedDays.length < 7
@@ -163,12 +198,27 @@ export async function GET() {
                     });
 
                   unavailableReason = `Available on ${allowedDayNames.join(", ")}`;
+
+                  // ✅ Find next available day
+                  const allowedDayNums = normalizedAllowedDays.map((d) =>
+                    parseInt(d)
+                  );
+                  let daysToAdd = 1;
+                  for (let i = 0; i < 7; i++) {
+                    const checkDay = (currentDay + daysToAdd) % 7;
+                    if (allowedDayNums.includes(checkDay)) {
+                      nextAvailableDate = new Date(now);
+                      nextAvailableDate.setDate(now.getDate() + daysToAdd);
+                      nextAvailableDate.setHours(0, 0, 0, 0);
+                      break;
+                    }
+                    daysToAdd++;
+                  }
                 }
               }
             }
           } catch (e) {
             console.error(`Error parsing daysOfWeek for ${perk.name}:`, e);
-            console.error("daysOfWeek value:", perk.daysOfWeek);
           }
         }
 
@@ -182,18 +232,80 @@ export async function GET() {
           }
         }
 
-        // 3. Check daily limit
-        if (isAvailable && perk.maxPerDay !== null) {
-          if (usedToday >= perk.maxPerDay) {
+        // ✅ Check limits in priority order: Monthly > Weekly > Daily
+
+        // 3. Check monthly limit FIRST (strictest)
+        if (
+          isAvailable &&
+          perk.maxPerMonth !== null &&
+          perk.maxPerMonth !== undefined
+        ) {
+          if (usedThisMonth >= perk.maxPerMonth) {
             isAvailable = false;
-            unavailableReason = `Daily limit reached`;
-            const tomorrow = new Date(todayEnd);
-            nextAvailableDate = tomorrow;
+            unavailableReason = `Monthly limit reached`;
+            // ✅ Set to first day of NEXT month, considering day restrictions
+            const baseNextMonth = new Date(
+              now.getFullYear(),
+              now.getMonth() + 1,
+              1,
+              0,
+              0,
+              0,
+              0
+            );
+
+            // If perk has day restrictions, find first valid day in next month
+            if (perk.daysOfWeek) {
+              try {
+                const daysOfWeekStr = perk.daysOfWeek.trim();
+                if (
+                  daysOfWeekStr &&
+                  daysOfWeekStr !== '""' &&
+                  daysOfWeekStr !== "''"
+                ) {
+                  const allowedDays = JSON.parse(daysOfWeekStr) as string[];
+                  const allowedDayNums = allowedDays
+                    .map((d) => parseInt(d.trim()))
+                    .filter((d) => !isNaN(d));
+
+                  if (allowedDayNums.length > 0 && allowedDayNums.length < 7) {
+                    // Find first valid day in next month
+                    const firstDayOfNextMonth = baseNextMonth.getDay();
+                    let daysToAdd = 0;
+
+                    for (let i = 0; i < 7; i++) {
+                      const checkDay = (firstDayOfNextMonth + i) % 7;
+                      if (allowedDayNums.includes(checkDay)) {
+                        daysToAdd = i;
+                        break;
+                      }
+                    }
+
+                    nextAvailableDate = new Date(baseNextMonth);
+                    nextAvailableDate.setDate(
+                      baseNextMonth.getDate() + daysToAdd
+                    );
+                  } else {
+                    nextAvailableDate = baseNextMonth;
+                  }
+                } else {
+                  nextAvailableDate = baseNextMonth;
+                }
+              } catch {
+                nextAvailableDate = baseNextMonth;
+              }
+            } else {
+              nextAvailableDate = baseNextMonth;
+            }
           }
         }
 
-        // 4. Check weekly limit
-        if (isAvailable && perk.maxPerWeek !== null) {
+        // 4. Check weekly limit SECOND
+        if (
+          isAvailable &&
+          perk.maxPerWeek !== null &&
+          perk.maxPerWeek !== undefined
+        ) {
           if (usedThisWeek >= perk.maxPerWeek) {
             isAvailable = false;
             unavailableReason = `Weekly limit reached`;
@@ -201,7 +313,20 @@ export async function GET() {
           }
         }
 
-        // 5. For meeting room hours, check remaining quantity
+        // 5. Check daily limit LAST (least strict)
+        if (
+          isAvailable &&
+          perk.maxPerDay !== null &&
+          perk.maxPerDay !== undefined
+        ) {
+          if (usedToday >= perk.maxPerDay) {
+            isAvailable = false;
+            unavailableReason = `Daily limit reached`;
+            nextAvailableDate = new Date(todayEnd);
+          }
+        }
+
+        // 6. For meeting room hours, check remaining quantity
         if (isAvailable && perk.perkType === "MEETING_ROOM_HOURS") {
           const remainingQuantity = perk.quantity - usedToday;
 
@@ -216,7 +341,7 @@ export async function GET() {
           }
         }
 
-        // 6. Check membership expiry
+        // 7. Check membership expiry
         if (
           isAvailable &&
           activeMembership.endDate &&
@@ -235,15 +360,20 @@ export async function GET() {
           unit: perk.unit,
           maxPerDay: perk.maxPerDay,
           maxPerWeek: perk.maxPerWeek,
+          maxPerMonth: perk.maxPerMonth,
           daysOfWeek: perk.daysOfWeek,
           isRecurring: perk.isRecurring,
           validFrom: perk.validFrom,
           validUntil: perk.validUntil,
           isAvailable,
           unavailableReason,
-          nextAvailableDate,
+          nextAvailableDate: nextAvailableDate
+            ? nextAvailableDate.toISOString()
+            : null,
           usedToday,
-          lastUsedAt: lastUsage?.usedAt || null,
+          usedThisWeek,
+          usedThisMonth,
+          lastUsedAt: lastUsage?.usedAt ? lastUsage.usedAt.toISOString() : null,
         } as MembershipPerk;
       })
     );
@@ -255,8 +385,10 @@ export async function GET() {
           id: activeMembership.id,
           planName: activeMembership.plan.name,
           status: activeMembership.status,
-          startDate: activeMembership.startDate,
-          endDate: activeMembership.endDate,
+          startDate: activeMembership.startDate.toISOString(),
+          endDate: activeMembership.endDate
+            ? activeMembership.endDate.toISOString()
+            : null,
         },
         perks: perksWithAvailability,
       },

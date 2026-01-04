@@ -182,6 +182,7 @@ model MembershipPlanPerk {
   // Optional limits
   maxPerDay  Float?
   maxPerWeek Float?
+  maxPerMonth Float?
 
   // Day/time restrictions (for recurring perks like "Free Matcha Monday")
   daysOfWeek  String? // JSON array of days: ["MONDAY", "WEDNESDAY", "FRIDAY"]

@@ -87,6 +87,7 @@ export interface MembershipPerk {
   unit: string;
   maxPerDay: number | null;
   maxPerWeek: number | null;
+  maxPerMonth: number | null; // ✅ Added
   daysOfWeek: string | null;
   isRecurring: boolean;
   validFrom: string | null;
@@ -95,6 +96,8 @@ export interface MembershipPerk {
   unavailableReason: string;
   nextAvailableDate: Date | null;
   usedToday: number;
+  usedThisWeek: number; // ✅ Added
+  usedThisMonth: number; // ✅ Added
   lastUsedAt: Date | null;
 }
 
@@ -116,8 +119,10 @@ export type MembershipPerkRedemption = {
   unit: string;
   usedToday: number;
   usedThisWeek: number;
+  usedThisMonth: number; // ✅ Added
   maxPerDay?: number;
   maxPerWeek?: number;
+  maxPerMonth?: number; // ✅ Added
   totalUsed: number;
 };
 

@@ -22,7 +22,6 @@ export async function POST(
     const { perkId } = params;
     const body = await request.json();
 
-    // Fetch the perk details
     const perk = await prisma.membershipPlanPerk.findUnique({
       where: { id: perkId },
     });
@@ -34,7 +33,6 @@ export async function POST(
       );
     }
 
-    // Get active membership with better validation
     const now = new Date();
     const activeMembership = await prisma.membership.findFirst({
       where: {
@@ -59,7 +57,6 @@ export async function POST(
       );
     }
 
-    // Check if perk belongs to user's membership plan
     const membershipPerk = activeMembership.plan.perks.find(
       (p) => p.id === perkId
     );
@@ -70,6 +67,48 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // ✅ Calculate time boundaries
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(todayStart.getDate() - todayStart.getDay());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    monthEnd.setHours(0, 0, 0, 0);
+
+    // ✅ Count actual usage from database for this specific perk
+    const [todayUsageCount, weekUsageCount, monthUsageCount] =
+      await Promise.all([
+        prisma.membershipPerkUsage.count({
+          where: {
+            membershipId: activeMembership.id,
+            perkId: perkId,
+            usedAt: { gte: todayStart, lt: todayEnd },
+          },
+        }),
+        prisma.membershipPerkUsage.count({
+          where: {
+            membershipId: activeMembership.id,
+            perkId: perkId,
+            usedAt: { gte: weekStart, lt: weekEnd },
+          },
+        }),
+        prisma.membershipPerkUsage.count({
+          where: {
+            membershipId: activeMembership.id,
+            perkId: perkId,
+            usedAt: { gte: monthStart, lt: monthEnd },
+          },
+        }),
+      ]);
 
     // Handle MEETING_ROOM_HOURS perk type
     if (perk.perkType === "MEETING_ROOM_HOURS") {
@@ -108,11 +147,6 @@ export async function POST(
           { status: 400 }
         );
       }
-
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date(todayStart);
-      todayEnd.setDate(todayEnd.getDate() + 1);
 
       const usedToday = await prisma.membershipPerkUsage.aggregate({
         where: {
@@ -299,11 +333,11 @@ export async function POST(
       });
     }
 
-    // Handle other perk types
+    // ✅ Handle other perk types - Check limits in priority order: Monthly > Weekly > Daily
     const { notes } = body;
     const dayOfWeek = now.getDay();
 
-    // Check day-specific perks with FIXED logic
+    // Check day-specific perks
     if (perk.daysOfWeek) {
       try {
         const daysOfWeekStr = perk.daysOfWeek.trim();
@@ -311,12 +345,10 @@ export async function POST(
         if (daysOfWeekStr && daysOfWeekStr !== '""' && daysOfWeekStr !== "''") {
           const allowedDays = JSON.parse(daysOfWeekStr) as string[];
 
-          // Normalize allowed days - trim and filter empty strings
           const normalizedAllowedDays = allowedDays
             .map((d) => String(d).trim())
             .filter((d) => d !== "");
 
-          // Only check if it's NOT all 7 days AND has valid days
           if (
             normalizedAllowedDays.length > 0 &&
             normalizedAllowedDays.length < 7
@@ -372,55 +404,25 @@ export async function POST(
       }
     }
 
-    // Check daily usage limit
-    if (perk.maxPerDay) {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date(todayStart);
-      todayEnd.setDate(todayEnd.getDate() + 1);
+    // ✅ Check limits in priority order: Monthly > Weekly > Daily
 
-      const todayUsage = await prisma.membershipPerkUsage.count({
-        where: {
-          membershipId: activeMembership.id,
-          perkId: perk.id,
-          usedAt: {
-            gte: todayStart,
-            lt: todayEnd,
-          },
-        },
-      });
-
-      if (todayUsage >= perk.maxPerDay) {
+    // 1. Check monthly usage limit FIRST (strictest)
+    if (perk.maxPerMonth !== null && perk.maxPerMonth !== undefined) {
+      if (monthUsageCount >= perk.maxPerMonth) {
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
         return NextResponse.json(
           {
             success: false,
-            error: `Daily limit reached. You can use this perk ${perk.maxPerDay} time(s) per day.`,
+            error: `Monthly limit reached. You can use this perk ${perk.maxPerMonth} time(s) per month. Available again on ${nextMonth.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`,
           },
           { status: 400 }
         );
       }
     }
 
-    // Check weekly usage limit
-    if (perk.maxPerWeek) {
-      const startOfWeek = new Date();
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      startOfWeek.setHours(0, 0, 0, 0);
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 7);
-
-      const weekUsage = await prisma.membershipPerkUsage.count({
-        where: {
-          membershipId: activeMembership.id,
-          perkId: perk.id,
-          usedAt: {
-            gte: startOfWeek,
-            lt: endOfWeek,
-          },
-        },
-      });
-
-      if (weekUsage >= perk.maxPerWeek) {
+    // 2. Check weekly usage limit SECOND
+    if (perk.maxPerWeek !== null && perk.maxPerWeek !== undefined) {
+      if (weekUsageCount >= perk.maxPerWeek) {
         return NextResponse.json(
           {
             success: false,
@@ -431,7 +433,20 @@ export async function POST(
       }
     }
 
-    // Create usage record
+    // 3. Check daily usage limit LAST (least strict)
+    if (perk.maxPerDay !== null && perk.maxPerDay !== undefined) {
+      if (todayUsageCount >= perk.maxPerDay) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Daily limit reached. You can use this perk ${perk.maxPerDay} time(s) per day.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // ✅ Create usage record
     const usage = await prisma.membershipPerkUsage.create({
       data: {
         membershipId: activeMembership.id,
@@ -472,6 +487,18 @@ export async function POST(
           type: perk.perkType,
         },
         usedAt: usage.usedAt,
+        remainingToday:
+          perk.maxPerDay !== null
+            ? perk.maxPerDay - (todayUsageCount + 1)
+            : null,
+        remainingThisWeek:
+          perk.maxPerWeek !== null
+            ? perk.maxPerWeek - (weekUsageCount + 1)
+            : null,
+        remainingThisMonth:
+          perk.maxPerMonth !== null
+            ? perk.maxPerMonth - (monthUsageCount + 1)
+            : null,
         message: `Successfully redeemed: ${perk.name}`,
       },
     });

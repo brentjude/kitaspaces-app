@@ -1,16 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { MembershipType } from '@/generated/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { MembershipType } from "@/generated/prisma";
 
+// GET all membership plans
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
@@ -18,11 +19,15 @@ export async function GET() {
     const plans = await prisma.membershipPlan.findMany({
       include: {
         perks: true,
+        _count: {
+          select: {
+            memberships: true,
+          },
+        },
       },
-      orderBy: [
-        { type: 'asc' },
-        { price: 'asc' },
-      ],
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
     return NextResponse.json({
@@ -30,54 +35,30 @@ export async function GET() {
       data: plans,
     });
   } catch (error) {
-    console.error('Error fetching membership plans:', error);
+    console.error("Error fetching membership plans:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch membership plans' },
+      { success: false, error: "Failed to fetch membership plans" },
       { status: 500 }
     );
   }
 }
 
+// POST - Create new membership plan
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
     const body = await request.json();
+    const { name, description, type, price, durationDays, isActive, perks } =
+      body;
 
-    const {
-      name,
-      description,
-      type,
-      price,
-      durationDays,
-      isActive,
-      perks,
-    } = body;
-
-    // Validate required fields
-    if (!name || !type || price === undefined || !durationDays) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Validate type
-    if (!['MONTHLY', 'DAILY'].includes(type)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid membership type' },
-        { status: 400 }
-      );
-    }
-
-    // Create plan with perks
     const plan = await prisma.membershipPlan.create({
       data: {
         name,
@@ -87,31 +68,43 @@ export async function POST(request: NextRequest) {
         durationDays: parseInt(durationDays),
         isActive: isActive !== false,
         perks: {
-          create: (perks || []).map((perk: {
-            perkType: string;
-            name: string;
-            description?: string;
-            quantity: number;
-            unit: string;
-            maxPerDay?: number;
-            maxPerWeek?: number;
-            daysOfWeek?: number[];
-            isRecurring: boolean;
-            validFrom?: string;
-            validUntil?: string;
-          }) => ({
-            perkType: perk.perkType,
-            name: perk.name,
-            description: perk.description || null,
-            quantity: parseFloat(String(perk.quantity)),
-            unit: perk.unit,
-            maxPerDay: perk.maxPerDay ? parseFloat(String(perk.maxPerDay)) : null,
-            maxPerWeek: perk.maxPerWeek ? parseFloat(String(perk.maxPerWeek)) : null,
-            daysOfWeek: perk.daysOfWeek ? JSON.stringify(perk.daysOfWeek) : null,
-            isRecurring: perk.isRecurring !== false,
-            validFrom: perk.validFrom || null,
-            validUntil: perk.validUntil || null,
-          })),
+          create: (perks || []).map(
+            (perk: {
+              perkType: string;
+              name: string;
+              description?: string;
+              quantity: number;
+              unit: string;
+              maxPerDay?: number;
+              maxPerWeek?: number;
+              maxPerMonth?: number;
+              daysOfWeek?: number[];
+              isRecurring: boolean;
+              validFrom?: string;
+              validUntil?: string;
+            }) => ({
+              perkType: perk.perkType,
+              name: perk.name,
+              description: perk.description || null,
+              quantity: parseFloat(String(perk.quantity)),
+              unit: perk.unit,
+              maxPerDay: perk.maxPerDay
+                ? parseFloat(String(perk.maxPerDay))
+                : null,
+              maxPerWeek: perk.maxPerWeek
+                ? parseFloat(String(perk.maxPerWeek))
+                : null,
+              maxPerMonth: perk.maxPerMonth
+                ? parseFloat(String(perk.maxPerMonth))
+                : null,
+              daysOfWeek: perk.daysOfWeek
+                ? JSON.stringify(perk.daysOfWeek)
+                : null,
+              isRecurring: perk.isRecurring !== false,
+              validFrom: perk.validFrom || null,
+              validUntil: perk.validUntil || null,
+            })
+          ),
         },
       },
       include: {
@@ -122,12 +115,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: plan,
-      message: 'Membership plan created successfully',
+      message: "Membership plan created successfully",
     });
   } catch (error) {
-    console.error('Error creating membership plan:', error);
+    console.error("Error creating membership plan:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to create membership plan' },
+      { success: false, error: "Failed to create membership plan" },
       { status: 500 }
     );
   }
