@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { generateEventSlug } from '@/lib/utils/slug';
-import { logAdminActivity } from '@/lib/activityLogger';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { generateEventSlug } from "@/lib/utils/slug";
+import { logAdminActivity } from "@/lib/activityLogger";
 
 // Type definitions for request body
 interface FreebieInput {
@@ -43,11 +43,11 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json() as CreateEventBody;
+    const body = (await request.json()) as CreateEventBody;
 
     const {
       title,
@@ -76,20 +76,20 @@ export async function POST(request: Request) {
       // 🆕 Log failed creation attempt
       await logAdminActivity(
         session.user.id,
-        'ADMIN_EVENT_CREATED',
+        "ADMIN_EVENT_CREATED",
         `Failed to create event: Missing required fields`,
         {
-          metadata: { title, error: 'Missing required fields' },
+          metadata: { title, error: "Missing required fields" },
           isSuccess: false,
-          errorMessage: 'Title, description, and date are required',
+          errorMessage: "Title, description, and date are required",
         }
       );
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Missing required fields',
-          details: 'Title, description, and date are required' 
+        {
+          success: false,
+          error: "Missing required fields",
+          details: "Title, description, and date are required",
         },
         { status: 400 }
       );
@@ -105,20 +105,20 @@ export async function POST(request: Request) {
         // 🆕 Log invalid category attempt
         await logAdminActivity(
           session.user.id,
-          'ADMIN_EVENT_CREATED',
+          "ADMIN_EVENT_CREATED",
           `Failed to create event "${title}": Invalid category`,
           {
-            metadata: { title, categoryId, error: 'Invalid category' },
+            metadata: { title, categoryId, error: "Invalid category" },
             isSuccess: false,
             errorMessage: `Category with ID ${categoryId} not found`,
           }
         );
 
         return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Invalid category',
-            details: `Category with ID ${categoryId} not found` 
+          {
+            success: false,
+            error: "Invalid category",
+            details: `Category with ID ${categoryId} not found`,
           },
           { status: 400 }
         );
@@ -130,68 +130,87 @@ export async function POST(request: Request) {
     try {
       eventDate = new Date(date);
       if (isNaN(eventDate.getTime())) {
-        throw new Error('Invalid date format');
+        throw new Error("Invalid date format");
       }
     } catch (error) {
       // 🆕 Log invalid date attempt
       await logAdminActivity(
         session.user.id,
-        'ADMIN_EVENT_CREATED',
+        "ADMIN_EVENT_CREATED",
         `Failed to create event "${title}": Invalid date format`,
         {
-          metadata: { title, date, error: 'Invalid date format' },
+          metadata: { title, date, error: "Invalid date format" },
           isSuccess: false,
-          errorMessage: error instanceof Error ? error.message : 'Invalid date',
+          errorMessage: error instanceof Error ? error.message : "Invalid date",
         }
       );
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Invalid date',
-          details: 'Please provide a valid date in ISO format' 
+        {
+          success: false,
+          error: "Invalid date",
+          details: "Please provide a valid date in ISO format",
         },
         { status: 400 }
       );
     }
 
     // Parse numeric values
-    const parsedPrice = typeof price === 'string' ? parseFloat(price) : price;
-    const parsedRedemptionLimit = redemptionLimit 
-      ? (typeof redemptionLimit === 'string' ? parseInt(redemptionLimit, 10) : redemptionLimit)
+    const parsedPrice = typeof price === "string" ? parseFloat(price) : price;
+    const parsedRedemptionLimit = redemptionLimit
+      ? typeof redemptionLimit === "string"
+        ? parseInt(redemptionLimit, 10)
+        : redemptionLimit
       : null;
     const parsedMaxAttendees = maxAttendees
-      ? (typeof maxAttendees === 'string' ? parseInt(maxAttendees, 10) : maxAttendees)
+      ? typeof maxAttendees === "string"
+        ? parseInt(maxAttendees, 10)
+        : maxAttendees
       : null;
-    
+
     const parsedMemberDiscount = memberDiscount
-      ? (typeof memberDiscount === 'string' ? parseFloat(memberDiscount) : memberDiscount)
+      ? typeof memberDiscount === "string"
+        ? parseFloat(memberDiscount)
+        : memberDiscount
       : null;
     const parsedMemberDiscountedPrice = memberDiscountedPrice
-      ? (typeof memberDiscountedPrice === 'string' ? parseFloat(memberDiscountedPrice) : memberDiscountedPrice)
+      ? typeof memberDiscountedPrice === "string"
+        ? parseFloat(memberDiscountedPrice)
+        : memberDiscountedPrice
       : null;
 
     // Create event first without slug
     const event = await prisma.event.create({
       data: {
         title,
-        slug: '', // Temporary slug
+        slug: "", // Temporary slug
         description,
         date: eventDate,
         startTime: startTime || null,
         endTime: endTime || null,
         location: location || null,
         price: parsedPrice || 0,
-        isFree: isFree ?? (parsedPrice === 0),
+        isFree: isFree ?? parsedPrice === 0,
         isMemberOnly: isMemberOnly || false,
         categoryId: categoryId || null,
         isRedemptionEvent: isRedemptionEvent || false,
-        redemptionLimit: isRedemptionEvent ? (parsedRedemptionLimit || 1) : null,
+        redemptionLimit: isRedemptionEvent ? parsedRedemptionLimit || 1 : null,
         maxAttendees: parsedMaxAttendees,
         imageUrl: imageUrl || null,
-        memberDiscount: parsedMemberDiscount && parsedMemberDiscount > 0 ? parsedMemberDiscount : null,
-        memberDiscountType: parsedMemberDiscount && parsedMemberDiscount > 0 ? (memberDiscountType || "FIXED") : null,
-        memberDiscountedPrice: parsedMemberDiscountedPrice && parsedMemberDiscount && parsedMemberDiscount > 0 ? parsedMemberDiscountedPrice : null,
+        memberDiscount:
+          parsedMemberDiscount && parsedMemberDiscount > 0
+            ? parsedMemberDiscount
+            : null,
+        memberDiscountType:
+          parsedMemberDiscount && parsedMemberDiscount > 0
+            ? memberDiscountType || "FIXED"
+            : null,
+        memberDiscountedPrice:
+          parsedMemberDiscountedPrice &&
+          parsedMemberDiscount &&
+          parsedMemberDiscount > 0
+            ? parsedMemberDiscountedPrice
+            : null,
         hasCustomerFreebies: hasCustomerFreebies ?? true,
       },
     });
@@ -214,9 +233,10 @@ export async function POST(request: Request) {
           eventId: updatedEvent.id,
           name: freebie.name,
           description: freebie.description || null,
-          quantity: typeof freebie.quantity === 'string' 
-            ? parseInt(freebie.quantity, 10) 
-            : freebie.quantity || 1,
+          quantity:
+            typeof freebie.quantity === "string"
+              ? parseInt(freebie.quantity, 10)
+              : freebie.quantity || 1,
           imageUrl: freebie.imageUrl || null,
         })),
       });
@@ -234,18 +254,18 @@ export async function POST(request: Request) {
     // 🆕 Log successful event creation
     await logAdminActivity(
       session.user.id,
-      'ADMIN_EVENT_CREATED',
+      "ADMIN_EVENT_CREATED",
       `Created event "${title}" (${slug})`,
       {
         referenceId: event.id,
-        referenceType: 'EVENT',
+        referenceType: "EVENT",
         metadata: {
           eventId: event.id,
           title,
           slug,
           date: eventDate.toISOString(),
           price: parsedPrice,
-          isFree: isFree ?? (parsedPrice === 0),
+          isFree: isFree ?? parsedPrice === 0,
           isMemberOnly: isMemberOnly || false,
           isRedemptionEvent: isRedemptionEvent || false,
           memberDiscount: parsedMemberDiscount,
@@ -260,31 +280,34 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       data: completeEvent,
-      message: 'Event created successfully',
+      message: "Event created successfully",
     });
   } catch (error) {
-    console.error('Error creating event:', error);
-    
+    console.error("Error creating event:", error);
+
     // 🆕 Log error
     const session = await getServerSession(authOptions);
     if (session?.user) {
       await logAdminActivity(
         session.user.id,
-        'ADMIN_EVENT_CREATED',
-        `Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        "ADMIN_EVENT_CREATED",
+        `Failed to create event: ${error instanceof Error ? error.message : "Unknown error"}`,
         {
-          metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
+          metadata: {
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
           isSuccess: false,
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorMessage:
+            error instanceof Error ? error.message : "Unknown error",
         }
       );
     }
-    
+
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to create event',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: "Failed to create event",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -299,8 +322,11 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const events = await prisma.event.findMany({
@@ -308,34 +334,46 @@ export async function GET() {
         category: true,
         freebies: true,
         registrations: {
-          select: { id: true },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            payment: true,
+            pax: true, // 🔧 Include EventPax for member registrations
+          },
         },
         customerRegistrations: {
-          select: { id: true },
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                contactNumber: true,
+              },
+            },
+            payment: true,
+            pax: true, // 🔧 Include CustomerEventPax for customer registrations
+          },
         },
       },
       orderBy: {
-        date: 'desc',
+        date: "desc",
       },
     });
-
-    const eventsWithCount = events.map((event) => ({
-      ...event,
-      registrationCount:
-        event.registrations.length + event.customerRegistrations.length,
-    }));
 
     return NextResponse.json({
       success: true,
-      data: eventsWithCount,
+      data: events,
     });
   } catch (error) {
-    console.error('Error fetching events:', error);
+    console.error("Error fetching events:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch events',
-      },
+      { success: false, error: "Failed to fetch events" },
       { status: 500 }
     );
   }

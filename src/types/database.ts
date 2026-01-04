@@ -798,8 +798,16 @@ export type EventWithRegistrations = PrismaEvent & {
 
 export type EventWithRelations = PrismaEvent & {
   category?: EventCategory | null;
-  registrations?: EventRegistration[];
-  customerRegistrations?: CustomerEventRegistration[];
+  registrations?: (EventRegistration & {
+    user?: Pick<User, "id" | "name" | "email">;
+    payment?: Payment | null;
+    pax?: EventPax[];
+  })[];
+  customerRegistrations?: (CustomerEventRegistration & {
+    customer?: Pick<Customer, "id" | "name" | "email" | "contactNumber">;
+    payment?: CustomerPayment | null;
+    pax?: CustomerEventPax[];
+  })[];
   freebies?: EventFreebie[];
   memberDiscount?: number | null;
   memberDiscountType?: "FIXED" | "PERCENTAGE" | null;
@@ -1143,13 +1151,13 @@ export type CalendarItem = {
   categoryColor?: string;
   registrationCount?: number;
   maxAttendees?: number | null;
-  
+
   // ✅ Booking-specific fields
   roomName?: string;
   userName?: string;
   status?: string;
   duration?: number; // ✅ Add this
-  
+
   // ✅ NEW: Additional booking fields for detail modal
   room?: {
     id: string;
@@ -1168,7 +1176,7 @@ export type CalendarItem = {
   numberOfAttendees?: number;
   purpose?: string | null;
   totalAmount?: number;
-  bookingType?: 'user' | 'customer';
+  bookingType?: "user" | "customer";
   paymentReference?: string | null;
   paymentMethod?: string | null;
 };

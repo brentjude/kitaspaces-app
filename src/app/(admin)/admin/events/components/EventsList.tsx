@@ -1,10 +1,18 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import type { EventWithRelations } from "@/types";
-import { type EventStatusFilter } from "@/hooks/useEvents";
+import { useState, useEffect, useMemo } from "react";
+import {
+  PlusIcon,
+  CalendarIcon,
+  UsersIcon,
+  CheckCircleIcon,
+  ClockIcon,
+} from "@heroicons/react/24/outline";
+import { EventWithRelations } from "@/types";
 import EventsTable from "./EventsTable";
-import EventsFilters from "./EventsFilter";
+import CreateEventModal from "@/app/(admin)/components/CreateEventModal";
+
+type EventStatusFilter = "all" | "upcoming" | "completed";
 
 interface EventsListProps {
   events: EventWithRelations[];
@@ -17,6 +25,7 @@ export default function EventsList({
 }: EventsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<EventStatusFilter>("all");
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Listen for event creation
   useEffect(() => {
@@ -24,6 +33,7 @@ export default function EventsList({
       if (onEventCreated) {
         onEventCreated();
       }
+      setShowCreateModal(false);
     };
 
     window.addEventListener("eventCreated", handleEventCreated);
@@ -42,18 +52,17 @@ export default function EventsList({
     return events.filter((event) => {
       const matchesSearch =
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.description.toLowerCase().includes(searchTerm.toLowerCase());
+        event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.location?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const eventStatus = getEventStatus(event.date);
-      const matchesStatus =
-        statusFilter === "all" || eventStatus === statusFilter;
+      const status = getEventStatus(event.date);
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
   }, [events, searchTerm, statusFilter]);
 
-  // Calculate statistics
+  // 🔧 UPDATED: Calculate statistics using pax data
   const stats = useMemo(() => {
     const totalEvents = events.length;
     const upcomingEvents = events.filter(
@@ -62,10 +71,31 @@ export default function EventsList({
     const completedEvents = events.filter(
       (e) => getEventStatus(e.date) === "completed"
     ).length;
-    const totalAttendees = events.reduce(
-      (sum, event) => sum + (event.registrations?.length || 0),
-      0
-    );
+
+    // Calculate total attendees including pax
+    const totalAttendees = events.reduce((sum, event) => {
+      // Member attendees = registrations + their pax
+      const memberRegistrations = event.registrations?.length || 0;
+      const memberPax =
+        event.registrations?.reduce((paxSum, reg) => {
+          return paxSum + (reg.pax?.length || 0);
+        }, 0) || 0;
+
+      // Customer attendees = registrations + their pax
+      const customerRegistrations = event.customerRegistrations?.length || 0;
+      const customerPax =
+        event.customerRegistrations?.reduce((paxSum, reg) => {
+          return paxSum + (reg.pax?.length || 0);
+        }, 0) || 0;
+
+      return (
+        sum +
+        memberRegistrations +
+        memberPax +
+        customerRegistrations +
+        customerPax
+      );
+    }, 0);
 
     return {
       totalEvents,
@@ -76,127 +106,126 @@ export default function EventsList({
   }, [events]);
 
   return (
-    <div className="space-y-6">
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Events"
-          value={stats.totalEvents}
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Upcoming"
-          value={stats.upcomingEvents}
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          }
-          variant="success"
-        />
-        <StatCard
-          label="Completed"
-          value={stats.completedEvents}
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          }
-          variant="secondary"
-        />
-        <StatCard
-          label="Total Attendees"
-          value={stats.totalAttendees}
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-              />
-            </svg>
-          }
-          variant="info"
-        />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="sticky top-0 z-30 bg-white border-b border-foreground/10 px-4 sm:px-6 lg:px-8 py-3 lg:py-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl lg:text-2xl font-bold text-foreground">
+            Events
+          </h1>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg shadow-sm transition-all"
+          >
+            <PlusIcon className="w-5 h-5 mr-2" />
+            <span className="hidden sm:inline">Create Event</span>
+            <span className="sm:hidden">New</span>
+          </button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <EventsFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
-      />
-
-      {/* Events Table */}
-      <EventsTable events={filteredEvents} getEventStatus={getEventStatus} />
-
-      {/* Empty State */}
-      {filteredEvents.length === 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-foreground/10 p-12 text-center">
-          <svg
-            className="w-16 h-16 mx-auto text-foreground/20 mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-          <h3 className="text-lg font-medium text-foreground mb-2">
-            No events found
-          </h3>
-          <p className="text-sm text-foreground/60 mb-6">
-            {searchTerm || statusFilter !== "all"
-              ? "Try adjusting your search or filters"
-              : "Get started by creating your first event"}
-          </p>
+      <div className="p-6 sm:p-6 lg:p-8 space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Total Events"
+            value={stats.totalEvents}
+            icon={<CalendarIcon className="w-6 h-6" />}
+            variant="default"
+          />
+          <StatCard
+            label="Upcoming"
+            value={stats.upcomingEvents}
+            icon={<ClockIcon className="w-6 h-6" />}
+            variant="info"
+          />
+          <StatCard
+            label="Completed"
+            value={stats.completedEvents}
+            icon={<CheckCircleIcon className="w-6 h-6" />}
+            variant="success"
+          />
+          <StatCard
+            label="Total Attendees"
+            value={stats.totalAttendees}
+            icon={<UsersIcon className="w-6 h-6" />}
+            variant="secondary"
+          />
         </div>
-      )}
+
+        {/* Filters */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-foreground/10">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search events..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-foreground/20 px-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStatusFilter("all")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  statusFilter === "all"
+                    ? "bg-primary text-white"
+                    : "bg-foreground/5 text-foreground/70 hover:bg-foreground/10"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setStatusFilter("upcoming")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  statusFilter === "upcoming"
+                    ? "bg-primary text-white"
+                    : "bg-foreground/5 text-foreground/70 hover:bg-foreground/10"
+                }`}
+              >
+                Upcoming
+              </button>
+              <button
+                onClick={() => setStatusFilter("completed")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  statusFilter === "completed"
+                    ? "bg-primary text-white"
+                    : "bg-foreground/5 text-foreground/70 hover:bg-foreground/10"
+                }`}
+              >
+                Completed
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Events Table */}
+        {filteredEvents.length > 0 ? (
+          <EventsTable
+            events={filteredEvents}
+            getEventStatus={getEventStatus}
+          />
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-foreground/10 p-12 text-center">
+            <CalendarIcon className="w-12 h-12 mx-auto text-foreground/20 mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-1">
+              No events found
+            </h3>
+            <p className="text-foreground/60">
+              {searchTerm || statusFilter !== "all"
+                ? "Try adjusting your filters"
+                : "Create your first event to get started"}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Create Event Modal */}
+      <CreateEventModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
     </div>
   );
 }
