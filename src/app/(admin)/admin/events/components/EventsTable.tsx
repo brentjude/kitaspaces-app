@@ -88,7 +88,6 @@ function EventTableRow({ event, status, isLastRow }: EventTableRowProps) {
   // Each pax = 1 additional attendee
 
   // Member attendees count
-  const memberRegistrationsCount = event.registrations?.length || 0;
   const memberPaxCount =
     event.registrations?.reduce((total, registration) => {
       return total + (registration.pax?.length || 0);
@@ -96,7 +95,6 @@ function EventTableRow({ event, status, isLastRow }: EventTableRowProps) {
   const memberAttendeesCount = memberPaxCount;
 
   // Customer attendees count
-  const customerRegistrationsCount = event.customerRegistrations?.length || 0;
   const customerPaxCount =
     event.customerRegistrations?.reduce((total, registration) => {
       return total + (registration.pax?.length || 0);

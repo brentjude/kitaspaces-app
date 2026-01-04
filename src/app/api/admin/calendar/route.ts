@@ -15,13 +15,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const year = parseInt(
-      searchParams.get("year") || new Date().getFullYear().toString()
-    );
-    const month = parseInt(
-      searchParams.get("month") || (new Date().getMonth() + 1).toString()
-    );
-    const viewMode = searchParams.get("viewMode") || "month";
 
     // Filters
     const showFreeOnly = searchParams.get("showFreeOnly") === "true";
@@ -32,23 +25,15 @@ export async function GET(request: NextRequest) {
     const showBookingsOnly = searchParams.get("showBookingsOnly") === "true";
     const categoryId = searchParams.get("categoryId") || undefined;
 
-    // Calculate date range based on view mode
-    let startDate: Date;
-    let endDate: Date;
+    // Load all data from 3 months ago to 12 months in the future
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setMonth(startDate.getMonth() - 3);
+    startDate.setHours(0, 0, 0, 0);
 
-    if (viewMode === "day") {
-      const day = parseInt(searchParams.get("day") || "1");
-      startDate = new Date(year, month - 1, day, 0, 0, 0);
-      endDate = new Date(year, month - 1, day, 23, 59, 59);
-    } else if (viewMode === "week") {
-      const week = parseInt(searchParams.get("week") || "1");
-      startDate = new Date(year, month - 1, (week - 1) * 7 + 1);
-      endDate = new Date(year, month - 1, week * 7, 23, 59, 59);
-    } else {
-      // Month view
-      startDate = new Date(year, month - 1, 1);
-      endDate = new Date(year, month, 0, 23, 59, 59);
-    }
+    const endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + 12);
+    endDate.setHours(23, 59, 59, 999);
 
     // Fetch events if not filtering for bookings only
     const events = !showBookingsOnly
@@ -66,10 +51,14 @@ export async function GET(request: NextRequest) {
           include: {
             category: true,
             registrations: {
-              select: { id: true },
+              include: {
+                pax: true,
+              },
             },
             customerRegistrations: {
-              select: { id: true },
+              include: {
+                pax: true,
+              },
             },
           },
           orderBy: {
@@ -79,106 +68,159 @@ export async function GET(request: NextRequest) {
       : [];
 
     // Fetch meeting room bookings if not filtering for events only
-    const bookings = !showEventsOnly
-      ? await Promise.all([
-          // User bookings
-          prisma.meetingRoomBooking.findMany({
-            where: {
-              bookingDate: {
-                gte: startDate,
-                lte: endDate,
-              },
+    const userBookings = !showEventsOnly
+      ? await prisma.meetingRoomBooking.findMany({
+          where: {
+            bookingDate: {
+              gte: startDate,
+              lte: endDate,
             },
-            include: {
-              room: true,
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
+          },
+          include: {
+            room: true,
+            user: true,
+            payment: true,
+          },
+          orderBy: {
+            bookingDate: "asc",
+          },
+        })
+      : [];
+
+    const customerBookings = !showEventsOnly
+      ? await prisma.customerMeetingRoomBooking.findMany({
+          where: {
+            bookingDate: {
+              gte: startDate,
+              lte: endDate,
             },
-            orderBy: {
-              bookingDate: "asc",
-            },
-          }),
-          // Customer bookings
-          prisma.customerMeetingRoomBooking.findMany({
-            where: {
-              bookingDate: {
-                gte: startDate,
-                lte: endDate,
-              },
-            },
-            include: {
-              room: true,
-              customer: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-            orderBy: {
-              bookingDate: "asc",
-            },
-          }),
-        ]).then(([userBookings, customerBookings]) => [
-          ...userBookings.map((b) => ({
-            ...b,
-            userName: b.user.name,
-            userEmail: b.user.email,
-            roomName: b.room.name,
-            type: "user" as const,
-          })),
-          ...customerBookings.map((b) => ({
-            ...b,
-            userName: b.customer.name,
-            userEmail: b.customer.email,
-            roomName: b.room.name,
-            type: "customer" as const,
-          })),
-        ])
+          },
+          include: {
+            room: true,
+            customer: true,
+            payment: true,
+          },
+          orderBy: {
+            bookingDate: "asc",
+          },
+        })
       : [];
 
     // Transform events for calendar
-    const calendarEvents = events.map((event) => ({
-      id: event.id,
-      title: event.title,
-      date: event.date,
-      startTime: event.startTime,
-      endTime: event.endTime,
-      location: event.location,
-      isFree: event.isFree,
-      isMemberOnly: event.isMemberOnly,
-      isRedemptionEvent: event.isRedemptionEvent,
-      categoryId: event.categoryId,
-      categoryName: event.category?.name,
-      categoryColor: event.category?.color,
-      registrationCount:
-        event.registrations.length + event.customerRegistrations.length,
-      maxAttendees: event.maxAttendees,
-      type: "event" as const,
-    }));
+    const calendarEvents = events.map((event) => {
+      // Calculate total attendees including pax
+      const memberRegistrations = event.registrations?.length || 0;
+      const memberPax =
+        event.registrations?.reduce(
+          (sum, reg) => sum + (reg.pax?.length || 0),
+          0
+        ) || 0;
+      const customerRegistrations = event.customerRegistrations?.length || 0;
+      const customerPax =
+        event.customerRegistrations?.reduce(
+          (sum, reg) => sum + (reg.pax?.length || 0),
+          0
+        ) || 0;
 
-    // Transform bookings for calendar
-    const calendarBookings = bookings.map((booking) => ({
+      const totalRegistrations =
+        memberRegistrations + memberPax + customerRegistrations + customerPax;
+
+      return {
+        id: event.id,
+        title: event.title,
+        date: event.date.toISOString(),
+        startTime: event.startTime,
+        endTime: event.endTime,
+        location: event.location,
+        isFree: event.isFree,
+        isMemberOnly: event.isMemberOnly,
+        isRedemptionEvent: event.isRedemptionEvent,
+        categoryId: event.categoryId,
+        categoryName: event.category?.name,
+        categoryColor: event.category?.color,
+        registrationCount: totalRegistrations,
+        maxAttendees: event.maxAttendees,
+        type: "event" as const,
+      };
+    });
+
+    // Transform user bookings for calendar
+    const transformedUserBookings = userBookings.map((booking) => ({
       id: booking.id,
-      title: `${booking.roomName} - ${booking.userName}`,
-      date: booking.bookingDate,
+      title: `${booking.room.name} - ${booking.user.name}`,
+      date: booking.bookingDate.toISOString(),
       startTime: booking.startTime,
       endTime: booking.endTime,
-      location: booking.roomName,
-      roomName: booking.roomName,
-      userName: booking.userName,
-      userEmail: booking.userEmail,
+      location: booking.room.name,
+      roomName: booking.room.name,
+      userName: booking.user.name,
+      userEmail: booking.user.email,
       status: booking.status,
       numberOfAttendees: booking.numberOfAttendees,
       type: "booking" as const,
-      bookingType: booking.type,
+      bookingType: "user" as const,
+      duration: booking.duration,
+      room: {
+        id: booking.room.id,
+        name: booking.room.name,
+        capacity: booking.room.capacity,
+        hourlyRate: booking.room.hourlyRate,
+        floor: booking.room.floor,
+        roomNumber: booking.room.roomNumber,
+        amenities: booking.room.amenities,
+      },
+      contactName: booking.contactName,
+      contactEmail: booking.contactEmail,
+      contactMobile: booking.contactMobile,
+      company: booking.company,
+      designation: booking.designation,
+      purpose: booking.purpose,
+      totalAmount: booking.totalAmount,
+      paymentReference: booking.payment?.paymentReference || null,
+      paymentMethod: booking.payment?.paymentMethod || null,
     }));
+
+    // Transform customer bookings for calendar
+    const transformedCustomerBookings = customerBookings.map((booking) => ({
+      id: booking.id,
+      title: `${booking.room.name} - ${booking.customer.name}`,
+      date: booking.bookingDate.toISOString(),
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      location: booking.room.name,
+      roomName: booking.room.name,
+      userName: booking.customer.name,
+      userEmail: booking.customer.email || "",
+      status: booking.status,
+      numberOfAttendees: booking.numberOfAttendees,
+      type: "booking" as const,
+      bookingType: "customer" as const,
+      duration: booking.duration,
+      room: {
+        id: booking.room.id,
+        name: booking.room.name,
+        capacity: booking.room.capacity,
+        hourlyRate: booking.room.hourlyRate,
+        floor: booking.room.floor,
+        roomNumber: booking.room.roomNumber,
+        amenities: booking.room.amenities,
+      },
+      contactName: booking.contactName,
+      contactEmail: booking.contactEmail,
+      contactMobile: booking.contactMobile || booking.contactPhone || null,
+      company: booking.company,
+      designation: booking.designation,
+      purpose: booking.purpose,
+      totalAmount: booking.totalAmount,
+      paymentReference: booking.payment?.paymentReference || null,
+      paymentMethod: booking.payment?.paymentMethod || null,
+    }));
+
+    // Combine all bookings
+    const calendarBookings = [
+      ...transformedUserBookings,
+      ...transformedCustomerBookings,
+    ];
 
     return NextResponse.json({
       success: true,
@@ -198,7 +240,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Calendar fetch error:", error);
+    console.error("❌ Calendar fetch error:", error);
     return NextResponse.json(
       {
         success: false,
