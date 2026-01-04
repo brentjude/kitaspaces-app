@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useState } from "react";
 import MeetingRoomPerkModal from "./MeetingRoomPerkModal";
+import RedemptionConfirmModal from "./RedemptionConfirmModal";
 
 interface RedemptionPerksProps {
   perks: MembershipPerk[];
@@ -24,6 +25,7 @@ export default function RedemptionPerks({
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [selectedMeetingRoomPerk, setSelectedMeetingRoomPerk] =
     useState<MembershipPerk | null>(null);
+  const [confirmPerk, setConfirmPerk] = useState<MembershipPerk | null>(null);
 
   if (!perks || perks.length === 0) {
     return (
@@ -40,9 +42,19 @@ export default function RedemptionPerks({
       return;
     }
 
-    setRedeeming(perk.id);
+    // Show confirmation modal
+    setConfirmPerk(perk);
+  };
+
+  const handleConfirmRedeem = async () => {
+    if (!confirmPerk) return;
+
+    setRedeeming(confirmPerk.id);
     try {
-      await onRedeem(perk.id);
+      await onRedeem(confirmPerk.id);
+      setConfirmPerk(null);
+    } catch (error) {
+      console.error("Redemption error:", error);
     } finally {
       setRedeeming(null);
     }
@@ -116,7 +128,6 @@ export default function RedemptionPerks({
       return perk.unavailableReason || "Not available";
     }
 
-    // ✅ Handle both Date objects and ISO strings
     const nextDate =
       typeof perk.nextAvailableDate === "string"
         ? new Date(perk.nextAvailableDate)
@@ -280,7 +291,7 @@ export default function RedemptionPerks({
                       </div>
                     )}
 
-                    {/* ✅ Monthly Usage - Only show if maxPerMonth is NOT null */}
+                    {/* Monthly Usage - Only show if maxPerMonth is NOT null */}
                     {perk.maxPerMonth !== null &&
                       perk.maxPerMonth !== undefined && (
                         <div className="flex items-center text-xs text-gray-500">
@@ -349,6 +360,15 @@ export default function RedemptionPerks({
           );
         })}
       </div>
+
+      {/* Redemption Confirmation Modal */}
+      <RedemptionConfirmModal
+        isOpen={confirmPerk !== null}
+        onClose={() => setConfirmPerk(null)}
+        onConfirm={handleConfirmRedeem}
+        perk={confirmPerk}
+        isRedeeming={redeeming !== null}
+      />
 
       {/* Meeting Room Modal */}
       {selectedMeetingRoomPerk && (

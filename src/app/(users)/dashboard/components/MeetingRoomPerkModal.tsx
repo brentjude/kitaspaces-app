@@ -71,6 +71,7 @@ export default function MeetingRoomPerkModal({
     perk.maxPerDay || availableHours
   );
 
+  // Reset modal when opened
   useEffect(() => {
     if (isOpen) {
       fetchRooms();
@@ -84,12 +85,16 @@ export default function MeetingRoomPerkModal({
         purpose: "MEETING",
       });
       setError(null);
+      setTimeSlots([]);
     }
   }, [isOpen]);
 
+  // ✅ Fetch time slots when room and date are selected
   useEffect(() => {
     if (formData.roomId && formData.bookingDate) {
       fetchTimeSlots();
+    } else {
+      setTimeSlots([]);
     }
   }, [formData.roomId, formData.bookingDate]);
 
@@ -125,7 +130,11 @@ export default function MeetingRoomPerkModal({
   };
 
   const fetchTimeSlots = async () => {
+    if (!formData.roomId || !formData.bookingDate) return;
+
     setLoadingSlots(true);
+    setError(null);
+
     try {
       const response = await fetch(
         `/api/public/meeting-rooms/${formData.roomId}/availability?date=${formData.bookingDate}`
@@ -134,9 +143,14 @@ export default function MeetingRoomPerkModal({
 
       if (result.success && result.data.timeSlots) {
         setTimeSlots(result.data.timeSlots);
+      } else {
+        setError("Failed to load available time slots");
+        setTimeSlots([]);
       }
     } catch (err) {
       console.error("Error fetching time slots:", err);
+      setError("Failed to load available time slots");
+      setTimeSlots([]);
     } finally {
       setLoadingSlots(false);
     }
@@ -151,6 +165,7 @@ export default function MeetingRoomPerkModal({
   const handleBack = () => {
     if (step > 1) {
       setStep((prev) => (prev - 1) as Step);
+      setError(null);
     }
   };
 
@@ -237,44 +252,50 @@ export default function MeetingRoomPerkModal({
 
         <h3 className="font-semibold text-gray-900 mb-3">Select a Room</h3>
 
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {rooms.map((room) => (
-            <div
-              key={room.id}
-              onClick={() => setFormData({ ...formData, roomId: room.id })}
-              className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                formData.roomId === room.id
-                  ? "border-primary bg-primary/5"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h4 className="font-bold text-gray-900">{room.name}</h4>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Capacity: {room.capacity} people
-                  </p>
+        {rooms.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            Loading meeting rooms...
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {rooms.map((room) => (
+              <div
+                key={room.id}
+                onClick={() => setFormData({ ...formData, roomId: room.id })}
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  formData.roomId === room.id
+                    ? "border-primary bg-primary/5"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h4 className="font-bold text-gray-900">{room.name}</h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Capacity: {room.capacity} people
+                    </p>
+                  </div>
+                  {formData.roomId === room.id && (
+                    <CheckCircleIcon className="w-6 h-6 text-primary shrink-0" />
+                  )}
                 </div>
-                {formData.roomId === room.id && (
-                  <CheckCircleIcon className="w-6 h-6 text-primary shrink-0" />
+
+                {room.amenities.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {room.amenities.map((amenity, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded"
+                      >
+                        {amenity}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
-
-              {room.amenities.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {room.amenities.map((amenity, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded"
-                    >
-                      {amenity}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {selectedRoom && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
@@ -312,7 +333,7 @@ export default function MeetingRoomPerkModal({
                 setFormData({
                   ...formData,
                   bookingDate: e.target.value,
-                  startTime: "",
+                  startTime: "", // Reset start time when date changes
                 })
               }
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -327,11 +348,40 @@ export default function MeetingRoomPerkModal({
               Start Time
             </label>
             {loadingSlots ? (
-              <div className="text-center py-8 text-gray-500">
-                Loading available times...
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center space-y-3">
+                  <svg
+                    className="animate-spin h-8 w-8 text-primary"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <p className="text-sm text-gray-500">
+                    Loading available times...
+                  </p>
+                </div>
+              </div>
+            ) : timeSlots.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                <p>No available time slots for this date</p>
+                <p className="text-xs mt-2">Please select a different date</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+              <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto p-2 bg-gray-50 rounded-lg">
                 {timeSlots.map((slot) => (
                   <button
                     key={slot.time}
@@ -342,10 +392,10 @@ export default function MeetingRoomPerkModal({
                     }
                     className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                       formData.startTime === slot.time
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-white shadow-md"
                         : slot.isAvailable
-                          ? "bg-gray-100 hover:bg-gray-200 text-gray-900"
-                          : "bg-gray-50 text-gray-400 cursor-not-allowed"
+                          ? "bg-white hover:bg-gray-100 text-gray-900 border border-gray-200"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     }`}
                   >
                     {slot.time}
@@ -402,6 +452,12 @@ export default function MeetingRoomPerkModal({
                 </span>
               </div>
             </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
       </div>
@@ -518,7 +574,7 @@ export default function MeetingRoomPerkModal({
               type="button"
               onClick={handleBack}
               disabled={isSubmitting}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium flex items-center"
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeftIcon className="w-4 h-4 mr-1" /> Back
             </button>
