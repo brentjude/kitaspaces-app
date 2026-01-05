@@ -354,26 +354,27 @@ export default function SettingsPage() {
   };
 
   const handleAddAdmin = async (data: {
-    name: string;
-    email: string;
-    password: string;
-  }) => {
-    const response = await fetch("/api/admin/settings/admins", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+  name: string;
+  email: string;
+  password: string;
+  superKey: string; // ✅ Add superKey
+}) => {
+  const response = await fetch("/api/admin/settings/admins", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data), // ✅ Now includes superKey
+  });
 
-    if (!response.ok) {
-      const result = await response.json();
-      throw new Error(result.error || "Failed to add admin");
-    }
-
+  if (!response.ok) {
     const result = await response.json();
-    if (result.success && result.data) {
-      setAdmins([...admins, result.data]);
-    }
-  };
+    throw new Error(result.error || "Failed to add admin");
+  }
+
+  const result = await response.json();
+  if (result.success && result.data) {
+    setAdmins([...admins, result.data]);
+  }
+};
 
   const handleEditAdmin = async (
     id: string,

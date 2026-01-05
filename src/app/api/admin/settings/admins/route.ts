@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { logAdminActivity } from "@/lib/activityLogger";
-import { Session } from "next-auth"; // Add this import
+import { Session } from "next-auth";
 
 async function generateUserId(): Promise<string> {
   const currentYear = new Date().getFullYear();
@@ -64,9 +64,13 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  // Properly type session and body
   let session: Session | null = null;
-  let body: { name?: string; email?: string; password?: string } = {};
+  let body: {
+    name?: string;
+    email?: string;
+    password?: string;
+    superKey?: string;
+  } = {};
 
   try {
     session = await getServerSession(authOptions);
@@ -79,12 +83,50 @@ export async function POST(request: NextRequest) {
     }
 
     body = await request.json();
-    const { name, email, password } = body;
+    const { name, email, password, superKey } = body;
 
-    if (!name || !email || !password) {
+    // Validate required fields
+    if (!name || !email || !password || !superKey) {
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
         { status: 400 }
+      );
+    }
+
+    // ✅ Verify Super Secret Key
+    const SUPER_KEY = process.env.SUPER_KEY;
+
+    if (!SUPER_KEY) {
+      console.error("SUPER_KEY is not configured in environment variables");
+      return NextResponse.json(
+        { success: false, error: "System configuration error" },
+        { status: 500 }
+      );
+    }
+
+    if (superKey !== SUPER_KEY) {
+      // Log failed attempt
+      await logAdminActivity(
+        session.user.id,
+        "ADMIN_USER_CREATED",
+        `Failed admin creation attempt: Invalid super key for ${email}`,
+        {
+          metadata: {
+            attemptedName: name,
+            attemptedEmail: email,
+            attemptedBy: session.user.name,
+            attemptedByEmail: session.user.email,
+            reason: "Invalid super key",
+          },
+          request,
+          isSuccess: false,
+          errorMessage: "Invalid super secret key",
+        }
+      );
+
+      return NextResponse.json(
+        { success: false, error: "Invalid super secret key" },
+        { status: 403 }
       );
     }
 
@@ -120,7 +162,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Log admin creation activity
+    // Log successful admin creation
     await logAdminActivity(
       session.user.id,
       "ADMIN_USER_CREATED",

@@ -16,6 +16,7 @@ interface SystemUsersTabProps {
     name: string;
     email: string;
     password: string;
+    superKey: string;
   }) => Promise<void>;
   onEditAdmin: (id: string, data: { name: string; password?: string }) => Promise<void>;
   onDeleteAdmin: (id: string) => Promise<void>;
