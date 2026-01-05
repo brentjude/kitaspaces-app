@@ -78,10 +78,10 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-full flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="mt-4 text-foreground/60">Loading dashboard...</p>
+          <p className="mt-4 text-sm text-foreground/60">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -89,15 +89,15 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-lg font-semibold mb-2">
+      <div className="h-full flex items-center justify-center bg-background">
+        <div className="text-center px-4">
+          <div className="text-red-500 text-base sm:text-lg font-semibold mb-2">
             Error loading dashboard
           </div>
-          <p className="text-foreground/60 mb-4">{error}</p>
+          <p className="text-sm text-foreground/60 mb-4">{error}</p>
           <button
             onClick={fetchDashboardData}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
           >
             Retry
           </button>
@@ -111,10 +111,10 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="p-4 sm:p-6 lg:p-8">
+    <div className="h-full overflow-y-auto bg-background">
+      <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 lg:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 lg:mb-8">
           <AdminStatsCard
             title="Total Users"
             value={data.stats.totalUsers.value.toLocaleString()}
@@ -124,7 +124,7 @@ export default function AdminDashboard() {
             }}
             icon={
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
             }}
             icon={
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
             }}
             icon={
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -189,25 +189,25 @@ export default function AdminDashboard() {
         </div>
 
         {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
           {/* Recent Customers */}
-          <div className="bg-white rounded-lg border border-foreground/10 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base sm:text-lg font-semibold text-foreground">
+          <div className="bg-white rounded-lg border border-foreground/10 p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-sm sm:text-base md:text-lg font-semibold text-foreground">
                 Recent Customers
               </h2>
               <Link
                 href="/admin/customers"
-                className="text-xs text-primary hover:text-primary/80 font-medium"
+                className="text-xs sm:text-sm text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 View all
               </Link>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {data.recentUsers.length === 0 ? (
-                <div className="text-center py-8 text-foreground/40">
+                <div className="text-center py-6 sm:py-8 text-foreground/40">
                   <svg
-                    className="w-12 h-12 mx-auto mb-3 opacity-20"
+                    className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 opacity-20"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -219,36 +219,36 @@ export default function AdminDashboard() {
                       d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                     />
                   </svg>
-                  <p className="text-sm">No recent customers</p>
+                  <p className="text-xs sm:text-sm">No recent customers</p>
                 </div>
               ) : (
                 data.recentUsers.map((user) => (
                   <Link
                     key={user.id}
                     href={`/admin/customers/${user.id}`}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-foreground/5 transition-colors"
+                    className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg hover:bg-foreground/5 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <span className="text-sm font-semibold text-primary">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs sm:text-sm font-semibold text-primary">
                         {user.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-foreground truncate">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <p className="text-xs sm:text-sm font-medium text-foreground truncate">
                           {user.name}
                         </p>
                         {user.isMember && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-orange-100 text-orange-700 rounded">
+                          <span className="px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold bg-orange-100 text-orange-700 rounded whitespace-nowrap">
                             MEMBER
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-foreground/60 truncate">
+                      <p className="text-[10px] sm:text-xs text-foreground/60 truncate">
                         {user.email}
                       </p>
                     </div>
-                    <span className="text-xs text-foreground/50 shrink-0">
+                    <span className="text-[10px] sm:text-xs text-foreground/50 shrink-0">
                       {user.timeAgo}
                     </span>
                   </Link>
@@ -258,23 +258,23 @@ export default function AdminDashboard() {
           </div>
 
           {/* Upcoming Events */}
-          <div className="bg-white rounded-lg border border-foreground/10 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base sm:text-lg font-semibold text-foreground">
+          <div className="bg-white rounded-lg border border-foreground/10 p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-sm sm:text-base md:text-lg font-semibold text-foreground">
                 Upcoming Events
               </h2>
               <Link
                 href="/admin/events"
-                className="text-xs text-primary hover:text-primary/80 font-medium"
+                className="text-xs sm:text-sm text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 View all
               </Link>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {data.upcomingEvents.length === 0 ? (
-                <div className="text-center py-8 text-foreground/40">
+                <div className="text-center py-6 sm:py-8 text-foreground/40">
                   <svg
-                    className="w-12 h-12 mx-auto mb-3 opacity-20"
+                    className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 opacity-20"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -286,18 +286,18 @@ export default function AdminDashboard() {
                       d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                     />
                   </svg>
-                  <p className="text-sm">No upcoming events</p>
+                  <p className="text-xs sm:text-sm">No upcoming events</p>
                 </div>
               ) : (
                 data.upcomingEvents.map((event) => (
                   <Link
                     key={event.id}
                     href={`/admin/events/${event.id}`}
-                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-foreground/5 transition-colors"
+                    className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg hover:bg-foreground/5 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                       <svg
-                        className="w-5 h-5 text-primary"
+                        className="w-4 h-4 sm:w-5 sm:h-5 text-primary"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -311,28 +311,28 @@ export default function AdminDashboard() {
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm font-medium text-foreground truncate">
+                      <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
+                        <p className="text-xs sm:text-sm font-medium text-foreground truncate">
                           {event.title}
                         </p>
                         {event.isFree && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 text-blue-700 rounded">
+                          <span className="px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold bg-blue-100 text-blue-700 rounded whitespace-nowrap">
                             FREE
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-foreground/60">
+                      <p className="text-[10px] sm:text-xs text-foreground/60">
                         {event.formattedDate}
                       </p>
                       {event.location && (
-                        <p className="text-xs text-foreground/40 truncate mt-0.5">
+                        <p className="text-[10px] sm:text-xs text-foreground/40 truncate mt-0.5">
                           📍 {event.location}
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-foreground/60 shrink-0">
+                    <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-foreground/60 shrink-0">
                       <svg
-                        className="w-4 h-4"
+                        className="w-3 h-3 sm:w-4 sm:h-4"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"

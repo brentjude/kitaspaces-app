@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import Image  from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import {
   HomeIcon,
   CalendarIcon,
   UserGroupIcon,
   Cog6ToothIcon,
-  Bars3Icon,
   XMarkIcon,
   TicketIcon,
   CreditCardIcon,
@@ -17,14 +16,23 @@ import {
   PresentationChartBarIcon,
 } from "@heroicons/react/24/outline";
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  isMobileMenuOpen: boolean;
+  onClose: () => void;
+}
+
+export default function AdminSidebar({
+  isMobileMenuOpen,
+  onClose,
+}: AdminSidebarProps) {
   const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
+    if (isMobileMenuOpen) {
+      onClose();
+    }
+  }, [pathname, isMobileMenuOpen, onClose]);
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -65,8 +73,8 @@ export default function AdminSidebar() {
       icon: <UserGroupIcon className="w-5 h-5" />,
     },
     {
-      name: 'Memberships',
-      href: '/admin/memberships',
+      name: "Memberships",
+      href: "/admin/memberships",
       icon: <CreditCardIcon className="w-5 h-5" />,
     },
     {
@@ -81,61 +89,74 @@ export default function AdminSidebar() {
     },
   ];
 
+  const handleOverlayClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    },
+    [onClose]
+  );
+
+  const handleSidebarClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-foreground/10 hover:bg-foreground/5 transition-colors"
-        aria-label="Toggle menu"
-      >
-        {isMobileMenuOpen ? (
-          <XMarkIcon className="w-6 h-6 text-foreground" />
-        ) : (
-          <Bars3Icon className="w-6 h-6 text-foreground" />
-        )}
-      </button>
-
       {/* Overlay for mobile */}
       {isMobileMenuOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsMobileMenuOpen(false)}
+          onClick={handleOverlayClick}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
-      <div
-        className={`fixed lg:sticky top-0 left-0 z-40 flex flex-col h-screen w-64 bg-white border-r border-foreground/10 transition-transform duration-300 ease-in-out ${
+      <aside
+        className={`fixed lg:sticky top-0 left-0 z-50 flex flex-col h-screen w-64 bg-white border-r border-foreground/10 transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen
             ? "translate-x-0"
             : "-translate-x-full lg:translate-x-0"
         }`}
+        onClick={handleSidebarClick}
       >
-        {/* Logo */}
-        <div className="flex items-center h-16 px-6 border-b border-foreground/10">
-          <Link href="/admin" className="flex items-center gap-2">
-            <Image 
-                src="/logo/kita-secondary-logo.png" 
-                alt="KITA Spaces Logo" 
-                width={280} 
-                height={180}
-                priority
-              />
+        {/* Header with Logo and Close Button */}
+        <div className="flex items-center justify-between h-16 px-4 border-b border-foreground/10 shrink-0">
+          <Link href="/admin" className="flex items-center">
+            <Image
+              src="/logo/kita-secondary-logo.png"
+              alt="KITA Spaces Logo"
+              width={140}
+              height={90}
+              priority
+              className="h-8 w-auto"
+            />
           </Link>
+
+          {/* Close Button (Mobile Only) */}
+          <button
+            onClick={onClose}
+            className="lg:hidden p-2 -mr-2 rounded-lg hover:bg-foreground/5 transition-colors"
+            aria-label="Close menu"
+          >
+            <XMarkIcon className="w-6 h-6 text-foreground" />
+          </button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {navigation.map((item) => {
-            const isActive = pathname === item.href || 
-              (item.href !== '/admin' && pathname.startsWith(item.href));
-            
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/admin" && pathname.startsWith(item.href));
+
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
@@ -149,12 +170,12 @@ export default function AdminSidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-foreground/10">
+        <div className="p-4 border-t border-foreground/10 shrink-0">
           <div className="text-xs text-foreground/50 text-center">
             © 2025 Kitaspaces
           </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 }

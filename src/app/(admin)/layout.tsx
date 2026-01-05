@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import AdminSidebar from "@/app/(admin)/components/AdminSidebar";
 import AdminHeader from "@/app/(admin)/components/AdminHeader";
@@ -10,6 +11,16 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Use useCallback to prevent function recreation on every render
+  const handleMenuToggle = useCallback(() => {
+    setIsMobileMenuOpen((prev) => !prev);
+  }, []);
+
+  const handleMenuClose = useCallback(() => {
+    setIsMobileMenuOpen(false);
+  }, []);
 
   // Determine page title based on pathname
   const getPageTitle = () => {
@@ -49,8 +60,8 @@ export default function AdminLayout({
       return "Meeting Rooms Management";
     }
 
-    if (pathname.startsWith("/admin/users")) {
-      return "Users Management";
+    if (pathname.startsWith("/admin/customers")) {
+      return "Customers Management";
     }
 
     if (pathname.startsWith("/admin/settings")) {
@@ -60,23 +71,26 @@ export default function AdminLayout({
     return "Admin Panel";
   };
 
-  // Check if current page should show the "Add Event" button
-
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
-      <AdminSidebar />
+      <AdminSidebar
+        isMobileMenuOpen={isMobileMenuOpen}
+        onClose={handleMenuClose}
+      />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto w-full">
-        <div className="w-full">
-          {/* Header */}
-          <AdminHeader title={getPageTitle()} showAddButton={true} />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header - Pass menu toggle function */}
+        <AdminHeader
+          title={getPageTitle()}
+          onMenuToggle={handleMenuToggle}
+          showAddButton={true}
+        />
 
-          {/* Page Content */}
-          {children}
-        </div>
-      </main>
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto">{children}</main>
+      </div>
     </div>
   );
 }

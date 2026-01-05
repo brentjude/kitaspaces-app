@@ -2,18 +2,21 @@
 
 import { useState, useRef, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
+import { Bars3Icon } from "@heroicons/react/24/outline";
 import CreateEventModal from "./CreateEventModal";
 
 interface AdminHeaderProps {
   title: string;
   onEventCreated?: () => void;
   showAddButton?: boolean;
+  onMenuToggle?: () => void;
 }
 
 export default function AdminHeader({
   title,
   onEventCreated,
   showAddButton = true,
+  onMenuToggle,
 }: AdminHeaderProps) {
   const { data: session } = useSession();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -41,23 +44,35 @@ export default function AdminHeader({
 
   return (
     <>
-      <div className="sticky top-0 z-30 bg-white border-b border-foreground/10 px-2 sm:px-6 lg:px-8 py-3 lg:py-2">
-        <div className="flex items-center justify-between gap-4">
-          {/* Title - Hidden on mobile when showing buttons */}
-          <h1 className="text-lg sm:text-xl lg:text-xl font-semibold text-foreground truncate">
-            {title}
-          </h1>
+      <div className="sticky top-0 z-30 bg-white border-b border-foreground/10 px-4 sm:px-6 lg:px-8 py-2">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
+          {/* Left: Menu Button (Mobile) + Title */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={onMenuToggle}
+              className="lg:hidden shrink-0 p-2 -ml-2 rounded-lg hover:bg-foreground/5 transition-colors"
+              aria-label="Toggle menu"
+            >
+              <Bars3Icon className="w-6 h-6 text-foreground" />
+            </button>
 
-          {/* Actions */}
+            {/* Title */}
+            <h1 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground truncate">
+              {title}
+            </h1>
+          </div>
+
+          {/* Right: Actions */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Add Event Button */}
+            {/* Add Event Button - Hidden on mobile, visible on desktop */}
             {showAddButton && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-button text-white rounded-lg text-xs sm:text-sm font-medium hover:opacity-90 transition-all shadow-sm"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-button text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm"
               >
                 <svg
-                  className="w-4 h-4"
+                  className="w-4 h-4 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -69,8 +84,7 @@ export default function AdminHeader({
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                <span className="hidden sm:inline">Add Event</span>
-                <span className="sm:hidden">Add</span>
+                <span>Add Event</span>
               </button>
             )}
 
