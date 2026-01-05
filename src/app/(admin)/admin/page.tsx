@@ -1,6 +1,115 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import AdminStatsCard from "@/app/(admin)/components/AdminStatsCard";
+import Link from "next/link";
+
+interface DashboardStats {
+  totalUsers: { value: number; change: number; trend: "up" | "down" };
+  upcomingEvents: { value: number; change: number; trend: "up" | "down" };
+  totalRevenue: {
+    value: number;
+    formatted: string;
+    change: number;
+    trend: "up" | "down";
+  };
+  activeMembers: { value: number };
+  pendingPayments: { value: number };
+  todayBookings: { value: number };
+  totalMeetingRooms: { value: number };
+}
+
+interface RecentUser {
+  id: string;
+  name: string;
+  email: string;
+  isMember: boolean;
+  role: string;
+  createdAt: string;
+  timeAgo: string;
+}
+
+interface UpcomingEvent {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string | null;
+  location: string | null;
+  price: number;
+  isFree: boolean;
+  attendees: number;
+  formattedDate: string;
+}
+
+interface DashboardData {
+  stats: DashboardStats;
+  recentUsers: RecentUser[];
+  upcomingEvents: UpcomingEvent[];
+}
 
 export default function AdminDashboard() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/admin/dashboard");
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to fetch dashboard data");
+      }
+
+      setData(result.data);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="mt-4 text-foreground/60">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-lg font-semibold mb-2">
+            Error loading dashboard
+          </div>
+          <p className="text-foreground/60 mb-4">{error}</p>
+          <button
+            onClick={fetchDashboardData}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="p-4 sm:p-6 lg:p-8">
@@ -8,8 +117,11 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 lg:mb-8">
           <AdminStatsCard
             title="Total Users"
-            value="1,234"
-            change={{ value: 12, trend: "up" }}
+            value={data.stats.totalUsers.value.toLocaleString()}
+            change={{
+              value: data.stats.totalUsers.change,
+              trend: data.stats.totalUsers.trend,
+            }}
             icon={
               <svg
                 className="w-5 h-5"
@@ -29,8 +141,11 @@ export default function AdminDashboard() {
 
           <AdminStatsCard
             title="Upcoming Events"
-            value="28"
-            change={{ value: 5, trend: "up" }}
+            value={data.stats.upcomingEvents.value}
+            change={{
+              value: data.stats.upcomingEvents.change,
+              trend: data.stats.upcomingEvents.trend,
+            }}
             icon={
               <svg
                 className="w-5 h-5"
@@ -50,8 +165,11 @@ export default function AdminDashboard() {
 
           <AdminStatsCard
             title="Total Revenue"
-            value="$45,231"
-            change={{ value: 8, trend: "up" }}
+            value={data.stats.totalRevenue.formatted}
+            change={{
+              value: data.stats.totalRevenue.change,
+              trend: data.stats.totalRevenue.trend,
+            }}
             icon={
               <svg
                 className="w-5 h-5"
@@ -72,66 +190,70 @@ export default function AdminDashboard() {
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Recent Users */}
+          {/* Recent Customers */}
           <div className="bg-white rounded-lg border border-foreground/10 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base sm:text-lg font-semibold text-foreground">
-                Recent Users
+                Recent Customers
               </h2>
-              <button className="text-xs text-primary hover:text-primary/80 font-medium">
+              <Link
+                href="/admin/customers"
+                className="text-xs text-primary hover:text-primary/80 font-medium"
+              >
                 View all
-              </button>
+              </Link>
             </div>
             <div className="space-y-3">
-              {[
-                {
-                  name: "John Doe",
-                  email: "john@example.com",
-                  time: "2 mins ago",
-                },
-                {
-                  name: "Jane Smith",
-                  email: "jane@example.com",
-                  time: "15 mins ago",
-                },
-                {
-                  name: "Mike Johnson",
-                  email: "mike@example.com",
-                  time: "1 hour ago",
-                },
-                {
-                  name: "Sarah Wilson",
-                  email: "sarah@example.com",
-                  time: "2 hours ago",
-                },
-                {
-                  name: "Tom Brown",
-                  email: "tom@example.com",
-                  time: "3 hours ago",
-                },
-              ].map((user, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-foreground/5 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-semibold text-primary">
-                      {user.name.charAt(0)}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {user.name}
-                    </p>
-                    <p className="text-xs text-foreground/60 truncate">
-                      {user.email}
-                    </p>
-                  </div>
-                  <span className="text-xs text-foreground/50 flex-shrink-0">
-                    {user.time}
-                  </span>
+              {data.recentUsers.length === 0 ? (
+                <div className="text-center py-8 text-foreground/40">
+                  <svg
+                    className="w-12 h-12 mx-auto mb-3 opacity-20"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  <p className="text-sm">No recent customers</p>
                 </div>
-              ))}
+              ) : (
+                data.recentUsers.map((user) => (
+                  <Link
+                    key={user.id}
+                    href={`/admin/customers/${user.id}`}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-foreground/5 transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-sm font-semibold text-primary">
+                        {user.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {user.name}
+                        </p>
+                        {user.isMember && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-orange-100 text-orange-700 rounded">
+                            MEMBER
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-foreground/60 truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                    <span className="text-xs text-foreground/50 shrink-0">
+                      {user.timeAgo}
+                    </span>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
 
@@ -141,83 +263,92 @@ export default function AdminDashboard() {
               <h2 className="text-base sm:text-lg font-semibold text-foreground">
                 Upcoming Events
               </h2>
-              <button className="text-xs text-primary hover:text-primary/80 font-medium">
+              <Link
+                href="/admin/events"
+                className="text-xs text-primary hover:text-primary/80 font-medium"
+              >
                 View all
-              </button>
+              </Link>
             </div>
             <div className="space-y-3">
-              {[
-                {
-                  title: "Team Meeting",
-                  date: "Today, 2:00 PM",
-                  attendees: 12,
-                },
-                {
-                  title: "Product Launch",
-                  date: "Tomorrow, 10:00 AM",
-                  attendees: 45,
-                },
-                {
-                  title: "Design Review",
-                  date: "Dec 25, 3:00 PM",
-                  attendees: 8,
-                },
-                {
-                  title: "Sprint Planning",
-                  date: "Dec 26, 9:00 AM",
-                  attendees: 15,
-                },
-                {
-                  title: "Client Presentation",
-                  date: "Dec 27, 1:00 PM",
-                  attendees: 20,
-                },
-              ].map((event, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-foreground/5 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <svg
-                      className="w-5 h-5 text-primary"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground">
-                      {event.title}
-                    </p>
-                    <p className="text-xs text-foreground/60 mt-0.5">
-                      {event.date}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-foreground/60 flex-shrink-0">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                      />
-                    </svg>
-                    {event.attendees}
-                  </div>
+              {data.upcomingEvents.length === 0 ? (
+                <div className="text-center py-8 text-foreground/40">
+                  <svg
+                    className="w-12 h-12 mx-auto mb-3 opacity-20"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <p className="text-sm">No upcoming events</p>
                 </div>
-              ))}
+              ) : (
+                data.upcomingEvents.map((event) => (
+                  <Link
+                    key={event.id}
+                    href={`/admin/events/${event.id}`}
+                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-foreground/5 transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <svg
+                        className="w-5 h-5 text-primary"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {event.title}
+                        </p>
+                        {event.isFree && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 text-blue-700 rounded">
+                            FREE
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-foreground/60">
+                        {event.formattedDate}
+                      </p>
+                      {event.location && (
+                        <p className="text-xs text-foreground/40 truncate mt-0.5">
+                          📍 {event.location}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-foreground/60 shrink-0">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                        />
+                      </svg>
+                      {event.attendees}
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
         </div>
