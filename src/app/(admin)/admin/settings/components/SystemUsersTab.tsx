@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import AddAdminModal from './AddAdminModal';
 import EditAdminModal from './EditAdminModal';
+import DeleteAdminModal from './DeleteAdminModal';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface SystemUsersTabProps {
@@ -18,8 +19,8 @@ interface SystemUsersTabProps {
     password: string;
     superKey: string;
   }) => Promise<void>;
-  onEditAdmin: (id: string, data: { name: string; password?: string }) => Promise<void>;
-  onDeleteAdmin: (id: string) => Promise<void>;
+  onEditAdmin: (id: string, data: { name: string; password?: string; superKey: string }) => Promise<void>;
+  onDeleteAdmin: (id: string, superKey: string) => Promise<void>;
 }
 
 export default function SystemUsersTab({
@@ -34,6 +35,11 @@ export default function SystemUsersTab({
     name: string;
     email: string;
   } | null>(null);
+  const [deletingAdmin, setDeletingAdmin] = useState<{
+    id: string;
+    name: string;
+    email: string;
+  } | null>(null);
 
   const handleOpenEditModal = (admin: { id: string; name: string; email: string }) => {
     setEditingAdmin(admin);
@@ -43,17 +49,18 @@ export default function SystemUsersTab({
     setEditingAdmin(null);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete admin "${name}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleOpenDeleteModal = (admin: { id: string; name: string; email: string }) => {
+    setDeletingAdmin(admin);
+  };
 
-    try {
-      await onDeleteAdmin(id);
-      alert('Admin deleted successfully!');
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete admin');
-    }
+  const handleCloseDeleteModal = () => {
+    setDeletingAdmin(null);
+  };
+
+  const handleDelete = async (id: string, superKey: string) => {
+    await onDeleteAdmin(id, superKey);
+    alert('Admin deleted successfully!');
+    setDeletingAdmin(null);
   };
 
   return (
@@ -133,7 +140,13 @@ export default function SystemUsersTab({
                           <PencilIcon className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(admin.id, admin.name)}
+                          onClick={() =>
+                            handleOpenDeleteModal({
+                              id: admin.id,
+                              name: admin.name,
+                              email: admin.email,
+                            })
+                          }
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete admin"
                         >
@@ -163,6 +176,15 @@ export default function SystemUsersTab({
           admin={editingAdmin}
           onClose={handleCloseEditModal}
           onSave={onEditAdmin}
+        />
+      )}
+
+      {/* Delete Admin Modal */}
+      {deletingAdmin && (
+        <DeleteAdminModal
+          admin={deletingAdmin}
+          onClose={handleCloseDeleteModal}
+          onDelete={handleDelete}
         />
       )}
     </div>

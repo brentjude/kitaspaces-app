@@ -4,14 +4,14 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { logAdminActivity } from "@/lib/activityLogger";
-import { Session } from "next-auth"; // Add this import
+import { Session } from "next-auth";
 
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   let session: Session | null = null;
-  let body: { name?: string; password?: string } = {};
+  let body: { name?: string; password?: string; superKey?: string } = {};
   let adminId = "";
 
   try {
@@ -27,7 +27,51 @@ export async function PATCH(
     const params = await context.params;
     adminId = params.id;
     body = await request.json();
-    const { name, password } = body;
+    const { name, password, superKey } = body;
+
+    // ✅ Validate super key
+    if (!superKey) {
+      return NextResponse.json(
+        { success: false, error: "Super secret key is required" },
+        { status: 400 }
+      );
+    }
+
+    const SUPER_KEY = process.env.SUPER_KEY;
+
+    if (!SUPER_KEY) {
+      console.error("SUPER_KEY is not configured in environment variables");
+      return NextResponse.json(
+        { success: false, error: "System configuration error" },
+        { status: 500 }
+      );
+    }
+
+    if (superKey !== SUPER_KEY) {
+      // Log failed attempt
+      await logAdminActivity(
+        session.user.id,
+        "ADMIN_USER_UPDATED",
+        `Failed admin update attempt: Invalid super key for admin ID ${adminId}`,
+        {
+          referenceId: adminId,
+          referenceType: "USER",
+          metadata: {
+            attemptedBy: session.user.name,
+            attemptedByEmail: session.user.email,
+            reason: "Invalid super key",
+          },
+          request,
+          isSuccess: false,
+          errorMessage: "Invalid super secret key",
+        }
+      );
+
+      return NextResponse.json(
+        { success: false, error: "Invalid super secret key" },
+        { status: 403 }
+      );
+    }
 
     if (!name?.trim()) {
       return NextResponse.json(
@@ -85,7 +129,7 @@ export async function PATCH(
       },
     });
 
-    // Log admin update activity
+    // Log successful admin update
     await logAdminActivity(
       session.user.id,
       "ADMIN_USER_UPDATED",
@@ -156,6 +200,7 @@ export async function DELETE(
   let session: Session | null = null;
   let adminId = "";
   let existingAdmin: { id: string; name: string; email: string } | null = null;
+  let body: { superKey?: string } = {};
 
   try {
     session = await getServerSession(authOptions);
@@ -169,6 +214,67 @@ export async function DELETE(
 
     const params = await context.params;
     adminId = params.id;
+
+    // ✅ Get super key from request body
+    body = await request.json();
+    const { superKey } = body;
+
+    // ✅ Validate super key
+    if (!superKey) {
+      return NextResponse.json(
+        { success: false, error: "Super secret key is required" },
+        { status: 400 }
+      );
+    }
+
+    const SUPER_KEY = process.env.SUPER_KEY;
+
+    if (!SUPER_KEY) {
+      console.error("SUPER_KEY is not configured in environment variables");
+      return NextResponse.json(
+        { success: false, error: "System configuration error" },
+        { status: 500 }
+      );
+    }
+
+    if (superKey !== SUPER_KEY) {
+      // Check if admin exists first for logging
+      existingAdmin = await prisma.user.findUnique({
+        where: { id: adminId, role: "ADMIN" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      });
+
+      // Log failed attempt
+      await logAdminActivity(
+        session.user.id,
+        "ADMIN_USER_DELETED",
+        `Failed admin deletion attempt: Invalid super key for ${existingAdmin?.name || adminId}`,
+        {
+          referenceId: adminId,
+          referenceType: "USER",
+          metadata: {
+            targetAdminId: adminId,
+            targetAdminName: existingAdmin?.name,
+            targetAdminEmail: existingAdmin?.email,
+            attemptedBy: session.user.name,
+            attemptedByEmail: session.user.email,
+            reason: "Invalid super key",
+          },
+          request,
+          isSuccess: false,
+          errorMessage: "Invalid super secret key",
+        }
+      );
+
+      return NextResponse.json(
+        { success: false, error: "Invalid super secret key" },
+        { status: 403 }
+      );
+    }
 
     // Prevent self-deletion
     if (adminId === session.user.id) {
@@ -200,7 +306,7 @@ export async function DELETE(
       where: { id: adminId },
     });
 
-    // Log admin deletion activity
+    // Log successful admin deletion
     await logAdminActivity(
       session.user.id,
       "ADMIN_USER_DELETED",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { XMarkIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, EyeIcon, EyeSlashIcon, KeyIcon } from '@heroicons/react/24/outline';
 
 interface EditAdminModalProps {
   admin: {
@@ -10,7 +10,7 @@ interface EditAdminModalProps {
     email: string;
   };
   onClose: () => void;
-  onSave: (id: string, data: { name: string; password?: string }) => Promise<void>;
+  onSave: (id: string, data: { name: string; password?: string; superKey: string }) => Promise<void>;
 }
 
 export default function EditAdminModal({
@@ -21,8 +21,10 @@ export default function EditAdminModal({
   const [name, setName] = useState(admin.name);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [superKey, setSuperKey] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showSuperKey, setShowSuperKey] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,6 +35,12 @@ export default function EditAdminModal({
     // Validate name
     if (!name.trim()) {
       setError('Name is required');
+      return;
+    }
+
+    // Validate super key
+    if (!superKey.trim()) {
+      setError('Super secret key is required');
       return;
     }
 
@@ -52,7 +60,10 @@ export default function EditAdminModal({
     setIsSubmitting(true);
 
     try {
-      const data: { name: string; password?: string } = { name: name.trim() };
+      const data: { name: string; password?: string; superKey: string } = {
+        name: name.trim(),
+        superKey: superKey.trim(),
+      };
       if (password) {
         data.password = password;
       }
@@ -60,9 +71,7 @@ export default function EditAdminModal({
       await onSave(admin.id, data);
       onClose();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to update admin'
-      );
+      setError(err instanceof Error ? err.message : 'Failed to update admin');
     } finally {
       setIsSubmitting(false);
     }
@@ -70,7 +79,7 @@ export default function EditAdminModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold text-foreground">Edit Admin</h3>
           <button
@@ -88,6 +97,40 @@ export default function EditAdminModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Super Secret Key - First Field */}
+          <div className="p-4 bg-orange-50 border-2 border-orange-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <KeyIcon className="w-5 h-5 text-orange-600" />
+              <label className="block text-sm font-bold text-orange-900">
+                Super Secret Key <span className="text-red-500">*</span>
+              </label>
+            </div>
+            <div className="relative">
+              <input
+                type={showSuperKey ? 'text' : 'password'}
+                required
+                className="w-full px-3 py-2 pr-10 border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 bg-white"
+                value={superKey}
+                onChange={(e) => setSuperKey(e.target.value)}
+                placeholder="Enter super secret key"
+              />
+              <button
+                type="button"
+                onClick={() => setShowSuperKey(!showSuperKey)}
+                className="absolute right-3 top-2.5 text-orange-600 hover:text-orange-800"
+              >
+                {showSuperKey ? (
+                  <EyeSlashIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-orange-700 mt-2">
+              🔒 Required to modify admin accounts
+            </p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               Email (Cannot be changed)

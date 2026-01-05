@@ -377,38 +377,40 @@ export default function SettingsPage() {
 };
 
   const handleEditAdmin = async (
-    id: string,
-    data: { name: string; password?: string }
-  ) => {
-    const response = await fetch(`/api/admin/settings/admins/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+  id: string,
+  data: { name: string; password?: string; superKey: string }
+) => {
+  const response = await fetch(`/api/admin/settings/admins/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
 
-    if (!response.ok) {
-      const result = await response.json();
-      throw new Error(result.error || "Failed to update admin");
-    }
-
+  if (!response.ok) {
     const result = await response.json();
-    if (result.success && result.data) {
-      setAdmins(admins.map((a) => (a.id === id ? result.data : a)));
-    }
-  };
+    throw new Error(result.error || "Failed to update admin");
+  }
 
-  const handleDeleteAdmin = async (id: string) => {
-    const response = await fetch(`/api/admin/settings/admins/${id}`, {
-      method: "DELETE",
-    });
+  const result = await response.json();
+  if (result.success && result.data) {
+    setAdmins(admins.map((a) => (a.id === id ? result.data : a)));
+  }
+};
 
-    if (!response.ok) {
-      const result = await response.json();
-      throw new Error(result.error || "Failed to delete admin");
-    }
+  const handleDeleteAdmin = async (id: string, superKey: string) => {
+  const response = await fetch(`/api/admin/settings/admins/${id}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ superKey }),
+  });
 
-    setAdmins(admins.filter((a) => a.id !== id));
-  };
+  if (!response.ok) {
+    const result = await response.json();
+    throw new Error(result.error || "Failed to delete admin");
+  }
+
+  setAdmins(admins.filter((a) => a.id !== id));
+};
 
   const handleEditCoupon = async (
     id: string,
