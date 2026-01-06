@@ -1,13 +1,13 @@
-import { PaymentStatus, PaymentMethod } from '@/generated/prisma';
+import { PaymentMethod, PaymentStatus } from '@/generated/prisma';
 
 export interface PaymentRecord {
   id: string;
   type: 'USER' | 'CUSTOMER';
-  recordType: 'EVENT' | 'MEMBERSHIP';
+  recordType: 'EVENT' | 'MEMBERSHIP' | 'ROOM_BOOKING';
   date: Date;
   userName: string;
   userEmail: string | null;
-  userPhone?: string | null;
+  userPhone: string | null;
   description: string;
   amount: number;
   method: PaymentMethod;
@@ -20,15 +20,8 @@ export interface PaymentRecord {
   createdAt: Date;
   eventTitle?: string;
   membershipPlan?: string;
+  roomName?: string;
   numberOfPax?: number;
-}
-
-export interface PaymentFilters {
-  search: string;
-  typeFilter: 'all' | 'event' | 'membership';
-  statusFilter: 'all' | 'paid' | 'pending' | 'failed' | 'refunded';
-  page: number;
-  limit: number;
 }
 
 export interface PaymentStats {
@@ -38,15 +31,13 @@ export interface PaymentStats {
   totalRefunded: number;
   eventRevenue: number;
   membershipRevenue: number;
+  roomBookingRevenue: number;
 }
 
-export interface PaginatedPayments {
-  payments: PaymentRecord[];
-  stats: PaymentStats;
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+export interface PaymentFilters {
+  search: string;
+  typeFilter: 'all' | 'event' | 'membership' | 'room';
+  statusFilter: 'all' | 'pending' | 'completed' | 'failed' | 'refunded';
+  page: number;
+  limit: number;
 }

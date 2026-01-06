@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
       userPaymentWhereConditions.push({ eventRegistration: { isNot: null } });
     } else if (typeFilter === 'membership') {
       userPaymentWhereConditions.push({ membership: { isNot: null } });
+    } else if (typeFilter === 'room') {
+      userPaymentWhereConditions.push({ meetingRoomBooking: { isNot: null } });
     }
 
     const userPaymentWhere: Prisma.PaymentWhereInput =
@@ -76,6 +78,13 @@ export async function GET(request: NextRequest) {
     if (statusFilter !== 'all') {
       const mappedStatus = statusFilter.toUpperCase() as PaymentStatus;
       customerPaymentWhereConditions.push({ status: mappedStatus });
+    }
+
+    // Add type filter for customer payments
+    if (typeFilter === 'event') {
+      customerPaymentWhereConditions.push({ eventRegistration: { isNot: null } });
+    } else if (typeFilter === 'room') {
+      customerPaymentWhereConditions.push({ meetingRoomBooking: { isNot: null } });
     }
 
     const customerPaymentWhere: Prisma.CustomerPaymentWhereInput =
@@ -118,6 +127,16 @@ export async function GET(request: NextRequest) {
                   },
                 },
               },
+              meetingRoomBooking: {
+                include: {
+                  room: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
             },
             orderBy: {
               createdAt: 'desc',
@@ -146,6 +165,16 @@ export async function GET(request: NextRequest) {
                   },
                 },
               },
+              meetingRoomBooking: {
+                include: {
+                  room: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
             },
             orderBy: {
               createdAt: 'desc',
@@ -154,58 +183,122 @@ export async function GET(request: NextRequest) {
         : Promise.resolve([]),
     ]);
 
+    // Helper function to determine record type
+    const getRecordType = (payment: {
+      eventRegistration: unknown;
+      membership?: unknown;
+      meetingRoomBooking?: unknown;
+      paymentReference: string | null;
+      notes: string | null;
+    }): 'EVENT' | 'MEMBERSHIP' | 'ROOM_BOOKING' => {
+      // Check if it's a meeting room booking
+      if (payment.meetingRoomBooking) {
+        return 'ROOM_BOOKING';
+      }
+
+      // Check by payment reference (starts with mrb_)
+      if (payment.paymentReference?.startsWith('mrb_')) {
+        return 'ROOM_BOOKING';
+      }
+
+      // Check by notes content
+      if (payment.notes) {
+        const notesLower = payment.notes.toLowerCase();
+        if (notesLower.includes('meeting room') || notesLower.includes('room booking')) {
+          return 'ROOM_BOOKING';
+        }
+      }
+
+      // Check if it's an event
+      if (payment.eventRegistration) {
+        return 'EVENT';
+      }
+
+      // Check if it's a membership (only for user payments)
+      if (payment.membership) {
+        return 'MEMBERSHIP';
+      }
+
+      // Default fallback
+      return 'EVENT';
+    };
+
     // Transform user payments
-    const transformedUserPayments: PaymentRecord[] = userPayments.map((payment) => ({
-      id: payment.id,
-      type: 'USER' as const,
-      recordType: payment.eventRegistration ? ('EVENT' as const) : ('MEMBERSHIP' as const),
-      date: payment.createdAt,
-      userName: payment.user.name,
-      userEmail: payment.user.email,
-      userPhone: payment.user.contactNumber,
-      description: payment.eventRegistration
-        ? `Event: ${payment.eventRegistration.event.title}`
-        : payment.membership
-        ? `Membership: ${payment.membership.plan?.name || 'N/A'}`
-        : 'Payment',
-      amount: payment.amount,
-      method: payment.paymentMethod,
-      status: payment.status,
-      referenceNumber: payment.referenceNumber,
-      paymentReference: payment.paymentReference,
-      proofImageUrl: payment.proofImageUrl,
-      notes: payment.notes,
-      paidAt: payment.paidAt,
-      createdAt: payment.createdAt,
-      eventTitle: payment.eventRegistration?.event.title,
-      membershipPlan: payment.membership?.plan?.name,
-      numberOfPax: payment.eventRegistration?.numberOfPax,
-    }));
+    const transformedUserPayments: PaymentRecord[] = userPayments.map((payment) => {
+      const recordType = getRecordType(payment);
+      let description = 'Payment';
+
+      if (recordType === 'ROOM_BOOKING') {
+        description = payment.meetingRoomBooking
+          ? `Meeting Room: ${payment.meetingRoomBooking.room.name}`
+          : 'Meeting Room Booking';
+      } else if (payment.eventRegistration) {
+        description = `Event: ${payment.eventRegistration.event.title}`;
+      } else if (payment.membership) {
+        description = `Membership: ${payment.membership.plan?.name || 'N/A'}`;
+      }
+
+      return {
+        id: payment.id,
+        type: 'USER' as const,
+        recordType,
+        date: payment.createdAt,
+        userName: payment.user.name,
+        userEmail: payment.user.email,
+        userPhone: payment.user.contactNumber,
+        description,
+        amount: payment.amount,
+        method: payment.paymentMethod,
+        status: payment.status,
+        referenceNumber: payment.referenceNumber,
+        paymentReference: payment.paymentReference,
+        proofImageUrl: payment.proofImageUrl,
+        notes: payment.notes,
+        paidAt: payment.paidAt,
+        createdAt: payment.createdAt,
+        eventTitle: payment.eventRegistration?.event.title,
+        membershipPlan: payment.membership?.plan?.name,
+        roomName: payment.meetingRoomBooking?.room.name,
+        numberOfPax: payment.eventRegistration?.numberOfPax,
+      };
+    });
 
     // Transform customer payments
-    const transformedCustomerPayments: PaymentRecord[] = customerPayments.map((payment) => ({
-      id: payment.id,
-      type: 'CUSTOMER' as const,
-      recordType: 'EVENT' as const,
-      date: payment.createdAt,
-      userName: payment.customer.name,
-      userEmail: payment.customer.email,
-      userPhone: payment.customer.contactNumber,
-      description: payment.eventRegistration
-        ? `Event: ${payment.eventRegistration.event.title}`
-        : 'Payment',
-      amount: payment.amount,
-      method: payment.paymentMethod,
-      status: payment.status,
-      referenceNumber: payment.referenceNumber,
-      paymentReference: payment.paymentReference,
-      proofImageUrl: payment.proofImageUrl,
-      notes: payment.notes,
-      paidAt: payment.paidAt,
-      createdAt: payment.createdAt,
-      eventTitle: payment.eventRegistration?.event.title,
-      numberOfPax: payment.eventRegistration?.numberOfPax,
-    }));
+    const transformedCustomerPayments: PaymentRecord[] = customerPayments.map((payment) => {
+      const recordType = getRecordType(payment);
+      let description = 'Payment';
+
+      if (recordType === 'ROOM_BOOKING') {
+        description = payment.meetingRoomBooking
+          ? `Meeting Room: ${payment.meetingRoomBooking.room.name}`
+          : 'Meeting Room Booking';
+      } else if (payment.eventRegistration) {
+        description = `Event: ${payment.eventRegistration.event.title}`;
+      }
+
+      return {
+        id: payment.id,
+        type: 'CUSTOMER' as const,
+        recordType,
+        date: payment.createdAt,
+        userName: payment.customer.name,
+        userEmail: payment.customer.email,
+        userPhone: payment.customer.contactNumber,
+        description,
+        amount: payment.amount,
+        method: payment.paymentMethod,
+        status: payment.status,
+        referenceNumber: payment.referenceNumber,
+        paymentReference: payment.paymentReference,
+        proofImageUrl: payment.proofImageUrl,
+        notes: payment.notes,
+        paidAt: payment.paidAt,
+        createdAt: payment.createdAt,
+        eventTitle: payment.eventRegistration?.event.title,
+        roomName: payment.meetingRoomBooking?.room.name,
+        numberOfPax: payment.eventRegistration?.numberOfPax,
+      };
+    });
 
     // Combine and sort all payments
     const allPayments = [...transformedUserPayments, ...transformedCustomerPayments].sort(
@@ -229,6 +322,9 @@ export async function GET(request: NextRequest) {
         .reduce((sum, p) => sum + p.amount, 0),
       membershipRevenue: allPayments
         .filter((p) => p.recordType === 'MEMBERSHIP' && p.status === 'COMPLETED')
+        .reduce((sum, p) => sum + p.amount, 0),
+      roomBookingRevenue: allPayments
+        .filter((p) => p.recordType === 'ROOM_BOOKING' && p.status === 'COMPLETED')
         .reduce((sum, p) => sum + p.amount, 0),
     };
 

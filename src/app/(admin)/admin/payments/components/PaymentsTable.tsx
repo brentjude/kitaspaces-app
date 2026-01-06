@@ -88,6 +88,34 @@ export default function PaymentsTable({
     }
   };
 
+  const getRecordTypeBadge = (recordType: PaymentRecord['recordType']) => {
+    switch (recordType) {
+      case 'MEMBERSHIP':
+        return (
+          <span className="inline-flex items-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5"></span>
+            Membership
+          </span>
+        );
+      case 'EVENT':
+        return (
+          <span className="inline-flex items-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1.5"></span>
+            Event
+          </span>
+        );
+      case 'ROOM_BOOKING':
+        return (
+          <span className="inline-flex items-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span>
+            Room Booking
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-foreground/10 overflow-hidden">
       <div className="overflow-x-auto">
@@ -174,14 +202,7 @@ export default function PaymentsTable({
                     {record.description}
                   </div>
                   <div className="text-xs text-foreground/60 inline-flex items-center mt-0.5">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                        record.recordType === 'MEMBERSHIP'
-                          ? 'bg-purple-500'
-                          : 'bg-orange-500'
-                      }`}
-                    ></span>
-                    {record.recordType === 'MEMBERSHIP' ? 'Membership' : 'Event'}
+                    {getRecordTypeBadge(record.recordType)}
                     {record.numberOfPax && ` (${record.numberOfPax} pax)`}
                   </div>
                 </td>

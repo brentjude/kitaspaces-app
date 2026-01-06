@@ -17,6 +17,7 @@ export default function PaymentsPage() {
     totalRefunded: 0,
     eventRevenue: 0,
     membershipRevenue: 0,
+    roomBookingRevenue: 0, // ✅ Added missing property
   });
   const [pagination, setPagination] = useState({
     total: 0,
