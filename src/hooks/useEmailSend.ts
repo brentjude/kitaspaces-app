@@ -4,6 +4,7 @@ export type EmailType =
   | 'membership-pending'
   | 'membership-free'
   | 'membership-approved'
+  | 'admin-added-member'  // ✅ ADD THIS
   | 'event-confirmation'
   | 'test';
 

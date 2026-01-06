@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { logAdminActivity } from "@/lib/activityLogger";
+import { sendAdminAddedMemberWelcomeEmail, convertPerksToEmailBenefits } from "@/lib/email-service";
 import { Session } from "next-auth";
 
 async function generateUserId(): Promise<string> {
@@ -104,9 +105,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get membership plan
+    // Get membership plan with perks
     const plan = await prisma.membershipPlan.findUnique({
       where: { id: planId },
+      include: {
+        perks: true,
+      },
     });
 
     if (!plan || !plan.isActive) {
@@ -172,14 +176,14 @@ export async function POST(request: NextRequest) {
 
     let durationDays = plan.durationDays;
     if (customDuration !== undefined && customDuration > 0) {
-        if (plan.type === 'MONTHLY') {
-            durationDays = customDuration * 30;
-        } else {
-            durationDays = customDuration;
-        }
+      if (plan.type === 'MONTHLY') {
+        durationDays = customDuration * 30;
+      } else {
+        durationDays = customDuration;
+      }
     }
 
-    endDate.setDate(endDate.getDate() + plan.durationDays);
+    endDate.setDate(endDate.getDate() + durationDays);
 
     // Create user, payment, and membership in a transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -237,6 +241,25 @@ export async function POST(request: NextRequest) {
 
       return { user, payment, membership };
     });
+
+    // ✅ Send welcome email
+    try {
+      const benefits = convertPerksToEmailBenefits(plan.perks);
+      
+      await sendAdminAddedMemberWelcomeEmail({
+        to: result.user.email,
+        name: result.user.name,
+        email: result.user.email,
+        planName: plan.name,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        adminNote: paymentNote,
+        benefits,
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail the whole operation if email fails
+    }
 
     // Log activity
     await logAdminActivity(

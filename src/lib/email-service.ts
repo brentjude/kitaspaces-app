@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { MembershipPendingPaymentEmail } from '@/app/components/email-template/MembershipPendingPaymentEmail';
 import { MembershipFreeRegistrationEmail } from '@/app/components/email-template/MembershipFreeRegistrationEmail';
 import { MembershipPaymentApprovedEmail } from '@/app/components/email-template/MembershipPaymentApprovedEmail';
+import { AdminAddedMemberWelcomeEmail } from '@/app/components/email-template/AdminAddedMemberWelcomeEmail';
 import { EmailTemplate } from '@/app/components/email-template/EmailTemplate';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -71,7 +72,7 @@ export async function sendMembershipFreeEmail(data: {
   couponCode: string;
   startDate: string;
   endDate: string;
-  benefits?: MembershipBenefit[]; // 🔧 Use proper type
+  benefits?: MembershipBenefit[];
 }) {
   return sendEmail({
     to: data.to,
@@ -115,7 +116,7 @@ export async function sendMembershipApprovedEmail(data: {
   paymentReference: string;
   startDate: string;
   endDate: string;
-  benefits?: MembershipBenefit[]; // 🔧 Use proper type
+  benefits?: MembershipBenefit[];
 }) {
   return sendEmail({
     to: data.to,
@@ -159,6 +160,32 @@ export async function sendMembershipApprovedEmail(data: {
           unit: 'membership',
         },
       ],
+    }),
+  });
+}
+
+// ✅ NEW: Admin Added Member Welcome Email
+export async function sendAdminAddedMemberWelcomeEmail(data: {
+  to: string;
+  name: string;
+  email: string;
+  planName: string;
+  startDate: string;
+  endDate: string;
+  adminNote: string;
+  benefits?: MembershipBenefit[];
+}) {
+  return sendEmail({
+    to: data.to,
+    subject: '🎉 Welcome to KITA Spaces! Your membership is active',
+    react: AdminAddedMemberWelcomeEmail({
+      name: data.name,
+      email: data.email,
+      planName: data.planName,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      adminNote: data.adminNote,
+      benefits: data.benefits || [],
     }),
   });
 }
