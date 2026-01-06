@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
+      bookingType, // 'CUSTOMER' | 'MEMBER' | 'GUEST'
+      customerId,
+      memberId,
       roomId,
       bookingDate,
       startTime,
@@ -60,7 +63,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!roomId || !bookingDate || !startTime || !endTime || !contactName || !contactMobile) {
+    if (!bookingType || !roomId || !bookingDate || !startTime || !endTime || !contactName || !contactMobile) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -79,92 +82,189 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for existing bookings on the same date and time
-    const existingBooking = await prisma.meetingRoomBooking.findFirst({
-      where: {
-        roomId,
-        bookingDate: new Date(bookingDate),
-        status: {
-          in: ['PENDING', 'CONFIRMED'],
+    // Check for existing bookings (same conflict check as before)
+    const bookingDateObj = new Date(bookingDate);
+    const checkConflict = await prisma.$transaction(async (tx) => {
+      const userConflicts = await tx.meetingRoomBooking.findMany({
+        where: {
+          roomId,
+          bookingDate: bookingDateObj,
+          status: { in: ['PENDING', 'CONFIRMED'] },
         },
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: startTime } },
-              { endTime: { gt: startTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { lt: endTime } },
-              { endTime: { gte: endTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { gte: startTime } },
-              { endTime: { lte: endTime } },
-            ],
-          },
-        ],
-      },
+      });
+
+      const customerConflicts = await tx.customerMeetingRoomBooking.findMany({
+        where: {
+          roomId,
+          bookingDate: bookingDateObj,
+          status: { in: ['PENDING', 'CONFIRMED'] },
+        },
+      });
+
+      const allBookings = [
+        ...userConflicts.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
+        ...customerConflicts.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
+      ];
+
+      for (const booking of allBookings) {
+        if (startTime < booking.endTime && endTime > booking.startTime) {
+          return true;
+        }
+      }
+      return false;
     });
 
-    if (existingBooking) {
+    if (checkConflict) {
       return NextResponse.json(
         { success: false, error: 'This time slot is already booked' },
         { status: 400 }
       );
     }
 
-    // Generate payment reference
     const paymentReference = await generatePaymentReference('mrb_kita');
 
-    // Create booking in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create payment record as PENDING (not paid)
-      const payment = await tx.payment.create({
-        data: {
-          userId: session.user.id!,
-          amount: totalAmount,
-          paymentMethod,
-          status: 'PENDING',
-          paymentReference,
-          notes: notes ? `Admin booking: ${notes}` : `Admin booking for ${contactName}`,
-        },
+    let result;
+
+    // Handle different booking types
+    if (bookingType === 'MEMBER' && memberId) {
+      // MEMBER BOOKING - Use MeetingRoomBooking table
+      result = await prisma.$transaction(async (tx) => {
+        const payment = await tx.payment.create({
+          data: {
+            userId: memberId,
+            amount: totalAmount,
+            paymentMethod,
+            status: 'PENDING',
+            paymentReference,
+            notes: notes ? `Admin booking: ${notes}` : `Admin booking for ${contactName}`,
+          },
+        });
+
+        const booking = await tx.meetingRoomBooking.create({
+          data: {
+            userId: memberId,
+            roomId,
+            bookingDate: bookingDateObj,
+            startTime,
+            endTime,
+            duration,
+            company: company || null,
+            contactName,
+            designation: designation || null,
+            contactEmail: contactEmail || null,
+            contactMobile,
+            numberOfAttendees,
+            purpose: purpose || null,
+            status: 'PENDING',
+            totalAmount,
+            paymentId: payment.id,
+            notes: notes || null,
+          },
+          include: {
+            room: true,
+            payment: true,
+            user: true,
+          },
+        });
+
+        return { booking, payment, customer: null };
       });
+    } else {
+      // CUSTOMER or GUEST BOOKING - Use CustomerMeetingRoomBooking table
+      result = await prisma.$transaction(async (tx) => {
+        let customer;
 
-      // Create meeting room booking as PENDING (not confirmed)
-      const booking = await tx.meetingRoomBooking.create({
-        data: {
-          userId: session.user.id!,
-          roomId,
-          bookingDate: new Date(bookingDate),
-          startTime,
-          endTime,
-          duration,
-          company: company || null,
-          contactName,
-          designation: designation || null,
-          contactEmail: contactEmail || null,
-          contactMobile,
-          numberOfAttendees,
-          purpose: purpose || null,
-          status: 'PENDING',
-          totalAmount,
-          paymentId: payment.id,
-          notes: notes || null,
-        },
-        include: {
-          room: true,
-          payment: true,
-        },
+        if (bookingType === 'CUSTOMER' && customerId) {
+          // Use existing customer
+          customer = await tx.customer.findUnique({
+            where: { id: customerId },
+          });
+
+          if (!customer) {
+            throw new Error('Customer not found');
+          }
+
+          // ✅ Update customer info if needed - with proper typing
+          const updateData: {
+            name?: string;
+            company?: string | null;
+            email?: string | null;
+          } = {};
+          
+          if (contactName && contactName !== customer.name) {
+            updateData.name = contactName;
+          }
+          if (company && company !== customer.company) {
+            updateData.company = company;
+          }
+          if (contactEmail && contactEmail.trim() && contactEmail.toLowerCase() !== customer.email) {
+            updateData.email = contactEmail.toLowerCase();
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            customer = await tx.customer.update({
+              where: { id: customerId },
+              data: updateData,
+            });
+          }
+        } else {
+          // GUEST - Create new customer (email is optional)
+          customer = await tx.customer.create({
+            data: {
+              name: contactName,
+              contactNumber: contactMobile,
+              email: contactEmail && contactEmail.trim() ? contactEmail.toLowerCase() : null,
+              company: company || null,
+              notes: notes ? `Admin booking: ${notes}` : 'Created from admin booking',
+            },
+          });
+        }
+
+        const payment = await tx.customerPayment.create({
+          data: {
+            customerId: customer.id,
+            amount: totalAmount,
+            paymentMethod,
+            status: 'PENDING',
+            paymentReference,
+            notes: notes ? `Admin booking: ${notes}` : `Admin booking for ${contactName}`,
+          },
+        });
+
+        const booking = await tx.customerMeetingRoomBooking.create({
+          data: {
+            customerId: customer.id,
+            roomId,
+            bookingDate: bookingDateObj,
+            startTime,
+            endTime,
+            duration,
+            company: company || null,
+            contactPerson: contactName,
+            contactName,
+            designation: designation || null,
+            contactEmail: contactEmail || null,
+            contactPhone: contactMobile,
+            contactMobile,
+            numberOfAttendees,
+            purpose: purpose || 'MEETING',
+            status: 'PENDING',
+            totalAmount,
+            paymentId: payment.id,
+            notes: notes || null,
+          },
+          include: {
+            room: true,
+            payment: true,
+            customer: true,
+          },
+        });
+
+        return { booking, payment, customer };
       });
+    }
 
-      return { booking, payment };
-    });
-
-    // Send confirmation email ONLY if email is provided
+    // Send confirmation email
     if (contactEmail && contactEmail.trim()) {
       try {
         const formatDuration = (hours: number): string => {
@@ -179,7 +279,7 @@ export async function POST(request: NextRequest) {
           react: MeetingRoomBookingEmail({
             customerName: contactName,
             roomName: room.name,
-            bookingDate: new Date(bookingDate).toLocaleDateString('en-US', {
+            bookingDate: bookingDateObj.toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
@@ -202,7 +302,6 @@ export async function POST(request: NextRequest) {
         console.info(`✅ Confirmation email sent to ${contactEmail}`);
       } catch (emailError) {
         console.error('Failed to send confirmation email:', emailError);
-        // Don't fail the whole operation if email fails
       }
     } else {
       console.info('ℹ️ No email provided, skipping confirmation email');
@@ -212,11 +311,14 @@ export async function POST(request: NextRequest) {
     await logAdminActivity(
       session.user.id!,
       'ADMIN_BOOKING_CREATED',
-      `Created meeting room booking for ${contactName} - ${room.name} on ${new Date(bookingDate).toLocaleDateString()}`,
+      `Created meeting room booking for ${contactName} - ${room.name} on ${bookingDateObj.toLocaleDateString()}`,
       {
         referenceId: result.booking.id,
-        referenceType: 'MEETING_ROOM_BOOKING',
+        referenceType: bookingType === 'MEMBER' ? 'MEETING_ROOM_BOOKING' : 'CUSTOMER_MEETING_ROOM_BOOKING',
         metadata: {
+          bookingType,
+          customerId: result.customer?.id,
+          memberId: bookingType === 'MEMBER' ? memberId : undefined,
           roomId,
           roomName: room.name,
           bookingDate,
@@ -236,6 +338,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         bookingId: result.booking.id,
+        customerId: result.customer?.id,
         paymentReference,
         booking: result.booking,
         emailSent: !!(contactEmail && contactEmail.trim()),

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Modal from '@/app/components/Modal';
+import AdminCustomerSelectionStep from './admin-booking-steps/AdminCustomerSelectionStep';
 import AdminRoomStep from './admin-booking-steps/AdminRoomStep';
 import AdminDateStep from './admin-booking-steps/AdminDateStep';
 import AdminTimeStep from './admin-booking-steps/AdminTimeStep';
@@ -20,6 +21,9 @@ interface AdminBookingModalProps {
 }
 
 export interface AdminBookingFormData {
+  bookingType: 'CUSTOMER' | 'MEMBER' | 'GUEST' | '';
+  customerId: string;
+  memberId: string;
   selectedRoomId: string;
   bookingDate: string;
   startTimeSlot: string;
@@ -34,18 +38,38 @@ export interface AdminBookingFormData {
   notes: string;
 }
 
+// ✅ Add proper types for customer and member
+interface CustomerData {
+  id: string;
+  name: string;
+  email: string | null;
+  contactNumber: string | null;
+  company: string | null;
+}
+
+interface MemberData {
+  id: string;
+  name: string;
+  email: string;
+  contactNumber: string | null;
+  company: string | null;
+}
+
 export default function AdminBookingModal({ 
   rooms,
   onClose, 
   onSuccess 
 }: AdminBookingModalProps) {
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [bookingReference, setBookingReference] = useState('');
-  const [emailSent, setEmailSent] = useState(false); // ✅ Track if email was sent
+  const [emailSent, setEmailSent] = useState(false);
 
   const [formData, setFormData] = useState<AdminBookingFormData>({
+    bookingType: '',
+    customerId: '',
+    memberId: '',
     selectedRoomId: '',
     bookingDate: '',
     startTimeSlot: '',
@@ -63,7 +87,7 @@ export default function AdminBookingModal({
   const selectedRoom = rooms.find(r => r.id === formData.selectedRoomId);
 
   const handleNext = () => {
-    if (step < 4) {
+    if (step < 5) {
       setStep((prev) => (prev + 1) as typeof step);
     }
   };
@@ -77,12 +101,21 @@ export default function AdminBookingModal({
   const canProceedFromStep = (): boolean => {
     switch (step) {
       case 1:
-        return formData.selectedRoomId !== '';
+        if (formData.bookingType === 'CUSTOMER') {
+          return formData.customerId !== '';
+        } else if (formData.bookingType === 'MEMBER') {
+          return formData.memberId !== '';
+        } else if (formData.bookingType === 'GUEST') {
+          return true;
+        }
+        return false;
       case 2:
-        return formData.bookingDate !== '';
+        return formData.selectedRoomId !== '';
       case 3:
-        return formData.startTimeSlot !== '' && formData.durationHours > 0;
+        return formData.bookingDate !== '';
       case 4:
+        return formData.startTimeSlot !== '' && formData.durationHours > 0;
+      case 5:
         return (
           formData.contactName.trim() !== '' &&
           formData.contactMobile.trim() !== ''
@@ -111,6 +144,9 @@ export default function AdminBookingModal({
       const totalAmount = selectedRoom.hourlyRate * formData.durationHours;
 
       const bookingData = {
+        bookingType: formData.bookingType,
+        customerId: formData.customerId || undefined,
+        memberId: formData.memberId || undefined,
         roomId: formData.selectedRoomId,
         bookingDate: formData.bookingDate,
         startTime: formData.startTimeSlot,
@@ -141,7 +177,7 @@ export default function AdminBookingModal({
       }
 
       setBookingReference(result.data.paymentReference || '');
-      setEmailSent(result.data.emailSent || false); // ✅ Track email status
+      setEmailSent(result.data.emailSent || false);
       setShowSuccess(true);
     } catch (error) {
       console.error('Booking error:', error);
@@ -156,6 +192,30 @@ export default function AdminBookingModal({
     onClose();
   };
 
+  // ✅ Updated with proper type
+  const handleCustomerSelect = (customerId: string, customer: CustomerData) => {
+    setFormData({
+      ...formData,
+      customerId,
+      contactName: customer.name,
+      contactEmail: customer.email || '',
+      contactMobile: customer.contactNumber || '',
+      company: customer.company || '',
+    });
+  };
+
+  // ✅ Updated with proper type
+  const handleMemberSelect = (memberId: string, member: MemberData) => {
+    setFormData({
+      ...formData,
+      memberId,
+      contactName: member.name,
+      contactEmail: member.email || '',
+      contactMobile: member.contactNumber || '',
+      company: member.company || '',
+    });
+  };
+
   const renderStepContent = () => {
     if (showSuccess && selectedRoom) {
       return (
@@ -166,8 +226,8 @@ export default function AdminBookingModal({
           endTime={calculateEndTime(formData.startTimeSlot, formData.durationHours)}
           reference={bookingReference}
           contactName={formData.contactName}
-          contactEmail={formData.contactEmail} // ✅ Pass email
-          emailSent={emailSent} // ✅ Pass email status
+          contactEmail={formData.contactEmail}
+          emailSent={emailSent}
           onClose={handleSuccessClose}
         />
       );
@@ -176,20 +236,31 @@ export default function AdminBookingModal({
     switch (step) {
       case 1:
         return (
+          <AdminCustomerSelectionStep
+            selectedType={formData.bookingType}
+            selectedCustomerId={formData.customerId}
+            selectedMemberId={formData.memberId}
+            onTypeChange={(type) => setFormData({ ...formData, bookingType: type, customerId: '', memberId: '' })}
+            onCustomerSelect={handleCustomerSelect}
+            onMemberSelect={handleMemberSelect}
+          />
+        );
+      case 2:
+        return (
           <AdminRoomStep
             rooms={rooms}
             selectedRoomId={formData.selectedRoomId}
             onRoomChange={(roomId) => setFormData({ ...formData, selectedRoomId: roomId })}
           />
         );
-      case 2:
+      case 3:
         return (
           <AdminDateStep
             selectedDate={formData.bookingDate}
             onDateChange={(date) => setFormData({ ...formData, bookingDate: date })}
           />
         );
-      case 3:
+      case 4:
         if (!selectedRoom) return null;
         return (
           <AdminTimeStep
@@ -206,7 +277,7 @@ export default function AdminBookingModal({
             }
           />
         );
-      case 4:
+      case 5:
         if (!selectedRoom) return null;
         return (
           <AdminDetailsStep
@@ -253,7 +324,7 @@ export default function AdminBookingModal({
           
           <div className="flex-1" />
 
-          {step < 4 ? (
+          {step < 5 ? (
             <button
               type="button"
               onClick={handleNext}
@@ -278,7 +349,7 @@ export default function AdminBookingModal({
       <div className="p-6">
         {/* Progress Indicator */}
         <div className="flex items-center space-x-1 mb-6">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
               className={`h-1.5 rounded-full transition-all duration-300 ${
