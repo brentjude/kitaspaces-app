@@ -11,7 +11,7 @@ export default async function UserLayout({ children }: UserLayoutProps) {
   const session = await getServerSession(authOptions);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
+    <div className="min-h-screen bg-linear-to-br from-orange-50 to-amber-50">
       <PublicHeader
         currentUser={
           session?.user

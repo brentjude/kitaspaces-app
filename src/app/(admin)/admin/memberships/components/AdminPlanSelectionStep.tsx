@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, ClockIcon, TagIcon } from '@heroicons/react/24/outline';
 import type { MembershipPlanWithPerks } from '@/types/membership';
 
 interface FormData {
   selectedPlanId: string;
   couponCode: string;
   discount: number;
-  customDuration?: number; // ✅ Add custom duration
+  customDuration?: number;
 }
 
 interface AdminPlanSelectionStepProps {
@@ -31,8 +31,14 @@ export default function AdminPlanSelectionStep({
     formData.customDuration
   );
   const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [error, setError] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountType: string;
+    discountValue: number;
+  } | null>(null);
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
@@ -60,22 +66,26 @@ export default function AdminPlanSelectionStep({
   const handleValidateCoupon = async () => {
     if (!couponCode.trim()) {
       setCouponError('Please enter a coupon code');
+      setCouponSuccess('');
       return;
     }
 
     if (!selectedPlanId) {
       setCouponError('Please select a plan first');
+      setCouponSuccess('');
       return;
     }
 
     setIsValidatingCoupon(true);
     setCouponError('');
+    setCouponSuccess('');
 
     try {
-      const response = await fetch('/api/public/membership-validate-coupon', {
+      // ✅ Use admin-specific route
+      const response = await fetch('/api/admin/validate-coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode.trim() }),
+        body: JSON.stringify({ code: couponCode.trim().toUpperCase() }),
       });
 
       const result = await response.json();
@@ -83,24 +93,56 @@ export default function AdminPlanSelectionStep({
       if (result.success && result.data) {
         const selectedPlan = plans.find((p) => p.id === selectedPlanId);
         if (selectedPlan) {
-          const discountAmount =
-            result.data.discountType === 'PERCENTAGE'
-              ? (selectedPlan.price * result.data.discountValue) / 100
-              : result.data.discountValue;
+          let discountAmount = 0;
+          
+          if (result.data.discountType === 'PERCENTAGE') {
+            discountAmount = (selectedPlan.price * result.data.discountValue) / 100;
+          } else if (result.data.discountType === 'FIXED_AMOUNT') {
+            discountAmount = result.data.discountValue;
+          } else if (result.data.discountType === 'FREE') {
+            discountAmount = selectedPlan.price;
+          }
+
+          // Ensure discount doesn't exceed plan price
+          discountAmount = Math.min(discountAmount, selectedPlan.price);
 
           setDiscount(discountAmount);
-          alert('Coupon applied successfully!');
+          setAppliedCoupon({
+            code: result.data.code,
+            discountType: result.data.discountType,
+            discountValue: result.data.discountValue,
+          });
+          
+          const discountText = 
+            result.data.discountType === 'PERCENTAGE'
+              ? `${result.data.discountValue}% discount`
+              : result.data.discountType === 'FIXED_AMOUNT'
+              ? `₱${result.data.discountValue} discount`
+              : '100% (Free)';
+          
+          setCouponSuccess(`✓ Coupon applied! ${discountText}`);
         }
       } else {
         setCouponError(result.error || 'Invalid coupon code');
         setDiscount(0);
+        setAppliedCoupon(null);
       }
-    } catch {
-      setCouponError('Failed to validate coupon');
+    } catch (err) {
+      console.error('Coupon validation error:', err);
+      setCouponError('Failed to validate coupon. Please try again.');
       setDiscount(0);
+      setAppliedCoupon(null);
     } finally {
       setIsValidatingCoupon(false);
     }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponCode('');
+    setDiscount(0);
+    setAppliedCoupon(null);
+    setCouponError('');
+    setCouponSuccess('');
   };
 
   const handleNext = () => {
@@ -116,7 +158,7 @@ export default function AdminPlanSelectionStep({
 
     onNext({
       selectedPlanId,
-      couponCode,
+      couponCode: appliedCoupon?.code || '',
       discount,
       customDuration,
     });
@@ -134,14 +176,15 @@ export default function AdminPlanSelectionStep({
               onClick={() => {
                 setSelectedPlanId(plan.id);
                 setError('');
-                setDiscount(0);
-                setCouponCode('');
-                setCouponError('');
+                // Reset coupon when changing plans
+                if (appliedCoupon) {
+                  handleRemoveCoupon();
+                }
                 setCustomDuration(getDefaultDuration(plan));
               }}
               className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all ${
                 selectedPlanId === plan.id
-                  ? 'border-primary bg-primary/5'
+                  ? 'border-primary bg-primary/5 shadow-md'
                   : 'border-foreground/10 hover:border-primary/50'
               }`}
             >
@@ -178,28 +221,31 @@ export default function AdminPlanSelectionStep({
               {/* Perks */}
               {plan.perks && plan.perks.length > 0 && (
                 <div className="space-y-2">
-                    <p className="text-sm font-semibold text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     Included Perks:
-                    </p>
-                    <ul className="space-y-1">
-                    {plan.perks.map((perk) => (
-                        <li
+                  </p>
+                  <ul className="space-y-1">
+                    {plan.perks.slice(0, 4).map((perk) => (
+                      <li
                         key={perk.id}
                         className="text-sm text-foreground/80 flex items-start gap-2"
-                        >
+                      >
                         <CheckIcon className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                         {perk.quantity === 0 ? (
-                            // Text-only perk (no quantity)
-                            <span>{perk.name}</span>
+                          <span>{perk.name}</span>
                         ) : (
-                            // Redemption perk (with quantity)
-                            <span>
+                          <span>
                             {perk.quantity} {perk.unit} - {perk.name}
-                            </span>
+                          </span>
                         )}
-                        </li>
+                      </li>
                     ))}
-                    </ul>
+                    {plan.perks.length > 4 && (
+                      <li className="text-xs text-foreground/40 pl-6">
+                        + {plan.perks.length - 4} more perks
+                      </li>
+                    )}
+                  </ul>
                 </div>
               )}
             </div>
@@ -214,12 +260,15 @@ export default function AdminPlanSelectionStep({
 
       {/* Custom Duration Input */}
       {selectedPlanId && selectedPlan && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <label className="block text-sm font-medium text-foreground mb-2">
-            <ClockIcon className="w-4 h-4 inline-block mr-2 text-amber-600" />
-            Membership Duration
-          </label>
-          <div className="flex items-center gap-3">
+        <div className="p-6 bg-linear-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl">
+          <div className="flex items-center gap-2 mb-4">
+            <ClockIcon className="w-5 h-5 text-amber-600" />
+            <label className="text-base font-bold text-foreground">
+              Membership Duration
+            </label>
+          </div>
+          
+          <div className="flex items-center gap-4">
             <input
               type="number"
               min="1"
@@ -229,121 +278,240 @@ export default function AdminPlanSelectionStep({
                 setCustomDuration(value > 0 ? value : undefined);
                 setError('');
               }}
-              className="w-32 px-4 py-2 border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-32 px-4 py-2.5 border-2 border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-semibold text-lg"
               placeholder={getDefaultDuration(selectedPlan).toString()}
             />
-            <span className="text-sm font-medium text-foreground">
+            <span className="text-base font-semibold text-foreground">
               {getDurationUnit(selectedPlan)}
             </span>
           </div>
-          <p className="text-xs text-amber-700 mt-2">
-            💡 Default: {getDurationText(selectedPlan)}. You can customize the duration for this member.
-          </p>
-          {customDuration && selectedPlan.type === 'MONTHLY' && (
-            <p className="text-xs text-green-600 mt-1">
-              ✓ Member will have access for {customDuration} {customDuration === 1 ? 'month' : 'months'} ({customDuration * 30} days)
+          
+          <div className="mt-3 space-y-1">
+            <p className="text-sm text-amber-700">
+              💡 Default: {getDurationText(selectedPlan)}. Customize for this member.
             </p>
-          )}
-          {customDuration && selectedPlan.type === 'DAILY' && (
-            <p className="text-xs text-green-600 mt-1">
-              ✓ Member will have access for {customDuration} {customDuration === 1 ? 'day' : 'days'}
-            </p>
-          )}
+            {customDuration && (
+              <p className="text-sm text-green-700 font-medium">
+                ✓ Member will have access for{' '}
+                {selectedPlan.type === 'MONTHLY'
+                  ? `${customDuration} ${customDuration === 1 ? 'month' : 'months'} (${customDuration * 30} days)`
+                  : `${customDuration} ${customDuration === 1 ? 'day' : 'days'}`}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Coupon Code */}
+      {/* Coupon Code Section */}
       {selectedPlanId && (
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <label className="block text-sm font-medium text-foreground mb-2">
-            Have a coupon code? (Optional)
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={couponCode}
-              onChange={(e) => {
-                setCouponCode(e.target.value);
-                setCouponError('');
-                setDiscount(0);
-              }}
-              placeholder="Enter coupon code"
-              className="flex-1 px-4 py-2 border border-foreground/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <button
-              type="button"
-              onClick={handleValidateCoupon}
-              disabled={isValidatingCoupon}
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 font-medium"
-            >
-              {isValidatingCoupon ? 'Validating...' : 'Apply'}
-            </button>
+        <div className="p-6 bg-white border-2 border-gray-200 rounded-xl shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <TagIcon className="w-5 h-5 text-primary" />
+            <label className="text-base font-bold text-foreground">
+              Have a Coupon Code? (Optional)
+            </label>
           </div>
-          {couponError && (
-            <p className="text-red-500 text-sm mt-2">{couponError}</p>
-          )}
-          {discount > 0 && (
-            <p className="text-green-600 text-sm mt-2">
-              ✓ Coupon applied! Discount: ₱{discount.toFixed(2)}
-            </p>
+
+          {appliedCoupon ? (
+            // Show applied coupon
+            <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono font-bold text-green-900 text-lg">
+                      {appliedCoupon.code}
+                    </span>
+                    <span className="px-2 py-0.5 bg-green-200 text-green-800 text-xs font-semibold rounded">
+                      Applied
+                    </span>
+                  </div>
+                  <p className="text-sm text-green-700">
+                    {appliedCoupon.discountType === 'PERCENTAGE'
+                      ? `${appliedCoupon.discountValue}% discount`
+                      : appliedCoupon.discountType === 'FIXED_AMOUNT'
+                      ? `₱${appliedCoupon.discountValue} discount`
+                      : 'Free membership (100% off)'}
+                  </p>
+                  <p className="text-sm font-semibold text-green-900 mt-1">
+                    You save: ₱{discount.toFixed(2)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors font-medium"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            // Show coupon input
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value.toUpperCase());
+                    setCouponError('');
+                    setCouponSuccess('');
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleValidateCoupon();
+                    }
+                  }}
+                  placeholder="Enter coupon code (e.g., SUMMER2025)"
+                  className={`flex-1 px-4 py-2.5 border-2 rounded-lg focus:outline-none focus:ring-2 font-mono uppercase ${
+                    couponError
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                      : couponSuccess
+                      ? 'border-green-300 focus:border-green-500 focus:ring-green-500'
+                      : 'border-gray-300 focus:border-primary focus:ring-primary'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={handleValidateCoupon}
+                  disabled={isValidatingCoupon || !couponCode.trim()}
+                  className="px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm"
+                >
+                  {isValidatingCoupon ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Checking...
+                    </div>
+                  ) : (
+                    'Apply'
+                  )}
+                </button>
+              </div>
+
+              {couponError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                  <svg
+                    className="w-5 h-5 text-red-600 shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-sm text-red-700 font-medium">{couponError}</p>
+                </div>
+              )}
+
+              {couponSuccess && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
+                  <svg
+                    className="w-5 h-5 text-green-600 shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-sm text-green-700 font-medium">{couponSuccess}</p>
+                </div>
+              )}
+
+              <p className="text-xs text-foreground/60">
+                💡 Tip: Coupon codes are case-insensitive and will be automatically converted to uppercase
+              </p>
+            </div>
           )}
         </div>
       )}
 
       {/* Price Summary */}
       {selectedPlan && (
-        <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-          <div className="space-y-2">
+        <div className="p-6 bg-linear-to-br from-primary/5 to-orange-50 rounded-xl border-2 border-primary/20 shadow-sm">
+          <h3 className="text-lg font-bold text-foreground mb-4">Order Summary</h3>
+          <div className="space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-foreground/60">Plan:</span>
-              <span className="font-medium">{selectedPlan.name}</span>
+              <span className="text-foreground/70">Plan:</span>
+              <span className="font-semibold text-foreground">{selectedPlan.name}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-foreground/60">Duration:</span>
-              <span className="font-medium">
+              <span className="text-foreground/70">Duration:</span>
+              <span className="font-semibold text-foreground">
                 {customDuration 
                   ? `${customDuration} ${getDurationUnit(selectedPlan)}`
                   : getDurationText(selectedPlan)
                 }
+                {customDuration && selectedPlan.type === 'MONTHLY' && (
+                  <span className="text-foreground/60 ml-1">
+                    ({customDuration * 30} days)
+                  </span>
+                )}
               </span>
             </div>
-            <div className="flex justify-between text-sm border-t border-primary/20 pt-2">
-              <span className="text-foreground/60">Plan Price:</span>
-              <span className="font-medium">
-                ₱{selectedPlan.price.toFixed(2)}
-              </span>
+            <div className="border-t-2 border-primary/20 pt-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-foreground/70">Plan Price:</span>
+                <span className="font-semibold text-foreground">
+                  ₱{selectedPlan.price.toFixed(2)}
+                </span>
+              </div>
             </div>
             {discount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>Discount:</span>
-                <span className="font-medium">-₱{discount.toFixed(2)}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-green-600 flex items-center gap-1">
+                  <TagIcon className="w-4 h-4" />
+                  Discount:
+                </span>
+                <span className="font-semibold text-green-600">
+                  -₱{discount.toFixed(2)}
+                </span>
               </div>
             )}
-            <div className="flex justify-between text-lg font-bold border-t border-primary/20 pt-2">
-              <span>Total:</span>
-              <span className="text-primary">
-                ₱{(selectedPlan.price - discount).toFixed(2)}
-              </span>
+            <div className="border-t-2 border-primary/20 pt-3">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-bold text-foreground">Total Amount:</span>
+                <span className="text-2xl font-extrabold text-primary">
+                  ₱{(selectedPlan.price - discount).toFixed(2)}
+                </span>
+              </div>
             </div>
+            {discount > 0 && (
+              <div className="pt-2 border-t border-primary/10">
+                <p className="text-xs text-green-700 font-medium text-center">
+                  🎉 You're saving ₱{discount.toFixed(2)} with this coupon!
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between pt-4">
+      <div className="flex justify-between pt-4 border-t border-foreground/10">
         <button
           type="button"
           onClick={onBack}
-          className="px-6 py-2 border border-foreground/20 rounded-lg hover:bg-foreground/5 transition-colors font-medium"
+          className="px-6 py-2.5 border-2 border-foreground/20 rounded-lg hover:bg-foreground/5 transition-colors font-semibold"
         >
-          Back
+          ← Back
         </button>
         <button
           type="button"
           onClick={handleNext}
-          className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
+          disabled={!selectedPlanId}
+          className="px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Next: Payment
+          Next: Payment →
         </button>
       </div>
     </div>
