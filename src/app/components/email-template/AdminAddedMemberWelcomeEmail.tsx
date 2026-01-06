@@ -23,6 +23,7 @@ interface MembershipBenefit {
 interface AdminAddedMemberWelcomeEmailProps {
   name: string;
   email: string;
+  password: string; // ✅ ADD THIS
   planName: string;
   startDate: string;
   endDate: string;
@@ -33,6 +34,7 @@ interface AdminAddedMemberWelcomeEmailProps {
 export function AdminAddedMemberWelcomeEmail({
   name,
   email,
+  password, // ✅ ADD THIS
   planName,
   startDate,
   endDate,
@@ -152,14 +154,41 @@ export function AdminAddedMemberWelcomeEmail({
 
             {/* Login Instructions */}
             <Section style={loginSection}>
-              <Text style={loginTitle}>🔐 Access Your Account</Text>
-              <Text style={loginText}>
-                You can now log in to your member dashboard using the email address: <strong>{email}</strong>
-              </Text>
-              <Text style={loginText}>
-                If you haven't set a password yet, please use the "Forgot Password" feature on the login page to create one.
-              </Text>
-            </Section>
+        <Text style={loginTitle}>🔐 Access Your Account</Text>
+        <Text style={loginText}>
+          You can now log in to your member dashboard using these credentials:
+        </Text>
+        
+        {/* Login Credentials Box */}
+        <Section style={credentialsBox}>
+          <table style={credentialsTable}>
+            <tr>
+              <td style={credentialLabel}>Email:</td>
+              <td style={credentialValue}>{email}</td>
+            </tr>
+            <tr>
+              <td style={credentialLabel}>Temporary Password:</td>
+              <td style={credentialValue}>
+                <code style={passwordCode}>{password}</code>
+              </td>
+            </tr>
+          </table>
+        </Section>
+
+        <Text style={securityNote}>
+          🔒 <strong>Important Security Notice:</strong> This is a temporary password created by our admin team. 
+          For your security, please change it immediately after logging in.
+        </Text>
+        
+        <Text style={loginSteps}>
+          <strong>How to change your password:</strong>
+        </Text>
+        <ol style={stepsList}>
+          <li style={stepItem}>Log in using the credentials above</li>
+          <li style={stepItem}>Go to Settings → Change Password</li>
+          <li style={stepItem}>Enter the temporary password and create a new one</li>
+        </ol>
+      </Section>
 
             {/* CTA Button */}
             <Section style={ctaSection}>
@@ -458,4 +487,72 @@ const footerLinks = {
 const footerLink = {
   color: '#6b7280',
   textDecoration: 'none',
+};
+
+
+const credentialsBox = {
+  backgroundColor: '#ffffff',
+  border: '2px solid #93c5fd',
+  borderRadius: '8px',
+  padding: '16px',
+  margin: '16px 0',
+};
+
+const credentialsTable = {
+  width: '100%',
+};
+
+const credentialLabel = {
+  color: '#6b7280',
+  fontSize: '14px',
+  padding: '8px 12px 8px 0',
+  fontWeight: '500' as const,
+};
+
+const credentialValue = {
+  color: '#1f2937',
+  fontSize: '14px',
+  padding: '8px 0',
+  fontWeight: '600' as const,
+};
+
+const passwordCode = {
+  backgroundColor: '#fef3c7',
+  border: '1px solid #fbbf24',
+  borderRadius: '4px',
+  padding: '4px 8px',
+  fontFamily: 'monospace',
+  fontSize: '14px',
+  color: '#92400e',
+  letterSpacing: '0.5px',
+};
+
+const securityNote = {
+  fontSize: '13px',
+  lineHeight: '18px',
+  color: '#dc2626',
+  backgroundColor: '#fef2f2',
+  border: '1px solid #fecaca',
+  borderRadius: '6px',
+  padding: '12px',
+  margin: '12px 0',
+};
+
+const loginSteps = {
+  fontSize: '14px',
+  fontWeight: '600' as const,
+  color: '#1f2937',
+  margin: '12px 0 8px 0',
+};
+
+const stepsList = {
+  margin: '0 0 0 20px',
+  padding: '0',
+  fontSize: '14px',
+  color: '#4b5563',
+  lineHeight: '24px',
+};
+
+const stepItem = {
+  marginBottom: '4px',
 };

@@ -244,18 +244,19 @@ export async function POST(request: NextRequest) {
 
     // ✅ Send welcome email
     try {
-      const benefits = convertPerksToEmailBenefits(plan.perks);
-      
-      await sendAdminAddedMemberWelcomeEmail({
-        to: result.user.email,
-        name: result.user.name,
-        email: result.user.email,
-        planName: plan.name,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        adminNote: paymentNote,
-        benefits,
-      });
+       const benefits = convertPerksToEmailBenefits(plan.perks);
+  
+        await sendAdminAddedMemberWelcomeEmail({
+            to: result.user.email,
+            name: result.user.name,
+            email: result.user.email,
+            password, // ✅ ADD THIS - pass the plain password
+            planName: plan.name,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            adminNote: paymentNote,
+            benefits,
+        });
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
       // Don't fail the whole operation if email fails

@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import cloudinary from '@/lib/cloudinary';
-import type { CloudinaryUploadResponse } from '@/types';
 import { prisma } from '@/lib/prisma';
 
-/**
- * POST /api/upload
- * Upload image to Cloudinary
- * Requires authentication
- */
-export async function POST(request: NextRequest) {
+// GET - Fetch current user's profile
+export async function GET() {
   try {
-    // Check authentication
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
@@ -22,78 +15,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const folder = formData.get('folder') as string || 'kitaspaces';
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        nickname: true,
+        company: true,
+        contactNumber: true,
+        birthdate: true,
+        referralSource: true,
+        agreeToNewsletter: true,
+        role: true,
+        isMember: true,
+        createdAt: true,
+      },
+    });
 
-    if (!file) {
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: 'No file provided' },
-        { status: 400 }
+        { success: false, error: 'User not found' },
+        { status: 404 }
       );
     }
 
-    // Convert file to base64
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
-
-    // Upload to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(base64String, {
-      folder,
-      resource_type: 'image',
-      transformation: [
-        { width: 1200, height: 630, crop: 'limit' }, // Limit max size
-        { quality: 'auto:good' },
-        { fetch_format: 'auto' },
-      ],
-    });
-
-    const response: CloudinaryUploadResponse = {
-      public_id: uploadResult.public_id,
-      version: uploadResult.version,
-      signature: uploadResult.signature,
-      width: uploadResult.width,
-      height: uploadResult.height,
-      format: uploadResult.format,
-      resource_type: uploadResult.resource_type,
-      created_at: uploadResult.created_at,
-      tags: uploadResult.tags || [],
-      bytes: uploadResult.bytes,
-      type: uploadResult.type,
-      etag: uploadResult.etag,
-      placeholder: uploadResult.placeholder || false,
-      url: uploadResult.url,
-      secure_url: uploadResult.secure_url,
-      access_mode: uploadResult.access_mode,
-      original_filename: uploadResult.original_filename,
-    };
-
     return NextResponse.json({
       success: true,
-      data: response,
+      data: user,
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Error fetching user:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Upload failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { success: false, error: 'Failed to fetch user' },
       { status: 500 }
     );
   }
 }
 
-/**
- * DELETE /api/upload
- * Delete image from Cloudinary
- * Requires authentication
- */
-export async function DELETE(request: NextRequest) {
+// PUT - Update current user's profile
+export async function PUT(request: NextRequest) {
   try {
-    // Check authentication
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
@@ -104,75 +66,64 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { publicId } = body;
+    const {
+      name,
+      nickname,
+      company,
+      contactNumber,
+      birthdate,
+      referralSource,
+      agreeToNewsletter,
+    } = body;
 
-    if (!publicId) {
+    // Validate required fields
+    if (!name?.trim()) {
       return NextResponse.json(
-        { success: false, error: 'No public ID provided' },
+        { success: false, error: 'Name is required' },
         { status: 400 }
       );
     }
 
-    // Delete from Cloudinary
-    const result = await cloudinary.uploader.destroy(publicId);
+    if (!contactNumber?.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Contact number is required' },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    console.error('Delete error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Delete failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+    const updatedUser = await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        name: name.trim(),
+        nickname: nickname?.trim() || null,
+        company: company?.trim() || null,
+        contactNumber: contactNumber.trim(),
+        birthdate: birthdate ? new Date(birthdate) : null,
+        referralSource: referralSource || null,
+        agreeToNewsletter: agreeToNewsletter || false,
       },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("id");
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "User ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
       select: {
         id: true,
-        name: true,
         email: true,
-        isMember: true,
+        name: true,
+        nickname: true,
+        company: true,
+        contactNumber: true,
+        birthdate: true,
+        referralSource: true,
+        agreeToNewsletter: true,
       },
     });
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "User not found" },
-        { status: 404 }
-      );
-    }
 
     return NextResponse.json({
       success: true,
-      data: user,
+      data: updatedUser,
+      message: 'Profile updated successfully',
     });
   } catch (error) {
-    console.error("Error fetching user:", error);
+    console.error('Error updating user:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch user",
-      },
+      { success: false, error: 'Failed to update profile' },
       { status: 500 }
     );
   }

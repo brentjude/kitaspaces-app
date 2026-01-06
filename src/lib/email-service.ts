@@ -169,6 +169,7 @@ export async function sendAdminAddedMemberWelcomeEmail(data: {
   to: string;
   name: string;
   email: string;
+  password: string;
   planName: string;
   startDate: string;
   endDate: string;
@@ -181,6 +182,7 @@ export async function sendAdminAddedMemberWelcomeEmail(data: {
     react: AdminAddedMemberWelcomeEmail({
       name: data.name,
       email: data.email,
+      password: data.password,
       planName: data.planName,
       startDate: data.startDate,
       endDate: data.endDate,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "next-auth/react"; // ✅ Already imported
 import {
   DashboardData,
   UserEventRegistration,
@@ -10,7 +10,6 @@ import {
   RedemptionEvent,
   UserPerksData,
 } from "@/types/dashboard";
-import PublicHeader from "@/app/components/Header";
 import WelcomeSection from "./components/WelcomeSection";
 import MyTickets from "./components/MyTickets";
 import RedemptionEvents from "./components/RedemptionEvents";
@@ -27,7 +26,7 @@ type TabType = "redemptions" | "perks" | "tickets";
 
 export default function UserDashboardPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession(); // ✅ ADD THIS LINE
 
   const [activeTab, setActiveTab] = useState<TabType>("redemptions");
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
@@ -131,26 +130,30 @@ export default function UserDashboardPage() {
   };
 
   const handleRedeemPerk = async (perkId: string) => {
-    const response = await fetch(`/api/user/perks/${perkId}/redeem`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notes: "Redeemed from dashboard" }),
-    });
+    try {
+      const response = await fetch(`/api/user/perks/${perkId}/redeem`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: "Redeemed from dashboard" }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error || "Failed to redeem perk");
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to redeem perk");
+      }
+
+      // Reload perks data
+      const perksRes = await fetch("/api/user/perks");
+      const perksJson = await perksRes.json();
+      if (perksRes.ok && perksJson.success) {
+        setPerksData(perksJson.data);
+      }
+
+      alert(data.data.message || "Perk redeemed successfully!");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to redeem perk");
     }
-
-    // Reload perks data
-    const perksRes = await fetch("/api/user/perks");
-    const perksJson = await perksRes.json();
-    if (perksRes.ok && perksJson.success) {
-      setPerksData(perksJson.data);
-    }
-
-    alert(data.data.message || "Perk redeemed successfully!");
   };
 
   // Helper function to check if perk is available all week
@@ -167,24 +170,21 @@ export default function UserDashboardPage() {
 
   // Filter perks based on tab
   const dailyPerks =
-  perksData?.perks.filter(
-    (perk) => !isAllWeekPerk(perk) && perk.quantity > 0
-  ) || [];
+    perksData?.perks.filter(
+      (perk) => !isAllWeekPerk(perk) && perk.quantity > 0
+    ) || [];
 
-const memberPerks =
-  perksData?.perks.filter(
-    (perk) => isAllWeekPerk(perk) && perk.quantity > 0
-  ) || [];
+  const memberPerks =
+    perksData?.perks.filter(
+      (perk) => isAllWeekPerk(perk) && perk.quantity > 0
+    ) || [];
 
   if (loading || status === "loading") {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <PublicHeader currentUser={session?.user} />
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
-            <p className="mt-2 text-sm text-gray-600">Loading dashboard...</p>
-          </div>
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
+          <p className="mt-2 text-sm text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -192,21 +192,18 @@ const memberPerks =
 
   if (error || !dashboardData) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <PublicHeader currentUser={session?.user} />
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <div className="text-center max-w-md">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
-            <p className="text-gray-600 mb-6">
-              {error || "Failed to load dashboard"}
-            </p>
-            <button
-              onClick={() => router.push("/")}
-              className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Return Home
-            </button>
-          </div>
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
+          <p className="text-gray-600 mb-6">
+            {error || "Failed to load dashboard"}
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Return Home
+          </button>
         </div>
       </div>
     );
@@ -234,163 +231,151 @@ const memberPerks =
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <PublicHeader
-        currentUser={{
-          name: session?.user?.name || "",
-          email: session?.user?.email || "",
-          role: session?.user?.role,
-          isMember: dashboardData?.isMember || false,
-        }}
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <WelcomeSection
+        data={dashboardData}
+        upcomingEventsCount={upcomingEvents.length}
       />
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <WelcomeSection
-          data={dashboardData}
-          upcomingEventsCount={upcomingEvents.length}
-        />
-
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Tab Headers */}
-          <div className="border-b border-gray-200">
-            <div className="flex overflow-x-auto">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-all whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "text-primary border-b-2 border-primary bg-primary/5"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                  }`}
-                >
-                  {tab.icon}
-                  <span>{tab.label}</span>
-                  {tab.count > 0 && (
-                    <span
-                      className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-                        activeTab === tab.id
-                          ? "bg-primary text-white"
-                          : "bg-gray-200 text-gray-600"
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-6">
-            {activeTab === "redemptions" && (
-              <div className="space-y-8">
-                {/* Redemption Events Section */}
-                {redemptionEvents.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h2 className="text-lg font-bold text-gray-900">
-                          Daily Redemption Events
-                        </h2>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Free events available on specific days
-                        </p>
-                      </div>
-                    </div>
-                    <RedemptionEvents
-                      events={redemptionEvents}
-                      onRedeem={handleRedeemEvent}
-                    />
-                  </div>
+      {/* Tabs */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Tab Headers */}
+        <div className="border-b border-gray-200">
+          <div className="flex overflow-x-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "text-primary border-b-2 border-primary bg-primary/5"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+                {tab.count > 0 && (
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                      activeTab === tab.id
+                        ? "bg-primary text-white"
+                        : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
                 )}
-
-                {/* Daily Perks Section */}
-                {dailyPerks.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h2 className="text-lg font-bold text-gray-900">
-                          Day-Specific Perks
-                        </h2>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Perks available on certain days of the week
-                        </p>
-                      </div>
-                    </div>
-                    <RedemptionPerks
-                      perks={dailyPerks}
-                      membershipName={perksData?.membership?.planName || ""}
-                      onRedeem={handleRedeemPerk}
-                    />
-                  </div>
-                )}
-
-                {/* Empty State */}
-                {redemptionEvents.length === 0 && dailyPerks.length === 0 && (
-                  <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
-                    <GiftIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-gray-500">No daily perks available</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "perks" && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">
-                      {perksData?.membership?.planName || "Membership Perks"}
-                    </h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Perks available every day of the week
-                    </p>
-                  </div>
-                </div>
-                {perksData && memberPerks.length > 0 && perksData.membership ? (
-                  <RedemptionPerks
-                    perks={memberPerks}
-                    membershipName={perksData.membership.planName}
-                    onRedeem={handleRedeemPerk}
-                  />
-                ) : (
-                  <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
-                    <SparklesIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-gray-500">
-                      {perksData && !perksData.membership
-                        ? "No active membership found"
-                        : "No all-week membership perks available"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "tickets" && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">
-                      Upcoming Events
-                    </h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Your registered events and tickets
-                    </p>
-                  </div>
-                </div>
-                <MyTickets events={upcomingEvents} />
-              </div>
-            )}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Past Events */}
-        <PastEvents events={pastEvents} />
-      </main>
-    </div>
+        {/* Tab Content */}
+        <div className="p-6">
+          {activeTab === "redemptions" && (
+            <div className="space-y-8">
+              {/* Redemption Events Section */}
+              {redemptionEvents.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">
+                        Daily Redemption Events
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Free events available on specific days
+                      </p>
+                    </div>
+                  </div>
+                  <RedemptionEvents
+                    events={redemptionEvents}
+                    onRedeem={handleRedeemEvent}
+                  />
+                </div>
+              )}
+
+              {/* Daily Perks Section */}
+              {dailyPerks.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">
+                        Day-Specific Perks
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Perks available on certain days of the week
+                      </p>
+                    </div>
+                  </div>
+                  <RedemptionPerks
+                    perks={dailyPerks}
+                    membershipName={perksData?.membership?.planName || ""}
+                    onRedeem={handleRedeemPerk}
+                  />
+                </div>
+              )}
+
+              {/* Empty State */}
+              {redemptionEvents.length === 0 && dailyPerks.length === 0 && (
+                <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+                  <GiftIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500">No daily perks available</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "perks" && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    {perksData?.membership?.planName || "Membership Perks"}
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Perks available every day of the week
+                  </p>
+                </div>
+              </div>
+              {perksData && memberPerks.length > 0 && perksData.membership ? (
+                <RedemptionPerks
+                  perks={memberPerks}
+                  membershipName={perksData.membership.planName}
+                  onRedeem={handleRedeemPerk}
+                />
+              ) : (
+                <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+                  <SparklesIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500">
+                    {perksData && !perksData.membership
+                      ? "No active membership found"
+                      : "No all-week membership perks available"}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "tickets" && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Upcoming Events
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Your registered events and tickets
+                  </p>
+                </div>
+              </div>
+              <MyTickets events={upcomingEvents} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Past Events */}
+      <PastEvents events={pastEvents} />
+    </main>
   );
 }

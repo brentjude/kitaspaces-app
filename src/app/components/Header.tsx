@@ -77,6 +77,16 @@ export default function PublicHeader({
     }
   };
 
+  const handleSettingsClick = () => {
+    setShowDropdown(false);
+    setShowMobileMenu(false);
+    if (currentUser?.role === 'ADMIN') {
+      router.push('/admin/settings');
+    } else {
+      router.push('/user/settings');
+    }
+  };
+
   const handleLogout = async () => {
     setShowDropdown(false);
     setShowMobileMenu(false);
@@ -93,7 +103,7 @@ export default function PublicHeader({
     return pathname === path || pathname?.startsWith(path + '/');
   };
 
-  // 🔧 UPDATED: Only show for guests (not logged in)
+  // Only show for guests (not logged in)
   const shouldShowMembershipButton = !currentUser;
 
   return (
@@ -148,7 +158,7 @@ export default function PublicHeader({
           </Link>
         </div>
 
-        {/* 🆕 Right Side - Updated Layout */}
+        {/* Right Side */}
         <div className="flex items-center gap-2">
           {currentUser ? (
             <>
@@ -201,7 +211,7 @@ export default function PublicHeader({
                       >
                         {currentUser.role === 'ADMIN' ? (
                           <>
-                            <Cog6ToothIcon className="w-4 h-4 mr-3 text-gray-400" />
+                            <HomeIcon className="w-4 h-4 mr-3 text-gray-400" />
                             Admin Dashboard
                           </>
                         ) : (
@@ -210,6 +220,15 @@ export default function PublicHeader({
                             My Dashboard
                           </>
                         )}
+                      </button>
+
+                      {/* ✅ Settings Button */}
+                      <button
+                        onClick={handleSettingsClick}
+                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <Cog6ToothIcon className="w-4 h-4 mr-3 text-gray-400" />
+                        Settings
                       </button>
 
                       <div className="border-t border-gray-100 my-1" />
@@ -316,7 +335,7 @@ export default function PublicHeader({
                       >
                         {currentUser.role === 'ADMIN' ? (
                           <>
-                            <Cog6ToothIcon className="w-5 h-5" />
+                            <HomeIcon className="w-5 h-5" />
                             Admin Dashboard
                           </>
                         ) : (
@@ -325,6 +344,15 @@ export default function PublicHeader({
                             My Dashboard
                           </>
                         )}
+                      </button>
+
+                      {/* ✅ Settings Button - Mobile */}
+                      <button
+                        onClick={handleSettingsClick}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <Cog6ToothIcon className="w-5 h-5" />
+                        Settings
                       </button>
                     </div>
 
@@ -344,7 +372,7 @@ export default function PublicHeader({
             </>
           ) : (
             <>
-              {/* 🆕 Become a Member Button - Desktop (Beside Login) */}
+              {/* Become a Member Button - Desktop (Beside Login) */}
               {shouldShowMembershipButton && (
                 <Link
                   href="/member-registration"
@@ -419,7 +447,7 @@ export default function PublicHeader({
                         Meeting Rooms
                       </Link>
 
-                      {/* 🆕 Become a Member for guests - Mobile */}
+                      {/* Become a Member for guests - Mobile */}
                       <Link
                         href="/member-registration"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${

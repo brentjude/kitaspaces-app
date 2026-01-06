@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 // Paths that require authentication
-const protectedPaths = ["/admin", "/dashboard", "/profile"];
+const protectedPaths = ["/admin", "/dashboard", "/profile", "/user/settings"];
 
 // Paths that should redirect authenticated users
 const authPaths = ["/auth/signin", "/auth/signup"];
