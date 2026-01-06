@@ -72,7 +72,15 @@ export default function MembershipPlanCard({
                 className="text-sm text-gray-600 flex items-start"
               >
                 <span className="mr-2 text-primary">•</span>
-                {perk.name} ({perk.quantity} {perk.unit})
+                {perk.quantity === 0 ? (
+                  // Text-only perk (no quantity)
+                  <span>{perk.name}</span>
+                ) : (
+                  // Redemption perk (with quantity)
+                  <span>
+                    {perk.name} ({perk.quantity} {perk.unit})
+                  </span>
+                )}
               </li>
             ))}
             {plan.perks.length > 3 && (

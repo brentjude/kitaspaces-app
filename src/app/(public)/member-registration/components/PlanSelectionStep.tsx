@@ -133,7 +133,7 @@ export default function PlanSelectionStep({
                     <li key={perk.id} className="flex items-start text-sm">
                       <CheckCircleIcon className="w-4 h-4 text-green-500 mr-2 mt-0.5 shrink-0" />
                       <span className="text-foreground/80">
-                        {perk.quantity} {perk.unit} {perk.name}
+                        {perk.quantity == 0 ? '' : perk.quantity} {perk.unit} {perk.name}
                       </span>
                     </li>
                   ))}

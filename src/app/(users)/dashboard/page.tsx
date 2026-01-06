@@ -167,9 +167,14 @@ export default function UserDashboardPage() {
 
   // Filter perks based on tab
   const dailyPerks =
-    perksData?.perks.filter((perk) => !isAllWeekPerk(perk)) || [];
-  const memberPerks =
-    perksData?.perks.filter((perk) => isAllWeekPerk(perk)) || [];
+  perksData?.perks.filter(
+    (perk) => !isAllWeekPerk(perk) && perk.quantity > 0
+  ) || [];
+
+const memberPerks =
+  perksData?.perks.filter(
+    (perk) => isAllWeekPerk(perk) && perk.quantity > 0
+  ) || [];
 
   if (loading || status === "loading") {
     return (

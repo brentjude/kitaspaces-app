@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { MembershipPerk } from "@/types/dashboard";
+import { MembershipPerk } from '@/types/dashboard';
 import {
   GiftIcon,
   ClockIcon,
   CalendarIcon,
   XCircleIcon,
   BuildingOfficeIcon,
-} from "@heroicons/react/24/outline";
-import { useState } from "react";
-import MeetingRoomPerkModal from "./MeetingRoomPerkModal";
-import RedemptionConfirmModal from "./RedemptionConfirmModal";
+} from '@heroicons/react/24/outline';
+import { useState } from 'react';
+import MeetingRoomPerkModal from './MeetingRoomPerkModal';
+import RedemptionConfirmModal from './RedemptionConfirmModal';
 
 interface RedemptionPerksProps {
   perks: MembershipPerk[];
@@ -27,17 +27,20 @@ export default function RedemptionPerks({
     useState<MembershipPerk | null>(null);
   const [confirmPerk, setConfirmPerk] = useState<MembershipPerk | null>(null);
 
-  if (!perks || perks.length === 0) {
+  // ✅ Filter out text-only perks (quantity === 0)
+  const redemptionPerks = perks.filter((perk) => perk.quantity > 0);
+
+  if (!redemptionPerks || redemptionPerks.length === 0) {
     return (
       <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
         <GiftIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-        <p className="text-gray-500">No perks available</p>
+        <p className="text-gray-500">No redeemable perks available</p>
       </div>
     );
   }
 
   const handleRedeem = async (perk: MembershipPerk) => {
-    if (perk.type === "MEETING_ROOM_HOURS") {
+    if (perk.type === 'MEETING_ROOM_HOURS') {
       setSelectedMeetingRoomPerk(perk);
       return;
     }
@@ -54,7 +57,7 @@ export default function RedemptionPerks({
       await onRedeem(confirmPerk.id);
       setConfirmPerk(null);
     } catch (error) {
-      console.error("Redemption error:", error);
+      console.error('Redemption error:', error);
     } finally {
       setRedeeming(null);
     }
@@ -62,33 +65,33 @@ export default function RedemptionPerks({
 
   const getPerkIcon = (type: string) => {
     const icons: Record<string, string> = {
-      CUSTOM: "💎",
-      COFFEE_VOUCHERS: "☕",
-      MEETING_ROOM_HOURS: "🏢",
-      PRINTING_CREDITS: "🖨️",
-      EVENT_DISCOUNT: "🎟️",
-      LOCKER_ACCESS: "🔐",
-      GUEST_PASSES: "👥",
-      PARKING_SLOTS: "🚗",
+      CUSTOM: '💎',
+      COFFEE_VOUCHERS: '☕',
+      MEETING_ROOM_HOURS: '🏢',
+      PRINTING_CREDITS: '🖨️',
+      EVENT_DISCOUNT: '🎟️',
+      LOCKER_ACCESS: '🔐',
+      GUEST_PASSES: '👥',
+      PARKING_SLOTS: '🚗',
     };
-    return icons[type] || "🎁";
+    return icons[type] || '🎁';
   };
 
   const formatDays = (daysJson: string | null) => {
-    if (!daysJson) return "Available Daily";
+    if (!daysJson) return 'Available Daily';
 
     try {
       const days = JSON.parse(daysJson) as string[];
 
       if (days.length === 7) {
-        return "Available Daily";
+        return 'Available Daily';
       }
 
-      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const sortedDays = days.map((d) => parseInt(d)).sort((a, b) => a - b);
-      return sortedDays.map((d) => dayNames[d]).join(", ");
+      return sortedDays.map((d) => dayNames[d]).join(', ');
     } catch {
-      return "Available Daily";
+      return 'Available Daily';
     }
   };
 
@@ -125,27 +128,27 @@ export default function RedemptionPerks({
 
   const formatAvailabilityMessage = (perk: MembershipPerk): string => {
     if (!perk.nextAvailableDate) {
-      return perk.unavailableReason || "Not available";
+      return perk.unavailableReason || 'Not available';
     }
 
     const nextDate =
-      typeof perk.nextAvailableDate === "string"
+      typeof perk.nextAvailableDate === 'string'
         ? new Date(perk.nextAvailableDate)
         : perk.nextAvailableDate;
 
     const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     return `Available ${months[nextDate.getMonth()]} ${nextDate.getDate()}`;
@@ -158,9 +161,9 @@ export default function RedemptionPerks({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {perks.map((perk) => {
+        {redemptionPerks.map((perk) => {
           const isAvailable = perk.isAvailable;
-          const isMeetingRoom = perk.type === "MEETING_ROOM_HOURS";
+          const isMeetingRoom = perk.type === 'MEETING_ROOM_HOURS';
           const hasUnlimitedDaily = perk.maxPerDay === null;
           const hasUnlimitedWeekly = perk.maxPerWeek === null;
           const hasUnlimitedMonthly = perk.maxPerMonth === null;
@@ -175,8 +178,8 @@ export default function RedemptionPerks({
               key={perk.id}
               className={`bg-white rounded-xl border p-5 transition-all ${
                 isAvailable
-                  ? "border-gray-200 hover:border-primary hover:shadow-sm"
-                  : "border-gray-200 bg-gray-50/30 opacity-60"
+                  ? 'border-gray-200 hover:border-primary hover:shadow-sm'
+                  : 'border-gray-200 bg-gray-50/30 opacity-60'
               }`}
             >
               {/* Header */}
@@ -203,47 +206,47 @@ export default function RedemptionPerks({
                   <div
                     className={`border rounded-lg p-3 mb-2 ${
                       isAvailable
-                        ? "bg-blue-50 border-blue-200"
-                        : "bg-gray-50 border-gray-200"
+                        ? 'bg-blue-50 border-blue-200'
+                        : 'bg-gray-50 border-gray-200'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p
                           className={`text-xs font-medium ${
-                            isAvailable ? "text-blue-900" : "text-gray-600"
+                            isAvailable ? 'text-blue-900' : 'text-gray-600'
                           }`}
                         >
-                          {perk.isRecurring ? "Today's Hours" : "Total Hours"}
+                          {perk.isRecurring ? "Today's Hours" : 'Total Hours'}
                         </p>
                         <p
                           className={`text-lg font-bold ${
-                            isAvailable ? "text-blue-600" : "text-gray-500"
+                            isAvailable ? 'text-blue-600' : 'text-gray-500'
                           }`}
                         >
-                          {perk.quantity - (perk.usedToday || 0)} /{" "}
+                          {perk.quantity - (perk.usedToday || 0)} /{' '}
                           {perk.quantity} {perk.unit}
                         </p>
                       </div>
                       <BuildingOfficeIcon
                         className={`w-6 h-6 ${
-                          isAvailable ? "text-blue-400" : "text-gray-400"
+                          isAvailable ? 'text-blue-400' : 'text-gray-400'
                         }`}
                       />
                     </div>
                     {perk.usedToday > 0 && (
                       <p
                         className={`text-xs mt-1 ${
-                          isAvailable ? "text-blue-600" : "text-gray-500"
+                          isAvailable ? 'text-blue-600' : 'text-gray-500'
                         }`}
                       >
-                        Used {perk.isRecurring ? "today" : "so far"}:{" "}
+                        Used {perk.isRecurring ? 'today' : 'so far'}:{' '}
                         {perk.usedToday} {perk.unit}
                       </p>
                     )}
                     {perk.isRecurring && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Resets {perk.maxPerDay !== null ? "daily" : "monthly"}
+                        Resets {perk.maxPerDay !== null ? 'daily' : 'monthly'}
                       </p>
                     )}
                   </div>
@@ -291,7 +294,7 @@ export default function RedemptionPerks({
                       </div>
                     )}
 
-                    {/* Monthly Usage - Only show if maxPerMonth is NOT null */}
+                    {/* Monthly Usage */}
                     {perk.maxPerMonth !== null &&
                       perk.maxPerMonth !== undefined && (
                         <div className="flex items-center text-xs text-gray-500">
@@ -325,10 +328,10 @@ export default function RedemptionPerks({
                     <BuildingOfficeIcon className="w-4 h-4 mr-2" />
                   )}
                   {redeeming === perk.id
-                    ? "Redeeming..."
+                    ? 'Redeeming...'
                     : isMeetingRoom
-                      ? "Book Meeting Room"
-                      : "Redeem Now"}
+                      ? 'Book Meeting Room'
+                      : 'Redeem Now'}
                 </button>
               ) : displayNextDate ? (
                 <div className="w-full py-2 px-4 bg-purple-50 text-purple-600 font-medium rounded-lg text-sm text-center flex items-center justify-center">
@@ -338,21 +341,21 @@ export default function RedemptionPerks({
               ) : (
                 <div className="w-full py-2 px-4 bg-gray-100 text-gray-500 font-medium rounded-lg text-sm text-center flex items-center justify-center">
                   <XCircleIcon className="w-4 h-4 mr-2" />
-                  {perk.unavailableReason || "Not available"}
+                  {perk.unavailableReason || 'Not available'}
                 </div>
               )}
 
               {/* Last Used */}
               {perk.lastUsedAt && (
                 <p className="text-xs text-gray-400 mt-2 text-center">
-                  Last used:{" "}
+                  Last used:{' '}
                   {new Date(
-                    typeof perk.lastUsedAt === "string"
+                    typeof perk.lastUsedAt === 'string'
                       ? perk.lastUsedAt
                       : perk.lastUsedAt
                   ).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
+                    month: 'short',
+                    day: 'numeric',
                   })}
                 </p>
               )}

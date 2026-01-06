@@ -178,22 +178,28 @@ export default function AdminPlanSelectionStep({
               {/* Perks */}
               {plan.perks && plan.perks.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-foreground">
+                    <p className="text-sm font-semibold text-foreground">
                     Included Perks:
-                  </p>
-                  <ul className="space-y-1">
+                    </p>
+                    <ul className="space-y-1">
                     {plan.perks.map((perk) => (
-                      <li
+                        <li
                         key={perk.id}
                         className="text-sm text-foreground/80 flex items-start gap-2"
-                      >
+                        >
                         <CheckIcon className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                        <span>
-                          {perk.quantity} {perk.unit} - {perk.name}
-                        </span>
-                      </li>
+                        {perk.quantity === 0 ? (
+                            // Text-only perk (no quantity)
+                            <span>{perk.name}</span>
+                        ) : (
+                            // Redemption perk (with quantity)
+                            <span>
+                            {perk.quantity} {perk.unit} - {perk.name}
+                            </span>
+                        )}
+                        </li>
                     ))}
-                  </ul>
+                    </ul>
                 </div>
               )}
             </div>
