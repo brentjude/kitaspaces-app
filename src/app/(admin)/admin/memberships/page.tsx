@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import MembershipPlanCard from "./components/MembershipPlanCard";
 import CreateMembershipPlanModal from "./components/CreateMembershipPlanModal";
 import MembersList from "./components/MembersList";
+import AddMemberModal from "./components/AddMemberModal";
 import type {
   MembershipPlanFormData,
   MembershipPlanWithPerks,
@@ -32,6 +33,8 @@ export default function MembershipsPage() {
   const [editingPlan, setEditingPlan] = useState<
     MembershipPlanWithPerks | undefined
   >(undefined);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+
 
   useEffect(() => {
     fetchData();
@@ -131,6 +134,16 @@ export default function MembershipsPage() {
     router.push(`/admin/customers/${memberId}`);
   };
 
+  const handleAddMember = () => {
+  setIsAddMemberModalOpen(true);
+};
+
+const handleAddMemberSuccess = () => {
+  setIsAddMemberModalOpen(false);
+  fetchData(); // Refresh the members list
+};
+
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -197,7 +210,11 @@ export default function MembershipsPage() {
 
       {/* Tab Content */}
       {activeTab === "members" && (
-        <MembersList members={members} onViewMember={handleViewMember} />
+        <MembersList 
+          members={members} 
+          onViewMember={handleViewMember}
+          onAddMember={handleAddMember}
+        />
       )}
 
       {activeTab === "plans" && (
@@ -224,6 +241,14 @@ export default function MembershipsPage() {
         onSubmit={handleSubmit}
         initialData={editingPlan}
       />
+
+      <AddMemberModal
+        isOpen={isAddMemberModalOpen}
+        onClose={() => setIsAddMemberModalOpen(false)}
+        onSuccess={handleAddMemberSuccess}
+        plans={plans}
+      />
+      
     </div>
   );
 }

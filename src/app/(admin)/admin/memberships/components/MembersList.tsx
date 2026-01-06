@@ -8,6 +8,7 @@ import {
   ShieldCheckIcon,
   EyeIcon,
   ClockIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import { format, isPast, differenceInDays } from "date-fns";
 import type { User, Membership, MembershipPlan } from "@/generated/prisma";
@@ -24,9 +25,10 @@ interface MemberWithDetails extends User {
 interface MembersListProps {
   members: MemberWithDetails[];
   onViewMember: (memberId: string) => void;
+  onAddMember: () => void; // ✅ ADD THIS
 }
 
-export default function MembersList({ members, onViewMember }: MembersListProps) {
+export default function MembersList({ members, onViewMember, onAddMember }: MembersListProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredMembers = members.filter(
@@ -140,6 +142,15 @@ export default function MembersList({ members, onViewMember }: MembersListProps)
     <div className="space-y-6">
       {/* 🆕 Stats Cards - Moved to Top */}
       <MembershipStatsCards members={members} />
+      <div className="flex justify-end">
+        <button
+          onClick={onAddMember}
+          className="inline-flex items-center justify-center px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+        >
+          <PlusIcon className="w-4 h-4 mr-2" /> Add Member
+        </button>
+      </div>
+
 
       {/* Search Bar */}
       <div className="relative max-w-md">
