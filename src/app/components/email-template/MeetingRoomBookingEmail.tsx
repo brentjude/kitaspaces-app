@@ -9,7 +9,6 @@ import {
   Text,
   Section,
   Hr,
-  Button,
   Img,
 } from '@react-email/components';
 
@@ -233,16 +232,6 @@ export default function MeetingRoomBookingEmail({
               </Section>
             )}
 
-            {/* CTA Button */}
-            <Section style={ctaSection}>
-              <Button
-                style={button}
-                href="https://community.kitaspaces.com/dashboard"
-              >
-                View My Bookings
-              </Button>
-            </Section>
-
             <Hr style={hr} />
 
             <Text style={helpText}>
@@ -443,25 +432,6 @@ const infoValue = {
   fontSize: '14px',
   fontWeight: '500' as const,
   padding: '8px 0',
-};
-
-const ctaSection = {
-  textAlign: 'center' as const,
-  margin: '32px 0',
-};
-
-const button = {
-  backgroundColor: '#FF8E49',
-  borderRadius: '8px',
-  color: '#ffffff',
-  fontSize: '16px',
-  fontWeight: 'bold' as const,
-  textDecoration: 'none',
-  textAlign: 'center' as const,
-  display: 'inline-block',
-  padding: '14px 40px',
-  border: 'none',
-  cursor: 'pointer',
 };
 
 const hr = {

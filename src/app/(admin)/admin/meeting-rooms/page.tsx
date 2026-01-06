@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import MeetingRoomsList from './components/MeetingRoomsList';
+import AdminBookingModal from './components/AdminBookingModal';
 import { MeetingRoom } from '@/types/database';
 import { 
   PresentationChartBarIcon, 
   CalendarIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 
@@ -18,6 +20,7 @@ export default function MeetingRoomsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'rooms' | 'bookings'>('rooms');
   const [bookingCount, setBookingCount] = useState(0);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   // Protect route
   if (status === 'unauthenticated' || (status === 'authenticated' && session?.user?.role !== 'ADMIN')) {
@@ -40,6 +43,15 @@ export default function MeetingRoomsPage() {
       console.error('Error fetching rooms:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleBookingSuccess = () => {
+    setShowBookingModal(false);
+    // Optionally refresh bookings if on bookings tab
+    if (activeTab === 'bookings') {
+      // Trigger refresh in MeetingRoomsList
+      fetchRooms();
     }
   };
 
@@ -82,16 +94,28 @@ export default function MeetingRoomsPage() {
               </p>
             </div>
             
-            {/* Calendar Button - Only show on bookings tab */}
-            {activeTab === 'bookings' && (
-              <Link
-                href="/admin/calendar"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* Book Room Button */}
+              <button
+                onClick={() => setShowBookingModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
               >
-                <CalendarDaysIcon className="w-5 h-5" />
-                Calendar View
-              </Link>
-            )}
+                <PlusIcon className="w-5 h-5" />
+                Book Room
+              </button>
+
+              {/* Calendar Button - Only show on bookings tab */}
+              {activeTab === 'bookings' && (
+                <Link
+                  href="/admin/calendar"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+                >
+                  <CalendarDaysIcon className="w-5 h-5" />
+                  Calendar View
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Tabs */}
@@ -129,6 +153,15 @@ export default function MeetingRoomsPage() {
           />
         </div>
       </div>
+
+      {/* Admin Booking Modal */}
+      {showBookingModal && (
+        <AdminBookingModal
+          rooms={rooms}
+          onClose={() => setShowBookingModal(false)}
+          onSuccess={handleBookingSuccess}
+        />
+      )}
     </div>
   );
 }
