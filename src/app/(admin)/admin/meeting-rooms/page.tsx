@@ -1,30 +1,34 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
-import MeetingRoomsList from './components/MeetingRoomsList';
-import AdminBookingModal from './components/AdminBookingModal';
-import { MeetingRoom } from '@/types/database';
-import { 
-  PresentationChartBarIcon, 
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { redirect } from "next/navigation";
+import MeetingRoomsList from "./components/MeetingRoomsList";
+import BookingsList from "./components/BookingsList";
+import AdminBookingModal from "./components/AdminBookingModal";
+import { MeetingRoom } from "@/types/database";
+import {
+  PresentationChartBarIcon,
   CalendarIcon,
   CalendarDaysIcon,
   PlusIcon,
-} from '@heroicons/react/24/outline';
-import Link from 'next/link';
+} from "@heroicons/react/24/outline";
+import Link from "next/link";
 
 export default function MeetingRoomsPage() {
   const { data: session, status } = useSession();
   const [rooms, setRooms] = useState<MeetingRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'rooms' | 'bookings'>('rooms');
+  const [activeTab, setActiveTab] = useState<"rooms" | "bookings">("rooms");
   const [bookingCount, setBookingCount] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   // Protect route
-  if (status === 'unauthenticated' || (status === 'authenticated' && session?.user?.role !== 'ADMIN')) {
-    redirect('/auth/signin');
+  if (
+    status === "unauthenticated" ||
+    (status === "authenticated" && session?.user?.role !== "ADMIN")
+  ) {
+    redirect("/auth/signin");
   }
 
   useEffect(() => {
@@ -34,13 +38,13 @@ export default function MeetingRoomsPage() {
   const fetchRooms = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/admin/meeting-rooms');
-      if (!response.ok) throw new Error('Failed to fetch rooms');
-      
+      const response = await fetch("/api/admin/meeting-rooms");
+      if (!response.ok) throw new Error("Failed to fetch rooms");
+
       const data = await response.json();
       setRooms(data.data || []);
     } catch (error) {
-      console.error('Error fetching rooms:', error);
+      console.error("Error fetching rooms:", error);
     } finally {
       setIsLoading(false);
     }
@@ -48,14 +52,9 @@ export default function MeetingRoomsPage() {
 
   const handleBookingSuccess = () => {
     setShowBookingModal(false);
-    // Optionally refresh bookings if on bookings tab
-    if (activeTab === 'bookings') {
-      // Trigger refresh in MeetingRoomsList
-      fetchRooms();
-    }
   };
 
-  if (status === 'loading' || isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
@@ -68,14 +67,14 @@ export default function MeetingRoomsPage() {
 
   const tabs = [
     {
-      id: 'rooms' as const,
-      label: 'Rooms',
+      id: "rooms" as const,
+      label: "Rooms",
       icon: <PresentationChartBarIcon className="w-5 h-5" />,
       count: rooms.length,
     },
     {
-      id: 'bookings' as const,
-      label: 'Bookings',
+      id: "bookings" as const,
+      label: "Bookings",
       icon: <CalendarIcon className="w-5 h-5" />,
       count: bookingCount,
     },
@@ -88,12 +87,14 @@ export default function MeetingRoomsPage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-foreground">Meeting Room Management</h2>
+              <h2 className="text-2xl font-bold text-foreground">
+                Meeting Room Management
+              </h2>
               <p className="text-foreground/60 text-sm mt-1">
                 Manage bookable spaces and view customer reservations.
               </p>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="flex items-center gap-3">
               {/* Book Room Button */}
@@ -106,7 +107,7 @@ export default function MeetingRoomsPage() {
               </button>
 
               {/* Calendar Button - Only show on bookings tab */}
-              {activeTab === 'bookings' && (
+              {activeTab === "bookings" && (
                 <Link
                   href="/admin/calendar"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
@@ -126,8 +127,8 @@ export default function MeetingRoomsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-6 py-3 text-sm font-medium transition-all relative ${
                   activeTab === tab.id
-                    ? 'text-primary'
-                    : 'text-foreground/60 hover:text-foreground'
+                    ? "text-primary"
+                    : "text-foreground/60 hover:text-foreground"
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -144,13 +145,11 @@ export default function MeetingRoomsPage() {
           </div>
 
           {/* Content */}
-          <MeetingRoomsList 
-            rooms={rooms}
-            onRoomsChange={fetchRooms}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            onBookingCountChange={setBookingCount}
-          />
+          {activeTab === "rooms" ? (
+            <MeetingRoomsList rooms={rooms} onRoomsChange={fetchRooms} />
+          ) : (
+            <BookingsList onBookingCountChange={setBookingCount} />
+          )}
         </div>
       </div>
 

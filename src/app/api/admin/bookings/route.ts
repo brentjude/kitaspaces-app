@@ -1,51 +1,62 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    // ✅ Fetch user bookings
+    // Fetch user bookings with FULL room data
     const userBookings = await prisma.meetingRoomBooking.findMany({
       include: {
         room: true,
-        user: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         payment: true,
       },
       orderBy: {
-        createdAt: "desc",
+        bookingDate: "desc",
       },
     });
 
-    // ✅ Fetch customer bookings
+    // Fetch customer bookings with FULL room data
     const customerBookings = await prisma.customerMeetingRoomBooking.findMany({
       include: {
         room: true,
-        customer: true,
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         payment: true,
       },
       orderBy: {
-        createdAt: "desc",
+        bookingDate: "desc",
       },
     });
 
-    // ✅ Combine and tag bookings
     const combinedBookings = [
-      ...userBookings.map((booking) => ({
-        ...booking,
-        type: "user" as const,
-      })),
-      ...customerBookings.map((booking) => ({
-        ...booking,
-        type: "customer" as const,
-      })),
-    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      ...userBookings.map((b) => ({ ...b, type: "user" as const })),
+      ...customerBookings.map((b) => ({ ...b, type: "customer" as const })),
+    ].sort(
+      (a, b) =>
+        new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime()
+    );
 
     return NextResponse.json({
       success: true,
@@ -56,7 +67,8 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch bookings",
+        error:
+          error instanceof Error ? error.message : "Failed to fetch bookings",
       },
       { status: 500 }
     );

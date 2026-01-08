@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { MeetingRoom } from '@/types/database';
-import { ClockIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from "react";
+import { MeetingRoom } from "@/types/database";
+import { ClockIcon } from "@heroicons/react/24/outline";
 
 interface AdminTimeStepProps {
   room: MeetingRoom;
@@ -10,6 +10,8 @@ interface AdminTimeStepProps {
   startTimeSlot: string;
   durationHours: number;
   onTimeChange: (startTime: string, duration: number) => void;
+  excludeBookingId?: string; // ✅ For editing existing bookings
+  bookingType?: "MEMBER" | "CUSTOMER"; // ✅ For editing existing bookings
 }
 
 interface TimeSlot {
@@ -23,6 +25,8 @@ export default function AdminTimeStep({
   startTimeSlot,
   durationHours,
   onTimeChange,
+  excludeBookingId, // ✅ Added
+  bookingType, // ✅ Added
 }: AdminTimeStepProps) {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,24 +35,42 @@ export default function AdminTimeStep({
     if (selectedDate && room.id) {
       fetchAvailability();
     }
-  }, [selectedDate, room.id]);
+  }, [selectedDate, room.id, excludeBookingId, bookingType]); // ✅ Added dependencies
 
   const fetchAvailability = async () => {
     setIsLoading(true);
     try {
+      // ✅ Add validation
+      if (!room || !room.id) {
+        setTimeSlots([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // ✅ Build query parameters
+      const params = new URLSearchParams({
+        date: selectedDate,
+      });
+
+      // ✅ Add exclude parameters if editing an existing booking
+      if (excludeBookingId && bookingType) {
+        params.append("excludeId", excludeBookingId);
+        params.append("type", bookingType);
+      }
+
       const response = await fetch(
-        `/api/admin/meeting-rooms/${room.id}/availability?date=${selectedDate}`
+        `/api/admin/meeting-rooms/${room.id}/availability?${params.toString()}`
       );
       const data = await response.json();
 
       if (data.success && data.data.timeSlots) {
         setTimeSlots(data.data.timeSlots);
       } else {
-        console.error('Failed to fetch availability:', data.error);
+        console.error("Failed to fetch availability:", data.error);
         setTimeSlots([]);
       }
     } catch (error) {
-      console.error('Error fetching availability:', error);
+      console.error("Error fetching availability:", error);
       setTimeSlots([]);
     } finally {
       setIsLoading(false);
@@ -56,23 +78,23 @@ export default function AdminTimeStep({
   };
 
   const calculateEndTime = (start: string, duration: number): string => {
-    const [hours, minutes] = start.split(':').map(Number);
+    const [hours, minutes] = start.split(":").map(Number);
     const totalMinutes = hours * 60 + minutes + duration * 60;
     const endHours = Math.floor(totalMinutes / 60);
     const endMinutes = totalMinutes % 60;
-    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+    return `${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}`;
   };
 
   // Duration options (1 hour increments only)
   const durationOptions = [
-    { value: 1, label: '1 hour' },
-    { value: 2, label: '2 hours' },
-    { value: 3, label: '3 hours' },
-    { value: 4, label: '4 hours' },
-    { value: 5, label: '5 hours' },
-    { value: 6, label: '6 hours' },
-    { value: 7, label: '7 hours' },
-    { value: 8, label: '8 hours' },
+    { value: 1, label: "1 hour" },
+    { value: 2, label: "2 hours" },
+    { value: 3, label: "3 hours" },
+    { value: 4, label: "4 hours" },
+    { value: 5, label: "5 hours" },
+    { value: 6, label: "6 hours" },
+    { value: 7, label: "7 hours" },
+    { value: 8, label: "8 hours" },
   ];
 
   if (isLoading) {
@@ -80,7 +102,9 @@ export default function AdminTimeStep({
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-          <p className="text-sm text-foreground/60">Loading available time slots...</p>
+          <p className="text-sm text-foreground/60">
+            Loading available time slots...
+          </p>
         </div>
       </div>
     );
@@ -91,7 +115,9 @@ export default function AdminTimeStep({
       <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
         <ClockIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
         <p className="text-gray-500">No time slots available for this date</p>
-        <p className="text-sm text-gray-400 mt-1">Please select a different date</p>
+        <p className="text-sm text-gray-400 mt-1">
+          Please select a different date
+        </p>
       </div>
     );
   }
@@ -99,7 +125,9 @@ export default function AdminTimeStep({
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-bold text-foreground mb-1">Select Time & Duration</h3>
+        <h3 className="text-lg font-bold text-foreground mb-1">
+          Select Time & Duration
+        </h3>
         <p className="text-sm text-foreground/60">
           Choose your preferred start time and booking duration
         </p>
@@ -119,11 +147,12 @@ export default function AdminTimeStep({
               disabled={!slot.available}
               className={`
                 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                ${startTimeSlot === slot.time
-                  ? 'bg-primary text-white shadow-md'
-                  : slot.available
-                  ? 'bg-white border border-foreground/20 hover:border-primary text-foreground'
-                  : 'bg-foreground/5 text-foreground/30 cursor-not-allowed line-through'
+                ${
+                  startTimeSlot === slot.time
+                    ? "bg-primary text-white shadow-md"
+                    : slot.available
+                      ? "bg-white border border-foreground/20 hover:border-primary text-foreground"
+                      : "bg-foreground/5 text-foreground/30 cursor-not-allowed line-through"
                 }
               `}
             >
@@ -145,7 +174,9 @@ export default function AdminTimeStep({
           <ClockIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
           <select
             value={durationHours}
-            onChange={(e) => onTimeChange(startTimeSlot, parseInt(e.target.value))}
+            onChange={(e) =>
+              onTimeChange(startTimeSlot, parseInt(e.target.value))
+            }
             className="w-full pl-11 pr-4 py-3 border-2 border-foreground/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary font-semibold text-base appearance-none bg-white cursor-pointer"
           >
             {durationOptions.map((option) => (
@@ -155,15 +186,28 @@ export default function AdminTimeStep({
             ))}
           </select>
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-            <svg className="w-5 h-5 text-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <svg
+              className="w-5 h-5 text-foreground/40"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </div>
         </div>
         <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-xs text-blue-700 font-medium">
-            💰 Cost: ₱{(room.hourlyRate * durationHours).toLocaleString()} 
-            <span className="text-blue-600"> ({room.hourlyRate.toLocaleString()}/hr × {durationHours}h)</span>
+            💰 Cost: ₱{(room.hourlyRate * durationHours).toLocaleString()}
+            <span className="text-blue-600">
+              {" "}
+              ({room.hourlyRate.toLocaleString()}/hr × {durationHours}h)
+            </span>
           </p>
         </div>
       </div>
@@ -178,7 +222,9 @@ export default function AdminTimeStep({
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-foreground/60 mb-1">Start Time</p>
-              <p className="font-bold text-foreground text-base">{startTimeSlot}</p>
+              <p className="font-bold text-foreground text-base">
+                {startTimeSlot}
+              </p>
             </div>
             <div>
               <p className="text-foreground/60 mb-1">End Time</p>
@@ -189,7 +235,7 @@ export default function AdminTimeStep({
             <div>
               <p className="text-foreground/60 mb-1">Duration</p>
               <p className="font-bold text-foreground text-base">
-                {durationHours === 1 ? '1 hour' : `${durationHours} hours`}
+                {durationHours === 1 ? "1 hour" : `${durationHours} hours`}
               </p>
             </div>
             <div>
