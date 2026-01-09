@@ -39,7 +39,146 @@ function handleData(item: any) {}
 // filepath: c:\Users\Jude\Documents\GitHub\kitaspaces-app\src\app\api\admin\payments\route.ts
 ```
 
-### 3. Next.js 15+ Best Practices
+### 3. Component Refractoring & Organization
+
+#### Always Refractor When Possible
+
+- Break down large components into smaller, reusable pieces
+- Extract repeated UI patterns into separate components
+- Separate logic from presentation when applicable
+- Create component folders for related components
+
+#### When to Refractor
+1. Component exceeds 200 lines
+2. Multiple similar UI patterns exist
+3. Logic can be reused across pages
+4. Component has multiple responsibilities
+5. Complex state management exists
+
+#### Component Structure Examples
+
+✅ Good - Modular Structure:
+```typescript
+src/app/(admin)/admin/payments/
+├── page.tsx                    # Main page - orchestrates components
+├── components/
+│   ├── PaymentFilters.tsx     # Filter controls
+│   ├── PaymentsTable.tsx      # Table display
+│   ├── PaymentDetailsModal.tsx # Detail modal
+│   ├── PaymentStats.tsx       # Stats cards
+│   └── Pagination.tsx         # Pagination controls
+
+❌ Bad - Monolithic Structure:
+
+src/app/(admin)/admin/payments/
+└── page.tsx                    # Everything in one file (500+ lines)
+```
+
+#### Component Extration Guidelines
+
+```typescript
+Extract when you see:
+// ❌ BAD - All in one component
+export default function PaymentsPage() {
+  // 50 lines of state management
+  // 100 lines of data fetching
+  // 200 lines of UI rendering
+  // 150 lines of modal logic
+}
+```
+
+✅ GOOD - Separated:
+```typescript
+// Main page - orchestration only
+export default function PaymentsPage() {
+  const { payments, stats, isLoading } = usePayments(filters);
+  
+  return (
+    <div className="space-y-6">
+      <PaymentStats stats={stats} />
+      <PaymentFilters filters={filters} onFilterChange={setFilters} />
+      <PaymentsTable payments={payments} onSelect={handleSelect} />
+      <PaymentModal payment={selected} onClose={handleClose} />
+    </div>
+  );
+}
+
+// Separate components
+// src/app/(admin)/admin/payments/components/PaymentStats.tsx
+// src/app/(admin)/admin/payments/components/PaymentFilters.tsx
+// src/app/(admin)/admin/payments/components/PaymentsTable.tsx
+// src/app/(admin)/admin/payments/components/PaymentModal.tsx
+```
+
+#### Customer Hooks for Logic
+
+```typescript
+// filepath: src/hooks/usePayments.ts
+import { useState, useEffect } from 'react';
+import { PaymentRecord, PaymentFilters } from '@/types/payment';
+
+export function usePayments(filters: PaymentFilters) {
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalPaid: 0,
+    totalPending: 0,
+    totalRefunded: 0,
+    eventRevenue: 0,
+    membershipRevenue: 0,
+    roomBookingRevenue: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams({
+          search: filters.search,
+          typeFilter: filters.typeFilter,
+          statusFilter: filters.statusFilter,
+          page: filters.page.toString(),
+          limit: filters.limit.toString(),
+        });
+
+        const response = await fetch(`/api/admin/payments?${params}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setPayments(data.data.payments);
+          setStats(data.data.stats);
+        }
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPayments();
+  }, [filters]);
+
+  const refetch = async () => {
+    // Refetch logic
+  };
+
+  return { payments, stats, isLoading, refetch };
+}
+```
+
+#### Shared Component Location
+```typescript
+// Used in multiple pages → src/app/components/
+// filepath: src/app/components/DataTable.tsx
+export default function DataTable({ ... }) { }
+
+// Used in one feature → feature/components/
+// filepath: src/app/(admin)/admin/payments/components/PaymentTable.tsx
+export default function PaymentTable({ ... }) { }
+```
+
+### 4. Next.js 15+ Best Practices
 
 #### Server Components (Default)
 ```typescript
@@ -103,7 +242,7 @@ export async function GET(
 }
 ```
 
-### 4. Database Schema & Types
+### 5. Database Schema & Types
 
 #### Always Include Schema Relations
 ```typescript
@@ -160,7 +299,7 @@ export interface PaymentStats {
 }
 ```
 
-### 5. API Response Structure
+### 6. API Response Structure
 
 #### Standard Success Response
 ```typescript
@@ -184,7 +323,7 @@ return NextResponse.json(
 );
 ```
 
-### 6. Authentication & Authorization
+### 7. Authentication & Authorization
 
 #### Check Admin Role
 ```typescript
@@ -211,7 +350,7 @@ if (!session?.user || !session.user.isMember) {
 }
 ```
 
-### 7. Database Transactions
+### 8. Database Transactions
 
 #### Always Use Transactions for Multiple Operations
 ```typescript
@@ -239,7 +378,7 @@ const result = await prisma.$transaction(async (tx) => {
 });
 ```
 
-### 8. Error Handling
+### 9. Error Handling
 
 #### API Routes
 ```typescript
@@ -282,7 +421,7 @@ try {
 }
 ```
 
-### 9. Logging & Activity Tracking
+### 10. Logging & Activity Tracking
 
 #### Admin Actions
 ```typescript
@@ -314,7 +453,7 @@ console.info('Info message');
 console.log('Debug message'); // Use console.info instead
 ```
 
-### 10. Component Props
+### 11. Component Props
 
 #### Always Define Prop Interfaces
 ```typescript
@@ -340,7 +479,7 @@ export default function Modal({
 }
 ```
 
-### 11. Date & Time Handling
+### 12. Date & Time Handling
 
 ```typescript
 // Store as Date objects in database
@@ -359,7 +498,7 @@ const [hours, minutes] = startTime.split(':').map(Number);
 const totalMinutes = hours * 60 + minutes + durationHours * 60;
 ```
 
-### 12. Environment Variables
+### 13. Environment Variables
 
 ```typescript
 // Access in server components/API routes only
@@ -369,7 +508,7 @@ const apiKey = process.env.STRIPE_SECRET_KEY;
 const publicKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
 ```
 
-### 13. Image Handling
+### 14. Image Handling
 
 ```typescript
 import Image from 'next/image';
@@ -383,7 +522,7 @@ import Image from 'next/image';
 />
 ```
 
-### 14. Form Handling
+### 15. Form Handling
 
 ```typescript
 'use client';
@@ -413,7 +552,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 };
 ```
 
-### 15. Tailwind CSS Classes
+### 16. Tailwind CSS Classes
 
 ```typescript
 // Use semantic color variables
