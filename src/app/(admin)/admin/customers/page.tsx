@@ -1,14 +1,15 @@
+// filepath: c:\Users\Jude\Documents\GitHub\kitaspaces-app\src\app\(admin)\admin\customers\page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { CombinedCustomerData } from '@/types/database';
 import { fetchCustomers } from '@/lib/api/customers';
 import CustomerFilters from './components/CustomerFilters';
 import CustomersTable from './components/CustomersTable';
+import AddGuestModal from './components/AddGuestModal';
 
 type CustomerStats = {
   totalUsers: number;
@@ -27,6 +28,7 @@ export default function CustomersPage() {
     totalCustomers: 0,
     totalCombined: 0,
   });
+  const [isAddGuestModalOpen, setIsAddGuestModalOpen] = useState(false);
 
   const loadCustomers = useCallback(async () => {
     setLoading(true);
@@ -82,13 +84,13 @@ export default function CustomersPage() {
                 Manage registered users and guest customers
               </p>
             </div>
-            <Link
-              href="/admin/customers/new"
+            <button
+              onClick={() => setIsAddGuestModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
             >
               <PlusIcon className="w-4 h-4" />
-              Add Customer
-            </Link>
+              Add Guest
+            </button>
           </div>
 
           {/* Stats Cards */}
@@ -186,6 +188,13 @@ export default function CustomersPage() {
           <CustomersTable customers={customers} loading={loading} />
         </div>
       </div>
+
+      {/* Add Guest Modal */}
+      <AddGuestModal
+        isOpen={isAddGuestModalOpen}
+        onClose={() => setIsAddGuestModalOpen(false)}
+        onSuccess={loadCustomers}
+      />
     </div>
   );
 }

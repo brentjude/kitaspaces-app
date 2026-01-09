@@ -615,6 +615,9 @@ src/
 8. ❌ Missing TypeScript interfaces for props and data
 9. ❌ Not checking authentication/authorization
 10. ❌ Inconsistent API response structures
+11. ❌ Creating monolithic components instead of breaking them down
+12. ❌ Duplicating UI patterns instead of creating reusable components
+13. ❌ Mixing business logic with presentation in components
 
 ## Questions to Ask Before Coding
 
@@ -626,7 +629,25 @@ src/
 6. What error cases need handling?
 7. What activity logging is needed?
 8. Are all required fields validated?
+9. Can this component be broken into smaller pieces?
+10. Is there repeated UI that should be extracted?
+11. Should be this logic be in custom hook?
+12. Is this component doing too many things?
 
----
+## Refactoring Checklist
+Before submitting code, check:
 
-**Remember**: Type safety, explicit schemas, and proper error handling are non-negotiable in this project.
+ - No any types used
+ - Filepath comment at the top
+ - Components are modular (< 200 lines each)
+ - Repeated UI patterns extracted to components
+ - Business logic separated from presentation
+ - Custom hooks created for shared logic
+ - Proper TypeScript interfaces defined
+ - Database relations included in queries
+ - Error handling implemented
+ - Authentication/authorization checked
+ - Transactions used for multi-table operations
+ - Activity logging added for admin actions
+
+**Remember**: Type safety, modular components, explicit schemas, and proper error handling are non-negotiable in this project. Always prefer composition over duplication.
