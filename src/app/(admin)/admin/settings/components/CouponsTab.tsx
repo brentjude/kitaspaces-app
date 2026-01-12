@@ -1,8 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Coupon } from '@/types/database';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+
+interface MembershipPlanOption {
+  id: string;
+  name: string;
+}
 
 interface CouponsTabProps {
   coupons: Coupon[];
@@ -12,6 +17,7 @@ interface CouponsTabProps {
     discountValue: number;
     maxUses: number | null;
     expiresAt: Date | null;
+    applicablePlansIds: string[] | null;
   }) => Promise<void>;
   onEditCoupon: (
     id: string,
@@ -21,6 +27,7 @@ interface CouponsTabProps {
       discountValue: number;
       maxUses: number | null;
       expiresAt: Date | null;
+      applicablePlansIds: string[] | null;
     }
   ) => Promise<void>;
   onToggleCoupon: (id: string, isActive: boolean) => Promise<void>;
@@ -38,6 +45,8 @@ export default function CouponsTab({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlanOption[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
 
   const [formData, setFormData] = useState({
     code: '',
@@ -45,7 +54,34 @@ export default function CouponsTab({
     discountValue: 0,
     maxUses: null as number | null,
     expiresAt: null as Date | null,
+    applicablePlansIds: [] as string[],
   });
+
+  // Fetch membership plans
+  useEffect(() => {
+    const fetchPlans = async () => {
+      setIsLoadingPlans(true);
+      try {
+        const response = await fetch('/api/admin/memberships');
+        const data = await response.json();
+
+        if (data.success) {
+          setMembershipPlans(
+            data.data.map((plan: { id: string; name: string }) => ({
+              id: plan.id,
+              name: plan.name,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching membership plans:', error);
+      } finally {
+        setIsLoadingPlans(false);
+      }
+    };
+
+    fetchPlans();
+  }, []);
 
   const handleOpenAddModal = () => {
     setFormData({
@@ -54,18 +90,30 @@ export default function CouponsTab({
       discountValue: 0,
       maxUses: null,
       expiresAt: null,
+      applicablePlansIds: [],
     });
     setIsAddModalOpen(true);
   };
 
   const handleOpenEditModal = (coupon: Coupon) => {
     setEditingCoupon(coupon);
+    
+    let planIds: string[] = [];
+    if (coupon.applicablePlansIds) {
+      try {
+        planIds = JSON.parse(coupon.applicablePlansIds) as string[];
+      } catch (error) {
+        console.error('Error parsing applicablePlansIds:', error);
+      }
+    }
+
     setFormData({
       code: coupon.code,
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
       maxUses: coupon.maxUses,
       expiresAt: coupon.expiresAt,
+      applicablePlansIds: planIds,
     });
     setIsEditModalOpen(true);
   };
@@ -80,7 +128,34 @@ export default function CouponsTab({
       discountValue: 0,
       maxUses: null,
       expiresAt: null,
+      applicablePlansIds: [],
     });
+  };
+
+  const handlePlanToggle = (planId: string) => {
+    setFormData((prev) => {
+      const isSelected = prev.applicablePlansIds.includes(planId);
+      return {
+        ...prev,
+        applicablePlansIds: isSelected
+          ? prev.applicablePlansIds.filter((id) => id !== planId)
+          : [...prev.applicablePlansIds, planId],
+      };
+    });
+  };
+
+  const handleSelectAllPlans = () => {
+    setFormData((prev) => ({
+      ...prev,
+      applicablePlansIds: membershipPlans.map((plan) => plan.id),
+    }));
+  };
+
+  const handleDeselectAllPlans = () => {
+    setFormData((prev) => ({
+      ...prev,
+      applicablePlansIds: [],
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,18 +163,22 @@ export default function CouponsTab({
     setIsSubmitting(true);
 
     try {
+      const submitData = {
+        ...formData,
+        applicablePlansIds:
+          formData.applicablePlansIds.length > 0 ? formData.applicablePlansIds : null,
+      };
+
       if (isEditModalOpen && editingCoupon) {
-        await onEditCoupon(editingCoupon.id, formData);
+        await onEditCoupon(editingCoupon.id, submitData);
         alert('Coupon updated successfully!');
       } else {
-        await onAddCoupon(formData);
+        await onAddCoupon(submitData);
         alert('Coupon added successfully!');
       }
       handleCloseModals();
     } catch (error) {
-      alert(
-        error instanceof Error ? error.message : 'Failed to save coupon'
-      );
+      alert(error instanceof Error ? error.message : 'Failed to save coupon');
     } finally {
       setIsSubmitting(false);
     }
@@ -112,9 +191,7 @@ export default function CouponsTab({
       await onDeleteCoupon(id);
       alert('Coupon deleted successfully!');
     } catch (error) {
-      alert(
-        error instanceof Error ? error.message : 'Failed to delete coupon'
-      );
+      alert(error instanceof Error ? error.message : 'Failed to delete coupon');
     }
   };
 
@@ -122,15 +199,34 @@ export default function CouponsTab({
     try {
       await onToggleCoupon(id, !currentStatus);
     } catch (error) {
-      alert(
-        error instanceof Error ? error.message : 'Failed to toggle coupon'
-      );
+      alert(error instanceof Error ? error.message : 'Failed to toggle coupon');
     }
   };
 
   const isCouponExpired = (expiresAt: Date | null) => {
     if (!expiresAt) return false;
     return new Date(expiresAt) < new Date();
+  };
+
+  const getApplicablePlansText = (applicablePlansIds: string | null) => {
+    if (!applicablePlansIds) return 'All Plans';
+    
+    try {
+      const planIds = JSON.parse(applicablePlansIds) as string[];
+      if (planIds.length === 0) return 'All Plans';
+      
+      const planNames = planIds
+        .map((id) => membershipPlans.find((p) => p.id === id)?.name)
+        .filter(Boolean);
+      
+      if (planNames.length === 0) return 'All Plans';
+      if (planNames.length === 1) return planNames[0];
+      if (planNames.length === membershipPlans.length) return 'All Plans';
+      
+      return `${planNames.length} plans`;
+    } catch {
+      return 'All Plans';
+    }
   };
 
   return (
@@ -169,6 +265,9 @@ export default function CouponsTab({
                     Discount
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">
+                    Applicable Plans
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">
                     Usage
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase">
@@ -199,6 +298,11 @@ export default function CouponsTab({
                             : coupon.discountType === 'FIXED_AMOUNT'
                             ? `₱${coupon.discountValue}`
                             : 'Free'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-foreground/80">
+                          {getApplicablePlansText(coupon.applicablePlansIds)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -272,8 +376,8 @@ export default function CouponsTab({
 
       {/* Add/Edit Modal */}
       {(isAddModalOpen || isEditModalOpen) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6 my-8">
             <h3 className="text-xl font-bold text-foreground mb-4">
               {isEditModalOpen ? 'Edit Coupon' : 'Add New Coupon'}
             </h3>
@@ -330,9 +434,7 @@ export default function CouponsTab({
                         discountValue: parseFloat(e.target.value),
                       })
                     }
-                    placeholder={
-                      formData.discountType === 'PERCENTAGE' ? '10' : '500'
-                    }
+                    placeholder={formData.discountType === 'PERCENTAGE' ? '10' : '500'}
                   />
                   <p className="text-xs text-foreground/60 mt-1">
                     {formData.discountType === 'PERCENTAGE'
@@ -341,6 +443,70 @@ export default function CouponsTab({
                   </p>
                 </div>
               )}
+
+              {/* 🆕 NEW: Applicable Membership Plans Selection */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Applicable Membership Plans
+                </label>
+                <div className="border border-foreground/20 rounded-lg p-4">
+                  {isLoadingPlans ? (
+                    <div className="text-center py-4 text-foreground/60">
+                      Loading membership plans...
+                    </div>
+                  ) : membershipPlans.length === 0 ? (
+                    <div className="text-center py-4 text-foreground/60">
+                      No membership plans available
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm text-foreground/70">
+                          {formData.applicablePlansIds.length === 0
+                            ? 'All plans (no restrictions)'
+                            : `${formData.applicablePlansIds.length} plan(s) selected`}
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleSelectAllPlans}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Select All
+                          </button>
+                          <span className="text-foreground/30">|</span>
+                          <button
+                            type="button"
+                            onClick={handleDeselectAllPlans}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {membershipPlans.map((plan) => (
+                          <label
+                            key={plan.id}
+                            className="flex items-center gap-3 p-2 hover:bg-foreground/5 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.applicablePlansIds.includes(plan.id)}
+                              onChange={() => handlePlanToggle(plan.id)}
+                              className="w-4 h-4 text-primary border-foreground/30 rounded focus:ring-primary"
+                            />
+                            <span className="text-sm text-foreground">{plan.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="text-xs text-foreground/60 mt-3">
+                        Leave all unchecked to apply coupon to all membership plans
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
@@ -385,7 +551,7 @@ export default function CouponsTab({
                 </p>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-4 border-t border-foreground/10">
                 <button
                   type="button"
                   onClick={handleCloseModals}

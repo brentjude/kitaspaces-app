@@ -3,27 +3,22 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
-    const { couponCode, planId, quantity } = await request.json();
+    const body = await request.json();
+    const { couponCode, planId, quantity } = body;
 
     if (!couponCode || !planId || !quantity) {
       return NextResponse.json(
         {
           success: false,
-          data: {
-            isValid: false,
-            message: 'Missing required fields',
-          },
+          error: 'Missing required fields',
         },
         { status: 400 }
       );
     }
 
-    // Find coupon
-    const coupon = await prisma.coupon.findFirst({
-      where: {
-        code: couponCode.toUpperCase(),
-        isActive: true,
-      },
+    // Find the coupon
+    const coupon = await prisma.coupon.findUnique({
+      where: { code: couponCode.toUpperCase() },
     });
 
     if (!coupon) {
@@ -31,7 +26,26 @@ export async function POST(request: NextRequest) {
         success: true,
         data: {
           isValid: false,
-          message: 'Invalid or inactive coupon code',
+          message: 'Invalid coupon code',
+          reason: 'This coupon code does not exist',
+          coupon: null,
+          finalAmount: 0,
+          discountAmount: 0,
+        },
+      });
+    }
+
+    // Check if coupon is active
+    if (!coupon.isActive) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          isValid: false,
+          message: 'Coupon is inactive',
+          reason: 'This coupon has been deactivated',
+          coupon: null,
+          finalAmount: 0,
+          discountAmount: 0,
         },
       });
     }
@@ -42,7 +56,11 @@ export async function POST(request: NextRequest) {
         success: true,
         data: {
           isValid: false,
-          message: 'This coupon has expired',
+          message: 'Coupon has expired',
+          reason: `This coupon expired on ${new Date(coupon.expiresAt).toLocaleDateString()}`,
+          coupon: null,
+          finalAmount: 0,
+          discountAmount: 0,
         },
       });
     }
@@ -54,11 +72,38 @@ export async function POST(request: NextRequest) {
         data: {
           isValid: false,
           message: 'Coupon usage limit reached',
+          reason: 'This coupon has reached its maximum number of uses',
+          coupon: null,
+          finalAmount: 0,
+          discountAmount: 0,
         },
       });
     }
 
-    // Get plan price
+    // 🆕 Check if coupon is applicable to the selected plan
+    if (coupon.applicablePlansIds) {
+      try {
+        const applicablePlanIds = JSON.parse(coupon.applicablePlansIds) as string[];
+        
+        if (applicablePlanIds.length > 0 && !applicablePlanIds.includes(planId)) {
+          return NextResponse.json({
+            success: true,
+            data: {
+              isValid: false,
+              message: 'Coupon not applicable to selected plan',
+              reason: 'This coupon cannot be used with your selected membership plan',
+              coupon: null,
+              finalAmount: 0,
+              discountAmount: 0,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error parsing applicablePlansIds:', error);
+      }
+    }
+
+    // Get the membership plan to calculate discount
     const plan = await prisma.membershipPlan.findUnique({
       where: { id: planId },
     });
@@ -67,46 +112,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          data: {
-            isValid: false,
-            message: 'Invalid membership plan',
-          },
+          error: 'Invalid membership plan',
         },
         { status: 400 }
       );
     }
 
+    // Calculate discount
     const baseAmount = plan.price * quantity;
-    let finalAmount = baseAmount;
     let discountAmount = 0;
 
-    // Calculate discount
-    if (coupon.discountType === 'PERCENTAGE') {
-      discountAmount = baseAmount * (coupon.discountValue / 100);
-      finalAmount = baseAmount - discountAmount;
-    } else if (coupon.discountType === 'FIXED_AMOUNT') {
-      discountAmount = Math.min(coupon.discountValue, baseAmount);
-      finalAmount = Math.max(0, baseAmount - coupon.discountValue);
-    } else if (coupon.discountType === 'FREE') {
-      discountAmount = baseAmount;
-      finalAmount = 0;
+    switch (coupon.discountType) {
+      case 'PERCENTAGE':
+        discountAmount = (baseAmount * coupon.discountValue) / 100;
+        break;
+      case 'FIXED_AMOUNT':
+        discountAmount = coupon.discountValue;
+        break;
+      case 'FREE':
+        discountAmount = baseAmount;
+        break;
+      default:
+        discountAmount = 0;
     }
+
+    // Ensure discount doesn't exceed base amount
+    if (discountAmount > baseAmount) {
+      discountAmount = baseAmount;
+    }
+
+    const finalAmount = Math.max(0, baseAmount - discountAmount);
 
     return NextResponse.json({
       success: true,
       data: {
         isValid: true,
+        message: 'Coupon is valid',
         coupon: {
           id: coupon.id,
           code: coupon.code,
           discountType: coupon.discountType,
           discountValue: coupon.discountValue,
           expiresAt: coupon.expiresAt,
+          applicablePlansIds: coupon.applicablePlansIds,
         },
-        baseAmount,
-        discountAmount,
         finalAmount,
-        message: `Coupon applied! You saved ₱${discountAmount.toFixed(2)}`,
+        discountAmount,
       },
     });
   } catch (error) {
@@ -114,10 +165,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        data: {
-          isValid: false,
-          message: 'Failed to validate coupon',
-        },
+        error: error instanceof Error ? error.message : 'Failed to validate coupon',
       },
       { status: 500 }
     );

@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { code, discountType, discountValue, maxUses, expiresAt } = body;
+    const { code, discountType, discountValue, maxUses, expiresAt, applicablePlansIds } = body;
 
     if (!code || !discountType || discountValue === undefined) {
       return NextResponse.json(
@@ -49,6 +49,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if coupon code already exists
+    const existingCoupon = await prisma.coupon.findUnique({
+      where: { code: code.toUpperCase() },
+    });
+
+    if (existingCoupon) {
+      return NextResponse.json(
+        { success: false, error: 'Coupon code already exists' },
+        { status: 400 }
+      );
+    }
+
+    // Convert applicablePlansIds array to JSON string for storage
+    const plansIdsJson = applicablePlansIds && applicablePlansIds.length > 0
+      ? JSON.stringify(applicablePlansIds)
+      : null;
+
     const coupon = await prisma.coupon.create({
       data: {
         code: code.toUpperCase(),
@@ -56,6 +73,7 @@ export async function POST(request: NextRequest) {
         discountValue,
         maxUses: maxUses || null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        applicablePlansIds: plansIdsJson,
         isActive: true,
       },
     });

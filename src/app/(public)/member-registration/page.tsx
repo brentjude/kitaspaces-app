@@ -8,6 +8,7 @@ import {
   RegistrationStep,
   CouponValidationResponse,
   MembershipRegistrationConfirmation,
+  CouponNotification,
 } from '@/types/membership-registration';
 import PlanSelectionStep from './components/PlanSelectionStep';
 import MemberDetailsStep from './components/MemberDetailsStep';
@@ -22,6 +23,7 @@ export default function MemberRegistrationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCouponLoading, setIsCouponLoading] = useState(false);
   const [confirmation, setConfirmation] = useState<MembershipRegistrationConfirmation | null>(null);
+  const [couponNotification, setCouponNotification] = useState<CouponNotification | null>(null);
 
   const [formData, setFormData] = useState<MembershipRegistrationFormData>({
     name: '',
@@ -96,54 +98,81 @@ export default function MemberRegistrationPage() {
 
   const handleSelectPlan = (planId: string) => {
     setFormData((prev) => ({ ...prev, planId }));
+    
+    // Remove coupon when plan changes
+    if (appliedCoupon) {
+      handleRemoveCoupon();
+      setCouponNotification({
+        type: 'info',
+        message: 'Plan changed',
+        details: 'Your coupon has been removed. Please reapply if applicable.',
+      });
+    }
   };
 
   const handleQuantityIncrement = () => {
     setFormData((prev) => ({ ...prev, quantity: prev.quantity + 1 }));
+    
+    // Recalculate coupon if applied
+    if (appliedCoupon) {
+      handleApplyCoupon();
+    }
   };
 
   const handleQuantityDecrement = () => {
     if (formData.quantity > 1) {
       setFormData((prev) => ({ ...prev, quantity: prev.quantity - 1 }));
+      
+      // Recalculate coupon if applied
+      if (appliedCoupon) {
+        handleApplyCoupon();
+      }
     }
   };
 
   const handleApplyCoupon = async () => {
-  if (!couponCode) return;
+    if (!couponCode) return;
 
-  setIsCouponLoading(true);
+    setIsCouponLoading(true);
+    setCouponNotification(null);
 
-  try {
-    const response = await fetch('/api/public/membership-validate-coupon', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        couponCode,
-        planId: formData.planId,
-        quantity: formData.quantity,
-      }),
-    });
+    try {
+      const response = await fetch('/api/public/membership-validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          couponCode,
+          planId: formData.planId,
+          quantity: formData.quantity,
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
       if (data.success && data.data.isValid) {
-        // Check expiration on client side as well
-        const coupon = data.data.coupon;
-        if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
-          alert('This coupon has expired');
-          return;
-        }
-
         setAppliedCoupon(data.data.coupon);
         setTotalAmount(data.data.finalAmount);
         setDiscountAmount(data.data.discountAmount);
-        alert(data.data.message);
+        
+        setCouponNotification({
+          type: 'success',
+          message: 'Coupon applied successfully!',
+          details: `You saved ₱${data.data.discountAmount.toFixed(2)}`,
+        });
       } else {
-        alert(data.data.message || 'Invalid coupon code');
+        setCouponNotification({
+          type: 'error',
+          message: data.data.message || 'Invalid coupon code',
+          details: data.data.reason || 'Please check the code and try again',
+        });
       }
     } catch (error) {
       console.error('Error validating coupon:', error);
-      alert('Failed to validate coupon. Please try again.');
+      setCouponNotification({
+        type: 'error',
+        message: 'Failed to validate coupon',
+        details: 'Please try again later',
+      });
     } finally {
       setIsCouponLoading(false);
     }
@@ -154,6 +183,7 @@ export default function MemberRegistrationPage() {
     setCouponCode('');
     setTotalAmount(baseAmount);
     setDiscountAmount(0);
+    setCouponNotification(null);
   };
 
   const handleSubmit = async () => {
@@ -305,6 +335,8 @@ export default function MemberRegistrationPage() {
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               isCouponLoading={isCouponLoading}
+              couponNotification={couponNotification}
+              onCouponNotificationChange={setCouponNotification}
             />
           )}
 

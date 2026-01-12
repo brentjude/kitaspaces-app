@@ -67,9 +67,18 @@ export interface CouponValidationResponse {
     code: string;
     discountType: string;
     discountValue: number;
+    expiresAt: Date | null;
+    applicablePlansIds: string[] | null;
   };
+  baseAmount?: number;
   discountAmount?: number;
   finalAmount?: number;
+}
+
+export interface CouponNotification {
+  type: 'success' | 'error' | 'info';
+  message: string;
+  details?: string;
 }
 
 export interface MembershipRegistrationConfirmation {

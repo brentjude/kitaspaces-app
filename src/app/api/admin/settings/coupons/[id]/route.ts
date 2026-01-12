@@ -19,7 +19,7 @@ export async function PUT(
 
     const { id } = await context.params;
     const body = await request.json();
-    const { code, discountType, discountValue, maxUses, expiresAt } = body;
+    const { code, discountType, discountValue, maxUses, expiresAt, applicablePlansIds } = body;
 
     // Validate input
     if (!code || !discountType || discountValue === undefined) {
@@ -44,15 +44,21 @@ export async function PUT(
       );
     }
 
+    // Convert applicablePlansIds array to JSON string for storage
+    const plansIdsJson = applicablePlansIds && applicablePlansIds.length > 0
+      ? JSON.stringify(applicablePlansIds)
+      : null;
+
     // Update coupon
     const updatedCoupon = await prisma.coupon.update({
       where: { id },
       data: {
         code: code.toUpperCase(),
         discountType,
-        discountValue: parseFloat(discountValue),
-        maxUses: maxUses ? parseInt(maxUses) : null,
+        discountValue: parseFloat(discountValue.toString()),
+        maxUses: maxUses ? parseInt(maxUses.toString()) : null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        applicablePlansIds: plansIdsJson,
       },
     });
 

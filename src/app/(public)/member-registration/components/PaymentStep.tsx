@@ -5,6 +5,7 @@ import {
   MembershipPlanPublic,
   PaymentSettingsPublic,
   CouponValidationResponse,
+  CouponNotification,
 } from '@/types/membership-registration';
 import { PaymentMethod } from '@/generated/prisma';
 import {
@@ -17,6 +18,8 @@ import {
   CheckCircleIcon,
   ArrowUpTrayIcon,
   XMarkIcon,
+  ExclamationCircleIcon,
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 
@@ -42,6 +45,8 @@ interface PaymentStepProps {
   onSubmit: () => Promise<void>;
   isSubmitting: boolean;
   isCouponLoading: boolean;
+  couponNotification: CouponNotification | null;
+  onCouponNotificationChange: (notification: CouponNotification | null) => void;
 }
 
 export default function PaymentStep({
@@ -66,6 +71,8 @@ export default function PaymentStep({
   onSubmit,
   isSubmitting,
   isCouponLoading,
+  couponNotification,
+  onCouponNotificationChange,
 }: PaymentStepProps) {
   const [isUploading, setIsUploading] = useState(false);
 
@@ -73,15 +80,21 @@ export default function PaymentStep({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
+      onCouponNotificationChange({
+        type: 'error',
+        message: 'Invalid file type',
+        details: 'Please upload an image file',
+      });
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB');
+      onCouponNotificationChange({
+        type: 'error',
+        message: 'File too large',
+        details: 'File size must be less than 5MB',
+      });
       return;
     }
 
@@ -102,7 +115,6 @@ export default function PaymentStep({
 
       const data = await response.json();
 
-      // Use secure_url from the response
       if (data.success && data.data?.secure_url) {
         onProofImageUrlChange(data.data.secure_url);
       } else {
@@ -110,30 +122,50 @@ export default function PaymentStep({
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload image. Please try again.');
+      onCouponNotificationChange({
+        type: 'error',
+        message: 'Upload failed',
+        details: 'Failed to upload image. Please try again.',
+      });
     } finally {
       setIsUploading(false);
     }
   };
 
+  const handleApplyCouponClick = async () => {
+    onCouponNotificationChange(null);
+    await onApplyCoupon();
+  };
+
+  const handleRemoveCouponClick = () => {
+    onCouponNotificationChange(null);
+    onRemoveCoupon();
+  };
+
   const handleSubmit = async () => {
-    // Only GCash and Bank Transfer require reference number
     if (
       totalAmount > 0 &&
       (paymentMethod === 'GCASH' || paymentMethod === 'BANK_TRANSFER') &&
       !referenceNumber
     ) {
-      alert('Please enter a payment reference number');
+      onCouponNotificationChange({
+        type: 'error',
+        message: 'Reference number required',
+        details: 'Please enter a payment reference number',
+      });
       return;
     }
 
-    // Only GCash and Bank Transfer require proof upload
     if (
       totalAmount > 0 &&
       (paymentMethod === 'GCASH' || paymentMethod === 'BANK_TRANSFER') &&
       !proofImageUrl
     ) {
-      alert('Please upload payment proof');
+      onCouponNotificationChange({
+        type: 'error',
+        message: 'Payment proof required',
+        details: 'Please upload payment proof',
+      });
       return;
     }
 
@@ -265,9 +297,7 @@ export default function PaymentStep({
                 <TicketIcon className="w-4 h-4 mr-1" />
                 Coupon: {appliedCoupon.code}
               </span>
-              <span className="font-semibold">
-                -₱{discountAmount.toFixed(2)}
-              </span>
+              <span className="font-semibold">-₱{discountAmount.toFixed(2)}</span>
             </div>
           )}
 
@@ -285,28 +315,96 @@ export default function PaymentStep({
         <label className="block text-sm font-medium text-foreground mb-2">
           Have a coupon code?
         </label>
+
+        {/* Coupon Notification Info Card */}
+        {couponNotification && (
+          <div
+            className={`mb-3 rounded-lg border-2 p-4 ${
+              couponNotification.type === 'success'
+                ? 'bg-green-50 border-green-200'
+                : couponNotification.type === 'error'
+                ? 'bg-red-50 border-red-200'
+                : 'bg-blue-50 border-blue-200'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                {couponNotification.type === 'success' ? (
+                  <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                ) : couponNotification.type === 'error' ? (
+                  <ExclamationCircleIcon className="w-5 h-5 text-red-600" />
+                ) : (
+                  <InformationCircleIcon className="w-5 h-5 text-blue-600" />
+                )}
+              </div>
+              <div className="flex-1">
+                <p
+                  className={`text-sm font-semibold ${
+                    couponNotification.type === 'success'
+                      ? 'text-green-900'
+                      : couponNotification.type === 'error'
+                      ? 'text-red-900'
+                      : 'text-blue-900'
+                  }`}
+                >
+                  {couponNotification.message}
+                </p>
+                {couponNotification.details && (
+                  <p
+                    className={`text-xs mt-1 ${
+                      couponNotification.type === 'success'
+                        ? 'text-green-700'
+                        : couponNotification.type === 'error'
+                        ? 'text-red-700'
+                        : 'text-blue-700'
+                    }`}
+                  >
+                    {couponNotification.details}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => onCouponNotificationChange(null)}
+                className={`flex-shrink-0 ${
+                  couponNotification.type === 'success'
+                    ? 'text-green-600 hover:text-green-700'
+                    : couponNotification.type === 'error'
+                    ? 'text-red-600 hover:text-red-700'
+                    : 'text-blue-600 hover:text-blue-700'
+                }`}
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <div className="relative flex-1">
             <TicketIcon className="absolute left-3 top-3 w-5 h-5 text-foreground/40" />
             <input
               type="text"
               placeholder="Enter coupon code"
-              className="w-full pl-10 pr-4 py-2.5 border border-foreground/20 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 uppercase"
+              className="w-full pl-10 pr-4 py-2.5 border border-foreground/20 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 uppercase disabled:bg-foreground/5 disabled:cursor-not-allowed"
               value={couponCode}
-              onChange={(e) => onCouponCodeChange(e.target.value.toUpperCase())}
+              onChange={(e) => {
+                onCouponCodeChange(e.target.value.toUpperCase());
+                onCouponNotificationChange(null);
+              }}
               disabled={!!appliedCoupon || isCouponLoading}
             />
           </div>
           {appliedCoupon ? (
             <button
-              onClick={onRemoveCoupon}
+              onClick={handleRemoveCouponClick}
               className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+              title="Remove coupon"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>
           ) : (
             <button
-              onClick={onApplyCoupon}
+              onClick={handleApplyCouponClick}
               disabled={!couponCode || isCouponLoading}
               className="px-6 py-2 bg-foreground text-white rounded-lg text-sm font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -385,8 +483,7 @@ export default function PaymentStep({
             <>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Payment Reference Number{' '}
-                  <span className="text-red-500">*</span>
+                  Payment Reference Number <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -401,8 +498,7 @@ export default function PaymentStep({
               {/* Payment Proof Upload */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Upload Payment Proof{' '}
-                  <span className="text-red-500">*</span>
+                  Upload Payment Proof <span className="text-red-500">*</span>
                 </label>
                 <div
                   className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
@@ -457,9 +553,7 @@ export default function PaymentStep({
                         <p className="text-sm font-medium text-foreground mb-1">
                           Click to upload payment proof
                         </p>
-                        <p className="text-xs text-foreground/60">
-                          PNG, JPG up to 5MB
-                        </p>
+                        <p className="text-xs text-foreground/60">PNG, JPG up to 5MB</p>
                       </div>
                     </label>
                   )}
@@ -473,12 +567,9 @@ export default function PaymentStep({
       {totalAmount === 0 && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6 text-center">
           <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto mb-2" />
-          <p className="font-semibold text-foreground mb-1">
-            Free Membership!
-          </p>
+          <p className="font-semibold text-foreground mb-1">Free Membership!</p>
           <p className="text-sm text-foreground/60">
-            Your coupon covers the full amount. Click submit to complete your
-            registration.
+            Your coupon covers the full amount. Click submit to complete your registration.
           </p>
         </div>
       )}
