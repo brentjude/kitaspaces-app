@@ -38,7 +38,6 @@ export default function PaymentSection({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [copiedQrNumber, setCopiedQrNumber] = useState(false);
   const [copiedAccountNumber, setCopiedAccountNumber] = useState(false);
 
   const handleCopyToClipboard = async (
@@ -48,8 +47,8 @@ export default function PaymentSection({
     try {
       await navigator.clipboard.writeText(text);
       if (type === "qr") {
-        setCopiedQrNumber(true);
-        setTimeout(() => setCopiedQrNumber(false), 2000);
+        setCopiedAccountNumber(true);
+        setTimeout(() => setCopiedAccountNumber(false), 2000);
       } else {
         setCopiedAccountNumber(true);
         setTimeout(() => setCopiedAccountNumber(false), 2000);
@@ -209,7 +208,7 @@ export default function PaymentSection({
               {paymentSettings?.qrCodeUrl && (
                 <div className="bg-white rounded-lg p-4">
                   <p className="text-sm text-foreground/60 mb-3">
-                    Scan this QR code with your GCash app:
+                    Scan this QR PH to pay:
                   </p>
                   <div className="relative w-48 h-48 mx-auto">
                     <Image
@@ -222,48 +221,10 @@ export default function PaymentSection({
                 </div>
               )}
 
-              {paymentSettings?.qrCodeNumber && (
-                <div className="bg-white rounded-lg p-4">
-                  <p className="text-sm text-foreground/60 mb-2">
-                    Or send payment to:
-                  </p>
-                  <div className="flex items-center justify-between bg-foreground/5 rounded-lg p-3 border border-foreground/10">
-                    <p className="text-lg font-bold text-foreground font-mono">
-                      {paymentSettings.qrCodeNumber}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopyToClipboard(
-                          paymentSettings.qrCodeNumber!,
-                          "qr"
-                        )
-                      }
-                      className="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-                      title="Copy number"
-                    >
-                      {copiedQrNumber ? (
-                        <>
-                          <ClipboardDocumentCheckIcon className="w-5 h-5" />
-                          <span className="text-sm font-medium">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <ClipboardDocumentIcon className="w-5 h-5" />
-                          <span className="text-sm font-medium">Copy</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
 
               <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/70">
-                <li>Open your GCash app</li>
-                <li>
-                  {paymentSettings?.qrCodeUrl
-                    ? "Scan the QR code above or send to the number"
-                    : "Send money to the number above"}
+                <li>Open your mobile payment app</li>
+                <li>Scan the QR code above
                 </li>
                 <li>Complete the payment</li>
                 <li>Take a screenshot of the confirmation</li>

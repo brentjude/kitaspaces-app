@@ -179,7 +179,7 @@ export default function PaymentStep({
           <div className="mt-4 bg-white border border-foreground/20 rounded-xl p-6">
             <div className="text-center mb-4">
               <p className="text-sm font-semibold text-foreground mb-2">
-                Scan QR Code with GCash App
+                Scan QRPH to Pay
               </p>
               <div className="inline-block p-4 bg-gray-50 rounded-lg border border-foreground/10">
                 {paymentSettings.qrCodeUrl ? (
@@ -197,14 +197,6 @@ export default function PaymentStep({
                   </div>
                 )}
               </div>
-              {paymentSettings.qrCodeNumber && (
-                <p className="text-sm text-foreground/60 mt-2">
-                  Or send to:{' '}
-                  <span className="font-mono font-semibold">
-                    {paymentSettings.qrCodeNumber}
-                  </span>
-                </p>
-              )}
             </div>
           </div>
         );
@@ -432,7 +424,7 @@ export default function PaymentStep({
                 }`}
               >
                 <QrCodeIcon className="w-6 h-6" />
-                <span className="font-medium">GCash</span>
+                <span className="font-medium">QR Payment</span>
               </button>
 
               <button
