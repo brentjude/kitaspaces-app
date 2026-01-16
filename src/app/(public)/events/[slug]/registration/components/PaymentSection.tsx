@@ -125,7 +125,7 @@ export default function PaymentSection({
   const paymentMethods = [
     {
       id: "GCASH" as const,
-      name: "GCash",
+      name: "QRPh",
       icon: <QrCodeIcon className="w-6 h-6" />,
       available:
         !!paymentSettings?.qrCodeUrl || !!paymentSettings?.qrCodeNumber,
@@ -221,11 +221,9 @@ export default function PaymentSection({
                 </div>
               )}
 
-
               <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/70">
                 <li>Open your mobile payment app</li>
-                <li>Scan the QR code above
-                </li>
+                <li>Scan the QR code above</li>
                 <li>Complete the payment</li>
                 <li>Take a screenshot of the confirmation</li>
                 <li>Upload the screenshot below</li>
