@@ -9,6 +9,7 @@ import EventCard from "@/app/components/EventCard";
 import { CalendarIcon } from "@heroicons/react/24/outline";
 import type { EventWithRelations } from "@/types";
 import { generateEventSlug } from "@/lib/utils/slug";
+import Footer from "@/app/components/Footer";
 
 // Event Skeleton Component
 function EventCardSkeleton() {
@@ -176,13 +177,7 @@ export default function HomePage() {
       )}
 
       {/* Footer */}
-      <footer className="bg-linear-to-b from-primary/80 via-primary/70 to-primary/90 py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-white text-sm">
-            © 2025 KITA Spaces. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

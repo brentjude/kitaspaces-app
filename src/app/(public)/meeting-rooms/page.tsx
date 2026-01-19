@@ -7,6 +7,7 @@ import MeetingRoomCard from './components/MeetingRoomCard';
 import BookingModal from './components/BookingModal';
 import { MeetingRoom } from '@/types/database';
 import { PresentationChartBarIcon } from '@heroicons/react/24/outline';
+import Footer from '@/app/components/Footer';
 
 export default function MeetingRoomsPage() {
   const { data: session } = useSession();
@@ -104,6 +105,8 @@ export default function MeetingRoomsPage() {
           </div>
         )}
       </div>
+
+      <Footer />
 
       {/* Booking Modal */}
       {selectedRoom && (

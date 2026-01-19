@@ -13,6 +13,7 @@ import { generateEventSlug } from "@/lib/utils/slug";
 import PublicHeader from "@/app/components/Header";
 import EventCard from "@/app/components/EventCard";
 import EventsSearchBar from "./components/EventsSearchBar";
+import Footer from "@/app/components/Footer";
 
 type PublicEvent = Event & {
   category?: EventCategory | null;
@@ -222,7 +223,9 @@ export default function EventsPage() {
             </div>
           )}
         </div>
+        
       </div>
+      <Footer />
     </div>
   );
 }
