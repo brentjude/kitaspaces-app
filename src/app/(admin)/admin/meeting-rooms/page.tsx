@@ -33,6 +33,7 @@ export default function MeetingRoomsPage() {
 
   useEffect(() => {
     fetchRooms();
+    fetchBookingCount();
   }, []);
 
   const fetchRooms = async () => {
@@ -50,8 +51,24 @@ export default function MeetingRoomsPage() {
     }
   };
 
+  const fetchBookingCount = async () => {
+    try {
+      const response = await fetch("/api/admin/bookings");
+      if (!response.ok) throw new Error("Failed to fetch bookings");
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        setBookingCount(data.data.length);
+      }
+    } catch (error) {
+      console.error("Error fetching booking count:", error);
+    }
+  };
+
   const handleBookingSuccess = () => {
     setShowBookingModal(false);
+    // Refresh booking count after successful booking
+    fetchBookingCount();
   };
 
   if (status === "loading" || isLoading) {

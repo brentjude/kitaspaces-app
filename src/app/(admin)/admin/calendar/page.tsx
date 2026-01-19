@@ -37,6 +37,25 @@ interface ApiBooking {
   numberOfAttendees: number;
   type: "booking";
   bookingType: "user" | "customer";
+  duration: number;
+  room: {
+    id: string;
+    name: string;
+    capacity: number;
+    hourlyRate: number;
+    floor: string | null;
+    roomNumber: string | null;
+    amenities: string | null;
+  };
+  contactName: string;
+  contactEmail: string | null;
+  contactMobile: string | null;
+  company: string | null;
+  designation: string | null;
+  purpose: string | null;
+  totalAmount: number;
+  paymentReference: string | null;
+  paymentMethod: string | null;
 }
 
 interface CalendarStats {
@@ -52,13 +71,10 @@ export default function CalendarPage() {
   const [bookings, setBookings] = useState<CalendarItem[]>([]);
   const [stats, setStats] = useState<CalendarStats | null>(null);
   const [loading, setLoading] = useState(true);
-  // Remove unused state since navigation is handled in CalendarView
-  // const [currentDate, setCurrentDate] = useState(new Date());
 
   const fetchCalendarData = async () => {
     setLoading(true);
     try {
-      // Use current date instead of state
       const now = new Date();
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
@@ -128,7 +144,7 @@ export default function CalendarPage() {
           }
         );
 
-        // Transform bookings
+        // ✅ Transform bookings - NOW INCLUDING ALL ROOM DETAILS
         const transformedBookings: CalendarItem[] = data.data.bookings.map(
           (booking: ApiBooking) => {
             const bookingDate = new Date(booking.date);
@@ -157,6 +173,20 @@ export default function CalendarPage() {
               roomName: booking.roomName,
               userName: booking.userName,
               status: booking.status,
+              // ✅ ADD ALL BOOKING DETAILS
+              duration: booking.duration,
+              room: booking.room,
+              contactName: booking.contactName,
+              contactEmail: booking.contactEmail,
+              contactMobile: booking.contactMobile,
+              company: booking.company,
+              designation: booking.designation,
+              numberOfAttendees: booking.numberOfAttendees,
+              purpose: booking.purpose,
+              totalAmount: booking.totalAmount,
+              bookingType: booking.bookingType,
+              paymentReference: booking.paymentReference,
+              paymentMethod: booking.paymentMethod,
             };
           }
         );
@@ -176,7 +206,7 @@ export default function CalendarPage() {
 
   useEffect(() => {
     fetchCalendarData();
-  }, []); // Empty dependency array - only fetch once on mount
+  }, []);
 
   if (loading) {
     return (

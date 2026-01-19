@@ -69,7 +69,6 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
 
   // ✅ Transform CalendarItem to BookingDetails
   const getBookingDetails = (item: CalendarItem) => {
-    // ✅ Check for 'booking' type instead of 'meeting_room'
     if (item.type !== 'booking') return null;
 
     // ✅ Calculate duration from start/end dates if not provided
@@ -79,7 +78,7 @@ export default function CalendarView({ events, bookings }: CalendarViewProps) {
 
     return {
       id: item.id,
-      type: 'meeting_room' as const,
+      type: 'booking' as const, // ✅ Changed from 'meeting_room' to 'booking'
       title: item.title,
       date: format(item.start, 'EEEE, MMMM d, yyyy'),
       startTime: format(item.start, 'HH:mm'),

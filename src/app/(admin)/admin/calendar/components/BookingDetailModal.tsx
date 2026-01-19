@@ -14,7 +14,7 @@ import {
 
 interface BookingDetails {
   id: string;
-  type: 'meeting_room';
+  type: 'booking';
   title: string;
   date: string;
   startTime: string;
@@ -27,7 +27,7 @@ interface BookingDetails {
     hourlyRate: number;
     floor?: string | null;
     roomNumber?: string | null;
-    amenities?: string | null; // ✅ This is a JSON string, not an array
+    amenities?: string | null;
   };
   contactName: string;
   contactEmail?: string | null;
@@ -56,7 +56,7 @@ export default function BookingDetailModal({
 }: BookingDetailModalProps) {
   if (!details) return null;
 
-  // ✅ Parse amenities JSON string
+  // Parse amenities JSON string
   const parseAmenities = (amenitiesString: string | null | undefined): string[] => {
     if (!amenitiesString) return [];
     try {
@@ -68,6 +68,27 @@ export default function BookingDetailModal({
   };
 
   const amenities = parseAmenities(details.room.amenities);
+
+  // Format time from 24hr to 12hr format
+  const formatTime = (time: string): string => {
+    if (!time) return 'N/A';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours, 10);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes} ${period}`;
+  };
+
+  // Format date
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -116,13 +137,13 @@ export default function BookingDetailModal({
       title="Booking Details"
       size="lg"
     >
-      <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+      <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-lg font-bold text-foreground">{details.title}</h3>
+            <h3 className="text-lg font-bold text-foreground">{details.room.name} Booking</h3>
             <p className="text-sm text-foreground/60 mt-1">
-              Booking ID: {details.id}
+              Booking ID: {details.id.slice(0, 8).toUpperCase()}
             </p>
           </div>
           {getStatusBadge(details.status)}
@@ -142,13 +163,13 @@ export default function BookingDetailModal({
         </div>
 
         {/* Contact Information */}
-        <div className="bg-white rounded-lg p-4 border border-foreground/10">
+        <div className="bg-gray-50 rounded-lg p-4 border border-foreground/10">
           <h4 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wide">
             Contact Information
           </h4>
           <div className="space-y-2 text-sm">
             <div className="flex items-start">
-              <UserIcon className="w-4 h-4 mr-2 text-foreground/40 mt-0.5" />
+              <UserIcon className="w-4 h-4 mr-2 text-foreground/40 mt-0.5 shrink-0" />
               <div>
                 <p className="font-medium text-foreground">{details.contactName}</p>
                 {details.designation && (
@@ -158,19 +179,19 @@ export default function BookingDetailModal({
             </div>
             {details.contactEmail && (
               <div className="flex items-center">
-                <EnvelopeIcon className="w-4 h-4 mr-2 text-foreground/40" />
-                <p className="text-foreground/80">{details.contactEmail}</p>
+                <EnvelopeIcon className="w-4 h-4 mr-2 text-foreground/40 shrink-0" />
+                <p className="text-foreground/80 break-all">{details.contactEmail}</p>
               </div>
             )}
             {details.contactMobile && (
               <div className="flex items-center">
-                <PhoneIcon className="w-4 h-4 mr-2 text-foreground/40" />
+                <PhoneIcon className="w-4 h-4 mr-2 text-foreground/40 shrink-0" />
                 <p className="text-foreground/80">{details.contactMobile}</p>
               </div>
             )}
             {details.company && (
               <div className="flex items-center">
-                <svg className="w-4 h-4 mr-2 text-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-2 text-foreground/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
                 <p className="text-foreground/80">{details.company}</p>
@@ -190,7 +211,7 @@ export default function BookingDetailModal({
                 <CalendarIcon className="w-4 h-4 mr-2" />
                 Date:
               </span>
-              <span className="font-medium text-blue-900">{details.date}</span>
+              <span className="font-medium text-blue-900">{formatDate(details.date)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-blue-700 flex items-center">
@@ -198,7 +219,7 @@ export default function BookingDetailModal({
                 Time:
               </span>
               <span className="font-medium text-blue-900">
-                {details.startTime} - {details.endTime}
+                {formatTime(details.startTime)} - {formatTime(details.endTime)}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -218,16 +239,16 @@ export default function BookingDetailModal({
               </span>
             </div>
             {details.purpose && (
-              <div className="flex items-center justify-between">
-                <span className="text-blue-700">Purpose:</span>
-                <span className="font-medium text-blue-900">{details.purpose}</span>
+              <div className="pt-2 border-t border-blue-200">
+                <span className="text-blue-700 text-xs font-medium">Purpose:</span>
+                <p className="font-medium text-blue-900 mt-1">{details.purpose}</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Room Details */}
-        <div className="bg-white rounded-lg p-4 border border-foreground/10">
+        <div className="bg-gray-50 rounded-lg p-4 border border-foreground/10">
           <h4 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wide">
             Room Details
           </h4>
@@ -256,25 +277,28 @@ export default function BookingDetailModal({
             <div className="flex items-center justify-between">
               <span className="text-foreground/60">Capacity:</span>
               <span className="font-medium text-foreground">
-                {details.room.capacity} people
+                {details.room.capacity || 0} {details.room.capacity === 1 ? 'person' : 'people'}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-foreground/60">Hourly Rate:</span>
               <span className="font-medium text-foreground">
-                ₱{details.room.hourlyRate.toFixed(2)}
+                ₱{(details.room.hourlyRate || 0).toLocaleString('en-PH', { 
+                  minimumFractionDigits: 2, 
+                  maximumFractionDigits: 2 
+                })}
               </span>
             </div>
 
             {/* Amenities */}
             {amenities.length > 0 && (
-              <div className="pt-2 border-t border-foreground/10">
-                <p className="text-xs text-foreground/60 mb-2">Amenities</p>
+              <div className="pt-3 border-t border-foreground/10">
+                <p className="text-xs text-foreground/60 font-medium mb-2">Amenities</p>
                 <div className="flex flex-wrap gap-2">
                   {amenities.map((amenity, index) => (
                     <span
                       key={index}
-                      className="px-2 py-1 bg-white border border-foreground/10 rounded-md text-xs text-foreground"
+                      className="px-2 py-1 bg-white border border-foreground/20 rounded-md text-xs text-foreground"
                     >
                       {amenity}
                     </span>
@@ -295,14 +319,17 @@ export default function BookingDetailModal({
             <div className="flex items-center justify-between">
               <span className="text-orange-700">Total Amount:</span>
               <span className="font-bold text-xl text-orange-900">
-                ₱{details.totalAmount.toFixed(2)}
+                ₱{details.totalAmount.toLocaleString('en-PH', { 
+                  minimumFractionDigits: 2, 
+                  maximumFractionDigits: 2 
+                })}
               </span>
             </div>
             {details.paymentMethod && (
               <div className="flex items-center justify-between pt-2 border-t border-orange-200">
                 <span className="text-orange-700">Payment Method:</span>
                 <span className="font-medium text-orange-900">
-                  {details.paymentMethod}
+                  {details.paymentMethod.replace(/_/g, ' ')}
                 </span>
               </div>
             )}
