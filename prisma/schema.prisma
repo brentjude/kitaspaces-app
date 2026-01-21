@@ -80,6 +80,29 @@ enum BookingStatus {
   NO_SHOW
 }
 
+enum InquiryReason {
+  INQUIRY
+  FEEDBACK
+  COMPLAINT
+  SUPPORT
+  OTHER
+}
+
+enum InquiryType {
+  EVENT
+  MEETING_ROOM
+  MEMBERSHIP
+  GENERAL
+  OTHER
+}
+
+enum InquiryStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 model User {
   id       String   @id // Format: YYYYNNN (e.g., 2025001, 2025002)
   email    String   @unique
@@ -106,6 +129,8 @@ model User {
   dailyUseRedemptions DailyUseRedemption[]
   perkUsages          MembershipPerkUsage[]
   meetingRoomBookings MeetingRoomBooking[]
+  assignedInquiries Inquiry[]
+  respondedInquiries Inquiry[] @relation("InquiryResponses")
 
   // Activity tracking
   activityLogs      ActivityLog[]
@@ -896,6 +921,13 @@ enum ActivityAction {
   ADMIN_CATEGORY_CREATED
   ADMIN_CATEGORY_UPDATED
   ADMIN_CATEGORY_DELETED
+
+  //Admin Actions - Inquiry Management
+  ADMIN_INQUIRY_CREATED
+  ADMIN_INQUIRY_UPDATED
+  ADMIN_INQUIRY_RESPONDED
+  ADMIN_INQUIRY_DELETED
+  ADMIN_INQUIRY_ASSIGNED
   
   // System Actions
   SYSTEM_NOTIFICATION_SENT
@@ -948,4 +980,50 @@ model ActivityLog {
   @@index([createdAt])
   @@index([isSuccess])
   @@map("activity_logs")
+}
+
+model Inquiry {
+  id String @id @default(cuid())
+  
+  // Contact Information
+  name          String
+  email         String
+  contactNumber String?
+  
+  // Inquiry Details
+  reason        InquiryReason
+  type          InquiryType?  // Only if reason is INQUIRY
+  subject       String?
+  message       String        @db.Text
+  
+  // Status & Assignment
+  status        InquiryStatus @default(PENDING)
+  assignedToId  String?
+  assignedTo    User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  
+  // Response
+  response      String?       @db.Text
+  respondedAt   DateTime?
+  respondedById String?
+  respondedBy   User?         @relation("InquiryResponses", fields: [respondedById], references: [id], onDelete: SetNull)
+  
+  // Source tracking
+  source        String        @default("WEBSITE") // WEBSITE, ADMIN_PANEL, API
+  ipAddress     String?
+  userAgent     String?       @db.Text
+  
+  // Metadata
+  metadata      String?       @db.Text // JSON for additional data
+  
+  // Timestamps
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  @@index([email])
+  @@index([status])
+  @@index([reason])
+  @@index([type])
+  @@index([createdAt])
+  @@index([assignedToId])
+  @@map("inquiries")
 }
