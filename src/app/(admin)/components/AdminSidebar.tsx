@@ -14,6 +14,7 @@ import {
   CreditCardIcon,
   BanknotesIcon,
   PresentationChartBarIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
 
 interface AdminSidebarProps {
@@ -81,6 +82,11 @@ export default function AdminSidebar({
       name: "Payments",
       href: "/admin/payments",
       icon: <BanknotesIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Inquiries",
+      href: "/admin/inquiries",
+      icon: <ChatBubbleLeftRightIcon className="w-5 h-5" />,
     },
     {
       name: "Settings",
@@ -172,7 +178,7 @@ export default function AdminSidebar({
         {/* Footer */}
         <div className="p-4 border-t border-foreground/10 shrink-0">
           <div className="text-xs text-foreground/50 text-center">
-            © 2025 Kitaspaces
+            © 2026 Kitaspaces
           </div>
         </div>
       </aside>
