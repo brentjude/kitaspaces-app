@@ -13,6 +13,7 @@ import {
   Bars3Icon,
   XMarkIcon,
   SparklesIcon,
+  EnvelopeIcon,
 } from "@heroicons/react/24/outline";
 import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
@@ -156,6 +157,18 @@ export default function PublicHeader({
             <PresentationChartBarIcon className="w-4 h-4" />
             Meeting Rooms
           </Link>
+
+          <Link
+            href="/contact"
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              isActive('/contact')
+                ? 'bg-primary/10 text-primary'
+                : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground'
+            }`}
+          >
+            <EnvelopeIcon className="w-4 h-4" />
+            Contact
+          </Link>
         </div>
 
         {/* Right Side */}
@@ -222,7 +235,6 @@ export default function PublicHeader({
                         )}
                       </button>
 
-                      {/* ✅ Settings Button */}
                       <button
                         onClick={handleSettingsClick}
                         className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -327,6 +339,18 @@ export default function PublicHeader({
                         Meeting Rooms
                       </Link>
 
+                      <Link
+                        href="/contact"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                          isActive('/contact')
+                            ? 'text-primary bg-primary/5'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <EnvelopeIcon className="w-5 h-5" />
+                        Contact
+                      </Link>
+
                       <div className="border-t border-gray-100 my-2" />
                       
                       <button
@@ -346,7 +370,6 @@ export default function PublicHeader({
                         )}
                       </button>
 
-                      {/* ✅ Settings Button - Mobile */}
                       <button
                         onClick={handleSettingsClick}
                         className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
@@ -445,6 +468,18 @@ export default function PublicHeader({
                       >
                         <PresentationChartBarIcon className="w-5 h-5" />
                         Meeting Rooms
+                      </Link>
+
+                      <Link
+                        href="/contact"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                          isActive('/contact')
+                            ? 'text-primary bg-primary/5'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <EnvelopeIcon className="w-5 h-5" />
+                        Contact
                       </Link>
 
                       {/* Become a Member for guests - Mobile */}
