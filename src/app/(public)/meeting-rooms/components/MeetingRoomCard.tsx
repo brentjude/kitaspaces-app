@@ -9,6 +9,7 @@ import {
   ArrowRightIcon,
 } from '@heroicons/react/24/outline';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface MeetingRoomCardProps {
   room: MeetingRoom;
@@ -39,31 +40,41 @@ export default function MeetingRoomCard({ room, onBookClick }: MeetingRoomCardPr
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-foreground/10 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col">
       {/* Image */}
-      <div className="h-56 bg-foreground/5 relative overflow-hidden">
-        {room.coverPhotoUrl ? (
-          <Image
-            src={room.coverPhotoUrl}
-            alt={room.name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-foreground/5 text-foreground/20">
-            <ComputerDesktopIcon className="w-16 h-16" />
+      <Link href={`/meeting-rooms/${room.id}`} className="block">
+        <div className="h-56 bg-foreground/5 relative overflow-hidden">
+          {room.coverPhotoUrl ? (
+            <Image
+              src={room.coverPhotoUrl}
+              alt={room.name}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-foreground/5 text-foreground/20">
+              <ComputerDesktopIcon className="w-16 h-16" />
+            </div>
+          )}
+          
+          {/* Price Badge */}
+          <div className="absolute top-4 right-4">
+            <span className="px-3 py-1 bg-white/90 backdrop-blur-md rounded-full text-xs font-bold text-foreground shadow-sm">
+              ₱{room.hourlyRate}/hr
+            </span>
           </div>
-        )}
-        
-        {/* Price Badge */}
-        <div className="absolute top-4 right-4">
-          <span className="px-3 py-1 bg-white/90 backdrop-blur-md rounded-full text-xs font-bold text-foreground shadow-sm">
-            ₱{room.hourlyRate}/hr
-          </span>
         </div>
-      </div>
+      </Link>
 
       {/* Content */}
       <div className="p-6 flex-1 flex flex-col">
-        <h3 className="text-xl font-bold text-foreground mb-2">{room.name}</h3>
+        <Link 
+          href={`/meeting-rooms/${room.id}`}
+          className="group/title"
+        >
+          <h3 className="text-xl font-bold text-foreground mb-2 group-hover/title:text-primary transition-colors">
+            {room.name}
+          </h3>
+        </Link>
+        
         <p className="text-foreground/60 text-sm mb-4 line-clamp-2">
           {room.description || 'Professional meeting space'}
         </p>
@@ -102,14 +113,22 @@ export default function MeetingRoomCard({ room, onBookClick }: MeetingRoomCardPr
           </div>
         )}
 
-        {/* Book Button */}
-        <button 
-          onClick={() => onBookClick(room)}
-          className="w-full py-3 bg-foreground hover:bg-primary text-white font-bold rounded-xl transition-colors flex items-center justify-center group-hover:bg-primary"
-        >
-          Book Now 
-          <ArrowRightIcon className="w-4 h-4 ml-2" />
-        </button>
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <Link 
+            href={`/meeting-rooms/${room.id}`}
+            className="flex-1 py-3 bg-foreground/10 hover:bg-foreground/20 text-foreground font-semibold rounded-xl transition-colors flex items-center justify-center"
+          >
+            View Details
+          </Link>
+          <button 
+            onClick={() => onBookClick(room)}
+            className="flex-1 py-3 bg-foreground hover:bg-primary text-white font-bold rounded-xl transition-colors flex items-center justify-center group-hover:bg-primary"
+          >
+            Book Now 
+            <ArrowRightIcon className="w-4 h-4 ml-2" />
+          </button>
+        </div>
       </div>
     </div>
   );
