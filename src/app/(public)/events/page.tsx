@@ -37,6 +37,7 @@ export default function EventsPage() {
       setLoading(true);
       try {
         const [eventsResponse, categoriesResponse] = await Promise.all([
+          // Only fetch upcoming events
           fetchPublicEvents({}),
           fetchPublicEventCategories(),
         ]);
@@ -105,7 +106,7 @@ export default function EventsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white via-orange-50/30 to-white">
+      <div className="min-h-screen bg-linear-to-b from-white via-orange-50/30 to-white">
         <PublicHeader
           currentUser={
             session?.user
@@ -134,7 +135,7 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-orange-50/30 to-white">
+    <div className="min-h-screen bg-linear-to-b from-white via-orange-50/30 to-white">
       <PublicHeader
         currentUser={
           session?.user
@@ -152,7 +153,7 @@ export default function EventsPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            All Events
+            Upcoming Events
           </h1>
           <p className="text-lg text-foreground/60">
             Discover upcoming events and experiences at KITA Spaces
@@ -179,9 +180,9 @@ export default function EventsPage() {
                 Filtering...
               </span>
             ) : filteredEvents.length === 0 ? (
-              "No events found"
+              "No upcoming events found"
             ) : (
-              `${filteredEvents.length} ${
+              `${filteredEvents.length} upcoming ${
                 filteredEvents.length === 1 ? "event" : "events"
               } found`
             )}
@@ -202,28 +203,31 @@ export default function EventsPage() {
             </div>
           ) : (
             <div className="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-foreground/10 shadow-sm">
-              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/10 to-orange-100/50 flex items-center justify-center">
+              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-linear-to-br from-primary/10 to-orange-100/50 flex items-center justify-center">
                 <MagnifyingGlassIcon className="w-12 h-12 text-primary/40" />
               </div>
               <h3 className="text-2xl font-bold text-foreground mb-2">
-                No events found
+                No upcoming events found
               </h3>
               <p className="text-foreground/60 text-lg mb-6">
-                Try adjusting your search or filters.
+                {searchTerm || selectedCategory
+                  ? "Try adjusting your search or filters."
+                  : "Check back later for new activities and experiences."}
               </p>
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedCategory("");
-                }}
-                className="px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors"
-              >
-                Clear Filters
-              </button>
+              {(searchTerm || selectedCategory) && (
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedCategory("");
+                  }}
+                  className="px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           )}
         </div>
-        
       </div>
       <Footer />
     </div>

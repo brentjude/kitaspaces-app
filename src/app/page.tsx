@@ -99,6 +99,7 @@ export default function HomePage() {
 
   const fetchEvents = async () => {
     try {
+      // Only fetch upcoming events (showPastEvents=false is default)
       const response = await fetch("/api/public/events");
       const data = await response.json();
 
@@ -166,10 +167,10 @@ export default function HomePage() {
             <div className="text-center py-24 bg-foreground/5 rounded-2xl border border-dashed border-foreground/20">
               <CalendarIcon className="w-12 h-12 mx-auto text-foreground/20 mb-4" />
               <h3 className="text-lg font-medium text-foreground">
-                No events scheduled
+                No upcoming events
               </h3>
               <p className="text-foreground/60 mt-1">
-                Check back later for upcoming activities.
+                Check back later for new activities and experiences.
               </p>
             </div>
           )}

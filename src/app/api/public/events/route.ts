@@ -7,17 +7,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const categoryId = searchParams.get("categoryId") || "";
+    const showPastEvents = searchParams.get("showPastEvents") === "true";
 
     const where: Prisma.EventWhereInput = {
       AND: [
-        // Show all events (commented out filters)
-        // {
-        //   OR: [
-        //     { isMemberOnly: false },
-        //     { AND: [{ isMemberOnly: true }, { isFreeForMembers: true }] },
-        //   ],
-        // },
-        // { isRedemptionEvent: false },
+        // Only show upcoming events by default
+        ...(!showPastEvents ? [{
+          date: {
+            gte: new Date(), // Greater than or equal to today
+          },
+        }] : []),
       ],
     };
 
