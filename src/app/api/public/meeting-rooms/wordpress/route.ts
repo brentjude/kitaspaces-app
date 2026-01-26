@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       {
         headers: {
           "Cache-Control":
-            "public, s-maxage=300, stale-while-revalidate=600", // 5 min cache
+            "public, s-maxage=300, stale-while-revalidate=600",
           "Access-Control-Allow-Origin":
             process.env.WORDPRESS_SITE_URL || "*",
           "Access-Control-Allow-Methods": "GET",
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Handle preflight requests
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return NextResponse.json(
     {},
     {

@@ -116,11 +116,11 @@ export async function GET(request: NextRequest) {
         isFree: event.isFree,
         imageUrl: event.imageUrl,
         maxAttendees: event.maxAttendees,
-        isFeatured: false, // Default to false since field doesn't exist
+        isFeatured: false,
         memberDiscount: event.memberDiscount,
         memberDiscountType: event.memberDiscountType,
         category: event.categoryId ? categoryMap.get(event.categoryId) || null : null,
-        freebies: [], // Default to empty array since relation doesn't exist or needs separate query
+        freebies: [],
         registrationCount,
         availableSlots,
         registrationUrl: `${process.env.NEXTAUTH_URL}/events/${event.id}`,
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return NextResponse.json(
     {},
     {
