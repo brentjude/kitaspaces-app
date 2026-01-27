@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import AdminStatsCard from "@/app/(admin)/components/AdminStatsCard";
+import UpcomingBirthdaysCard from "../components/UpcomingBirthdaysCard";
+import ExpiringMembershipsCard from "../components/ExpiringMembershipCard";
 import Link from "next/link";
 
 interface DashboardStats {
@@ -41,10 +43,32 @@ interface UpcomingEvent {
   formattedDate: string;
 }
 
+interface BirthdayUser {
+  id: string;
+  name: string;
+  company: string | null;
+  birthdate: string;
+  daysUntil: number;
+  formattedDate: string;
+}
+
+interface ExpiringMembership {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  planName: string;
+  endDate: string;
+  daysLeft: number;
+  formattedEndDate: string;
+}
+
 interface DashboardData {
   stats: DashboardStats;
   recentUsers: RecentUser[];
   upcomingEvents: UpcomingEvent[];
+  upcomingBirthdays: BirthdayUser[];
+  expiringMemberships: ExpiringMembership[];
 }
 
 export default function AdminDashboard() {
@@ -188,8 +212,17 @@ export default function AdminDashboard() {
           />
         </div>
 
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+        {/* Priority Content Grid - Birthdays & Memberships First */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
+          {/* Upcoming Birthdays - Priority 1 */}
+          <UpcomingBirthdaysCard birthdays={data.upcomingBirthdays} />
+
+          {/* Expiring Memberships - Priority 2 */}
+          <ExpiringMembershipsCard memberships={data.expiringMemberships} />
+        </div>
+
+        {/* Secondary Content Grid - Recent Users & Events */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
           {/* Recent Customers */}
           <div className="bg-white rounded-lg border border-foreground/10 p-4 sm:p-5 md:p-6">
             <div className="flex items-center justify-between mb-3 sm:mb-4">

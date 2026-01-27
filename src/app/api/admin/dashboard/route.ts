@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { subDays, startOfDay, endOfDay } from "date-fns";
+import { subDays, startOfDay, endOfDay, addDays, differenceInDays } from "date-fns";
 
 export async function GET() {
   try {
@@ -86,7 +86,6 @@ export async function GET() {
     // ✅ 3. Total Revenue Stats
     const [totalRevenue, revenueThisMonth, revenueLastMonth] =
       await Promise.all([
-        // Total revenue from all completed payments
         prisma.payment.aggregate({
           where: {
             status: "COMPLETED",
@@ -95,7 +94,6 @@ export async function GET() {
             amount: true,
           },
         }),
-        // Revenue this month
         prisma.payment.aggregate({
           where: {
             status: "COMPLETED",
@@ -108,7 +106,6 @@ export async function GET() {
             amount: true,
           },
         }),
-        // Revenue last month
         prisma.payment.aggregate({
           where: {
             status: "COMPLETED",
@@ -123,7 +120,6 @@ export async function GET() {
         }),
       ]);
 
-    // Include customer payments in revenue
     const [
       totalCustomerRevenue,
       customerRevenueThisMonth,
@@ -224,34 +220,7 @@ export async function GET() {
       },
     });
 
-    // ✅ 6. Recent Memberships (Last 5 active memberships)
-    const recentMemberships = await prisma.membership.findMany({
-      where: {
-        status: "ACTIVE",
-      },
-      take: 5,
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        plan: {
-          select: {
-            name: true,
-            type: true,
-            price: true,
-          },
-        },
-      },
-    });
-
-    // ✅ 7. Additional Stats
+    // ✅ 6. Additional Stats
     const [
       activeMembersCount,
       pendingPaymentsCount,
@@ -288,10 +257,73 @@ export async function GET() {
       }),
     ]);
 
+    // ✅ 7. Upcoming Birthdays (Next 30 days, only users with birthdate)
+    const usersWithBirthdays = await prisma.user.findMany({
+      where: {
+        birthdate: {
+          not: null,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        company: true,
+        birthdate: true,
+      },
+    });
+
+    const upcomingBirthdays = usersWithBirthdays
+      .map((user) => {
+        const birthdate = user.birthdate!;
+        const nextBirthday = getNextBirthday(birthdate);
+        const daysUntil = differenceInDays(nextBirthday, startOfDay(now));
+
+        return {
+          id: user.id,
+          name: user.name,
+          company: user.company,
+          birthdate: birthdate.toISOString(),
+          nextBirthday,
+          daysUntil,
+        };
+      })
+      .filter((user) => user.daysUntil >= 0 && user.daysUntil <= 30)
+      .sort((a, b) => a.daysUntil - b.daysUntil)
+      .slice(0, 5);
+
+    // ✅ 8. Expiring Memberships (Next 30 days)
+    const expiringMemberships = await prisma.membership.findMany({
+      where: {
+        status: "ACTIVE",
+        endDate: {
+          not: null,
+          gte: startOfDay(now),
+          lte: endOfDay(addDays(now, 30)),
+        },
+      },
+      orderBy: {
+        endDate: "asc",
+      },
+      take: 5,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        plan: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
     return NextResponse.json({
       success: true,
       data: {
-        // Main Stats
         stats: {
           totalUsers: {
             value: totalUsers,
@@ -326,7 +358,6 @@ export async function GET() {
           },
         },
 
-        // Recent Users
         recentUsers: recentUsers.map((user) => ({
           id: user.id,
           name: user.name,
@@ -337,7 +368,6 @@ export async function GET() {
           timeAgo: getTimeAgo(user.createdAt),
         })),
 
-        // Upcoming Events
         upcomingEvents: upcomingEventsList.map((event) => {
           const totalAttendees =
             event._count.registrations + event._count.customerRegistrations;
@@ -354,25 +384,33 @@ export async function GET() {
           };
         }),
 
-        // Recent Memberships
-        recentMemberships: recentMemberships.map((membership) => ({
-          id: membership.id,
-          user: {
-            id: membership.user.id,
-            name: membership.user.name,
-            email: membership.user.email,
-          },
-          plan: {
-            name: membership.plan?.name || "N/A",
-            type: membership.plan?.type || "N/A",
-            price: membership.plan?.price || 0,
-          },
-          status: membership.status,
-          startDate: membership.startDate.toISOString(),
-          endDate: membership.endDate?.toISOString() || null,
-          createdAt: membership.createdAt.toISOString(),
-          timeAgo: getTimeAgo(membership.createdAt),
+        upcomingBirthdays: upcomingBirthdays.map((user) => ({
+          id: user.id,
+          name: user.name,
+          company: user.company,
+          birthdate: user.birthdate,
+          daysUntil: user.daysUntil,
+          formattedDate: formatBirthdayDate(user.nextBirthday),
         })),
+
+        expiringMemberships: expiringMemberships.map((membership) => {
+          const daysLeft = membership.endDate
+            ? differenceInDays(membership.endDate, startOfDay(now))
+            : 0;
+
+          return {
+            id: membership.id,
+            userId: membership.user.id,
+            userName: membership.user.name,
+            userEmail: membership.user.email,
+            planName: membership.plan?.name || "N/A",
+            endDate: membership.endDate?.toISOString() || null,
+            daysLeft,
+            formattedEndDate: membership.endDate
+              ? formatDate(membership.endDate)
+              : "N/A",
+          };
+        }),
       },
     });
   } catch (error) {
@@ -384,7 +422,49 @@ export async function GET() {
   }
 }
 
-// ✅ Helper function to calculate time ago
+// ✅ Helper: Get next birthday occurrence
+function getNextBirthday(birthdate: Date): Date {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  let nextBirthday = new Date(
+    currentYear,
+    birthdate.getMonth(),
+    birthdate.getDate()
+  );
+
+  if (nextBirthday < now) {
+    nextBirthday = new Date(
+      currentYear + 1,
+      birthdate.getMonth(),
+      birthdate.getDate()
+    );
+  }
+
+  return nextBirthday;
+}
+
+// ✅ Helper: Format birthday date
+function formatBirthdayDate(date: Date): string {
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  
+  return `${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+// ✅ Helper: Format date
+function formatDate(date: Date): string {
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
+// ✅ Helper: Calculate time ago
 function getTimeAgo(date: Date): string {
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -402,12 +482,11 @@ function getTimeAgo(date: Date): string {
   return `${years} year${years > 1 ? "s" : ""} ago`;
 }
 
-// ✅ Helper function to format event date
+// ✅ Helper: Format event date
 function formatEventDate(date: Date, startTime: string | null): string {
   const now = new Date();
   const eventDate = new Date(date);
 
-  // Check if today
   if (
     eventDate.getDate() === now.getDate() &&
     eventDate.getMonth() === now.getMonth() &&
@@ -416,7 +495,6 @@ function formatEventDate(date: Date, startTime: string | null): string {
     return `Today${startTime ? `, ${startTime}` : ""}`;
   }
 
-  // Check if tomorrow
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   if (
@@ -427,20 +505,9 @@ function formatEventDate(date: Date, startTime: string | null): string {
     return `Tomorrow${startTime ? `, ${startTime}` : ""}`;
   }
 
-  // Otherwise, format as "MMM DD, YYYY"
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
   const month = months[eventDate.getMonth()];
   const day = eventDate.getDate();
