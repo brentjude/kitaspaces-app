@@ -3,10 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { 
-  UserIcon, 
-  ArrowRightOnRectangleIcon, 
-  Cog6ToothIcon, 
+import {
+  UserIcon,
+  ArrowRightOnRectangleIcon,
+  Cog6ToothIcon,
   HomeIcon,
   CalendarIcon,
   PresentationChartBarIcon,
@@ -14,6 +14,7 @@ import {
   XMarkIcon,
   SparklesIcon,
   EnvelopeIcon,
+  CreditCardIcon,
 } from "@heroicons/react/24/outline";
 import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
@@ -42,10 +43,16 @@ export default function PublicHeader({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target as Node)
+      ) {
         setShowMobileMenu(false);
       }
     };
@@ -64,27 +71,27 @@ export default function PublicHeader({
     if (onLoginClick) {
       onLoginClick();
     } else {
-      router.push('/auth/signin');
+      router.push("/auth/signin");
     }
   };
 
   const handleDashboardClick = () => {
     setShowDropdown(false);
     setShowMobileMenu(false);
-    if (currentUser?.role === 'ADMIN') {
-      router.push('/admin');
+    if (currentUser?.role === "ADMIN") {
+      router.push("/admin");
     } else {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   };
 
   const handleSettingsClick = () => {
     setShowDropdown(false);
     setShowMobileMenu(false);
-    if (currentUser?.role === 'ADMIN') {
-      router.push('/admin/settings');
+    if (currentUser?.role === "ADMIN") {
+      router.push("/admin/settings");
     } else {
-      router.push('/user/settings');
+      router.push("/user/settings");
     }
   };
 
@@ -92,19 +99,18 @@ export default function PublicHeader({
     setShowDropdown(false);
     setShowMobileMenu(false);
     await signOut({ redirect: false });
-    router.push('/');
+    router.push("/");
     router.refresh();
   };
 
   const isActive = (path: string) => {
-    // For homepage, only match exact path
-    if (path === '/') {
-      return pathname === '/';
+    if (path === "/") {
+      return pathname === "/";
     }
-    return pathname === path || pathname?.startsWith(path + '/');
+    return pathname === path || pathname?.startsWith(path + "/");
   };
 
-  // Only show for guests (not logged in)
+  // Only show "Be a KITA Member" CTA for guests (not logged in)
   const shouldShowMembershipButton = !currentUser;
 
   return (
@@ -112,10 +118,10 @@ export default function PublicHeader({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 shrink-0">
-          <Image 
-            src="/logo/kita-primary-logo.png" 
-            alt="KitaSpaces Logo" 
-            width={120} 
+          <Image
+            src="/logo/kita-primary-logo.png"
+            alt="KitaSpaces Logo"
+            width={120}
             height={60}
           />
         </Link>
@@ -125,9 +131,9 @@ export default function PublicHeader({
           <Link
             href="/"
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive('/')
-                ? 'bg-primary/10 text-primary'
-                : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground'
+              isActive("/")
+                ? "bg-primary/10 text-primary"
+                : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
             }`}
           >
             <HomeIcon className="w-4 h-4" />
@@ -137,21 +143,21 @@ export default function PublicHeader({
           <Link
             href="/events"
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive('/events')
-                ? 'bg-primary/10 text-primary'
-                : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground'
+              isActive("/events")
+                ? "bg-primary/10 text-primary"
+                : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
             }`}
           >
             <CalendarIcon className="w-4 h-4" />
             Events
           </Link>
-          
+
           <Link
             href="/meeting-rooms"
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive('/meeting-rooms')
-                ? 'bg-primary/10 text-primary'
-                : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground'
+              isActive("/meeting-rooms")
+                ? "bg-primary/10 text-primary"
+                : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
             }`}
           >
             <PresentationChartBarIcon className="w-4 h-4" />
@@ -159,11 +165,23 @@ export default function PublicHeader({
           </Link>
 
           <Link
+            href="/member-registration"
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              isActive("/member-registration")
+                ? "bg-primary/10 text-primary"
+                : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
+            }`}
+          >
+            <CreditCardIcon className="w-4 h-4" />
+            Plans
+          </Link>
+
+          <Link
             href="/contact"
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive('/contact')
-                ? 'bg-primary/10 text-primary'
-                : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground'
+              isActive("/contact")
+                ? "bg-primary/10 text-primary"
+                : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
             }`}
           >
             <EnvelopeIcon className="w-4 h-4" />
@@ -184,12 +202,17 @@ export default function PublicHeader({
                   <UserIcon className="w-4 h-4 mr-2" />
                   <span>{currentUser.name}</span>
                   <svg
-                    className={`ml-2 w-4 h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                    className={`ml-2 w-4 h-4 transition-transform ${showDropdown ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
 
@@ -206,7 +229,11 @@ export default function PublicHeader({
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                          {currentUser.role === 'ADMIN' ? 'Admin' : currentUser.isMember ? 'Member' : 'User'}
+                          {currentUser.role === "ADMIN"
+                            ? "Admin"
+                            : currentUser.isMember
+                              ? "Member"
+                              : "User"}
                         </span>
                         {currentUser.isMember && (
                           <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700">
@@ -222,7 +249,7 @@ export default function PublicHeader({
                         onClick={handleDashboardClick}
                         className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        {currentUser.role === 'ADMIN' ? (
+                        {currentUser.role === "ADMIN" ? (
                           <>
                             <HomeIcon className="w-4 h-4 mr-3 text-gray-400" />
                             Admin Dashboard
@@ -271,7 +298,7 @@ export default function PublicHeader({
                   )}
                 </button>
 
-                {/* Mobile Dropdown Menu */}
+                {/* Mobile Dropdown Menu - Logged In */}
                 {showMobileMenu && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-[calc(100vh-5rem)] overflow-y-auto">
                     {/* User Info Section */}
@@ -291,7 +318,11 @@ export default function PublicHeader({
                       </div>
                       <div className="flex items-center gap-2 mt-2">
                         <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                          {currentUser.role === 'ADMIN' ? 'Admin' : currentUser.isMember ? 'Member' : 'User'}
+                          {currentUser.role === "ADMIN"
+                            ? "Admin"
+                            : currentUser.isMember
+                              ? "Member"
+                              : "User"}
                         </span>
                         {currentUser.isMember && (
                           <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700">
@@ -306,9 +337,9 @@ export default function PublicHeader({
                       <Link
                         href="/"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive('/')
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-700 hover:bg-gray-50'
+                          isActive("/")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <HomeIcon className="w-5 h-5" />
@@ -318,9 +349,9 @@ export default function PublicHeader({
                       <Link
                         href="/events"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive('/events')
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-700 hover:bg-gray-50'
+                          isActive("/events")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <CalendarIcon className="w-5 h-5" />
@@ -330,9 +361,9 @@ export default function PublicHeader({
                       <Link
                         href="/meeting-rooms"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive('/meeting-rooms')
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-700 hover:bg-gray-50'
+                          isActive("/meeting-rooms")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <PresentationChartBarIcon className="w-5 h-5" />
@@ -340,11 +371,23 @@ export default function PublicHeader({
                       </Link>
 
                       <Link
+                        href="/member-registration"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                          isActive("/member-registration")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <CreditCardIcon className="w-5 h-5" />
+                        Plans
+                      </Link>
+
+                      <Link
                         href="/contact"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive('/contact')
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-700 hover:bg-gray-50'
+                          isActive("/contact")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <EnvelopeIcon className="w-5 h-5" />
@@ -352,12 +395,12 @@ export default function PublicHeader({
                       </Link>
 
                       <div className="border-t border-gray-100 my-2" />
-                      
+
                       <button
                         onClick={handleDashboardClick}
                         className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        {currentUser.role === 'ADMIN' ? (
+                        {currentUser.role === "ADMIN" ? (
                           <>
                             <HomeIcon className="w-5 h-5" />
                             Admin Dashboard
@@ -429,7 +472,7 @@ export default function PublicHeader({
                   )}
                 </button>
 
-                {/* Mobile Dropdown Menu for Non-logged in users */}
+                {/* Mobile Dropdown Menu - Non-logged in */}
                 {showMobileMenu && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* Navigation Links */}
@@ -437,9 +480,9 @@ export default function PublicHeader({
                       <Link
                         href="/"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive('/')
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-700 hover:bg-gray-50'
+                          isActive("/")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <HomeIcon className="w-5 h-5" />
@@ -449,9 +492,9 @@ export default function PublicHeader({
                       <Link
                         href="/events"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive('/events')
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-700 hover:bg-gray-50'
+                          isActive("/events")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <CalendarIcon className="w-5 h-5" />
@@ -461,9 +504,9 @@ export default function PublicHeader({
                       <Link
                         href="/meeting-rooms"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive('/meeting-rooms')
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-700 hover:bg-gray-50'
+                          isActive("/meeting-rooms")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <PresentationChartBarIcon className="w-5 h-5" />
@@ -471,29 +514,42 @@ export default function PublicHeader({
                       </Link>
 
                       <Link
+                        href="/member-registration"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                          isActive("/member-registration")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <CreditCardIcon className="w-5 h-5" />
+                        Plans
+                      </Link>
+
+                      <Link
                         href="/contact"
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive('/contact')
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-700 hover:bg-gray-50'
+                          isActive("/contact")
+                            ? "text-primary bg-primary/5"
+                            : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <EnvelopeIcon className="w-5 h-5" />
                         Contact
                       </Link>
 
-                      {/* Become a Member for guests - Mobile */}
-                      <Link
-                        href="/member-registration"
-                        className={`flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${
-                          isActive('/member-registration')
-                            ? 'text-white bg-primary'
-                            : 'text-primary bg-primary/5 hover:bg-primary/10'
-                        }`}
-                      >
-                        <SparklesIcon className="w-5 h-5" />
-                        Be a KITA Member
-                      </Link>
+                      {/* Become a Member CTA for guests - Mobile */}
+                      {shouldShowMembershipButton && (
+                        <>
+                          <div className="border-t border-gray-100 my-2" />
+                          <Link
+                            href="/member-registration"
+                            className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
+                          >
+                            <SparklesIcon className="w-5 h-5" />
+                            Be a KITA Member
+                          </Link>
+                        </>
+                      )}
                     </div>
 
                     {/* Login Action */}

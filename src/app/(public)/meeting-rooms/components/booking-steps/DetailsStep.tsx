@@ -1,48 +1,36 @@
-'use client';
+"use client";
 
-import { 
-  UserIcon, 
-  EnvelopeIcon, 
-  PhoneIcon, 
+import { MeetingRoom } from "@/types/database";
+import {
   BuildingOfficeIcon,
+  UserIcon,
   BriefcaseIcon,
+  EnvelopeIcon,
+  PhoneIcon,
+  PresentationChartBarIcon,
   UsersIcon,
-  DocumentTextIcon,
-  ChatBubbleLeftRightIcon,
-} from '@heroicons/react/24/outline';
-import type { MeetingRoom } from '@/types/database';
+} from "@heroicons/react/24/outline";
+
+interface GuestDetails {
+  company: string;
+  name: string;
+  designation: string;
+  email: string;
+  mobile: string;
+  purpose: string;
+  numberOfAttendees: number;
+}
 
 interface DetailsStepProps {
   room: MeetingRoom;
   durationHours: number;
   bookingDate: string;
-  guestDetails: {
-    company: string;
-    name: string;
-    designation: string;
-    email: string;
-    mobile: string;
-    purpose: string;
-    numberOfAttendees: number;
-  };
+  guestDetails: GuestDetails;
   agreedToTerms: boolean;
-  onDetailsChange: (details: DetailsStepProps['guestDetails']) => void;
+  onDetailsChange: (details: GuestDetails) => void;
   onTermsChange: (agreed: boolean) => void;
   isLoggedIn: boolean;
 }
-
-// Purpose options for dropdown
-const PURPOSE_OPTIONS = [
-  { value: 'MEETING', label: 'Meeting' },
-  { value: 'TRAINING', label: 'Training Session' },
-  { value: 'INTERVIEW', label: 'Job Interview' },
-  { value: 'WORKSHOP', label: 'Workshop' },
-  { value: 'PRESENTATION', label: 'Presentation' },
-  { value: 'BRAINSTORMING', label: 'Brainstorming Session' },
-  { value: 'CLIENT_MEETING', label: 'Client Meeting' },
-  { value: 'TEAM_MEETING', label: 'Team Meeting' },
-  { value: 'OTHER', label: 'Other' },
-];
 
 export default function DetailsStep({
   room,
@@ -54,282 +42,224 @@ export default function DetailsStep({
   onTermsChange,
   isLoggedIn,
 }: DetailsStepProps) {
-  const handleInputChange = (field: keyof typeof guestDetails, value: string | number) => {
-    onDetailsChange({
-      ...guestDetails,
-      [field]: value,
-    });
-  };
-
   const totalAmount = room.hourlyRate * durationHours;
 
-  const formatDuration = (hours: number): string => {
-    if (hours === 1) return '1 hour';
-    if (hours % 1 === 0) return `${hours} hours`;
-    return `${Math.floor(hours)} hour${Math.floor(hours) > 1 ? 's' : ''} 30 mins`;
-  };
-
-  // Generate attendee options based on room capacity
-  const getAttendeeOptions = (): number[] => {
-    const options: number[] = [];
-    for (let i = 1; i <= room.capacity; i++) {
-      options.push(i);
-    }
-    return options;
+  const handleChange = (field: keyof GuestDetails, value: string | number) => {
+    onDetailsChange({ ...guestDetails, [field]: value });
   };
 
   return (
-    <div className="relative space-y-6">
-      {/* Header */}
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-1">Booking Details</h3>
-        <p className="text-sm text-foreground/60">
-          Please provide your contact information
-        </p>
+    <div className="space-y-6">
+      {/* Booking Summary */}
+      <div className="bg-linear-to-br from-primary/5 to-primary/10 p-5 rounded-xl border border-primary/20">
+        <h3 className="text-sm font-bold text-foreground/70 mb-3 uppercase tracking-wide">
+          Booking Summary
+        </h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between items-center">
+            <span className="text-foreground/60">Room:</span>
+            <span className="font-semibold text-foreground">{room.name}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-foreground/60">Date:</span>
+            <span className="font-semibold text-foreground">
+              {new Date(bookingDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-foreground/60">Duration:</span>
+            <span className="font-semibold text-foreground">
+              {durationHours} hour{durationHours > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t border-primary/20">
+            <span className="text-foreground/80 font-medium">
+              Total Amount:
+            </span>
+            <span className="font-bold text-lg text-primary">
+              ₱{totalAmount.toLocaleString()}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Two Column Form Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Company */}
+      {/* Guest Details Form */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-bold text-foreground/70 uppercase tracking-wide">
+          Contact Information
+        </h3>
+
+        {/* Company Name - Required */}
         <div>
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            <div className="flex items-center gap-2">
-              <BuildingOfficeIcon className="w-4 h-4" />
-              Company
-            </div>
+          <label className="block text-sm font-medium text-foreground/80 mb-2">
+            Company/Organization <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            value={guestDetails.company}
-            onChange={(e) => handleInputChange('company', e.target.value)}
-            placeholder="Your company name"
-            className="w-full px-4 py-3 border border-foreground/20 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
-          />
+          <div className="relative">
+            <BuildingOfficeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
+            <input
+              type="text"
+              value={guestDetails.company}
+              onChange={(e) => handleChange("company", e.target.value)}
+              placeholder="Enter company or organization name"
+              required
+              className="w-full pl-11 pr-4 py-2.5 border border-foreground/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-foreground/30"
+            />
+          </div>
         </div>
 
-        {/* Designation */}
+        {/* Contact Name - Required */}
         <div>
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            <div className="flex items-center gap-2">
-              <BriefcaseIcon className="w-4 h-4" />
-              Designation
-            </div>
+          <label className="block text-sm font-medium text-foreground/80 mb-2">
+            Contact Name <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            value={guestDetails.designation}
-            onChange={(e) => handleInputChange('designation', e.target.value)}
-            placeholder="Job title or position"
-            className="w-full px-4 py-3 border border-foreground/20 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
-          />
+          <div className="relative">
+            <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
+            <input
+              type="text"
+              value={guestDetails.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+              placeholder="Enter your full name"
+              required
+              disabled={isLoggedIn}
+              className="w-full pl-11 pr-4 py-2.5 border border-foreground/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:bg-foreground/5 disabled:cursor-not-allowed placeholder:text-foreground/30"
+            />
+          </div>
         </div>
 
-        {/* Name - Full Width on Mobile */}
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            <div className="flex items-center gap-2">
-              <UserIcon className="w-4 h-4" />
-              Full Name <span className="text-red-500">*</span>
-            </div>
+        {/* Designation - Optional */}
+        <div>
+          <label className="block text-sm font-medium text-foreground/80 mb-2">
+            Designation/Position
           </label>
-          <input
-            type="text"
-            value={guestDetails.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="Your full name"
-            required
-            disabled={isLoggedIn}
-            className="w-full px-4 py-3 border border-foreground/20 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none disabled:bg-foreground/5 disabled:cursor-not-allowed text-sm"
-          />
+          <div className="relative">
+            <BriefcaseIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
+            <input
+              type="text"
+              value={guestDetails.designation}
+              onChange={(e) => handleChange("designation", e.target.value)}
+              placeholder="e.g., Manager, Team Lead (optional)"
+              className="w-full pl-11 pr-4 py-2.5 border border-foreground/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-foreground/30"
+            />
+          </div>
         </div>
 
-        {/* Email */}
+        {/* Email - Required */}
         <div>
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            <div className="flex items-center gap-2">
-              <EnvelopeIcon className="w-4 h-4" />
-              Email Address <span className="text-red-500">*</span>
-            </div>
+          <label className="block text-sm font-medium text-foreground/80 mb-2">
+            Email Address <span className="text-red-500">*</span>
           </label>
-          <input
-            type="email"
-            value={guestDetails.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            placeholder="your.email@example.com"
-            required
-            disabled={isLoggedIn}
-            className="w-full px-4 py-3 border border-foreground/20 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none disabled:bg-foreground/5 disabled:cursor-not-allowed text-sm"
-          />
+          <div className="relative">
+            <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
+            <input
+              type="email"
+              value={guestDetails.email}
+              onChange={(e) => handleChange("email", e.target.value)}
+              placeholder="your.email@company.com"
+              required
+              disabled={isLoggedIn}
+              className="w-full pl-11 pr-4 py-2.5 border border-foreground/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:bg-foreground/5 disabled:cursor-not-allowed placeholder:text-foreground/30"
+            />
+          </div>
         </div>
 
-        {/* Mobile Number */}
+        {/* Mobile Number - Required */}
         <div>
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            <div className="flex items-center gap-2">
-              <PhoneIcon className="w-4 h-4" />
-              Mobile Number <span className="text-red-500">*</span>
-            </div>
+          <label className="block text-sm font-medium text-foreground/80 mb-2">
+            Mobile Number <span className="text-red-500">*</span>
           </label>
-          <input
-            type="tel"
-            value={guestDetails.mobile}
-            onChange={(e) => handleInputChange('mobile', e.target.value)}
-            placeholder="+63 912 345 6789"
-            required
-            className="w-full px-4 py-3 border border-foreground/20 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
-          />
+          <div className="relative">
+            <PhoneIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
+            <input
+              type="tel"
+              value={guestDetails.mobile}
+              onChange={(e) => handleChange("mobile", e.target.value)}
+              placeholder="09XX XXX XXXX"
+              required
+              className="w-full pl-11 pr-4 py-2.5 border border-foreground/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-foreground/30"
+            />
+          </div>
         </div>
 
-        {/* Purpose Dropdown */}
+        {/* Purpose - Required */}
         <div>
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            <div className="flex items-center gap-2">
-              <ChatBubbleLeftRightIcon className="w-4 h-4" />
-              Purpose <span className="text-red-500">*</span>
-            </div>
+          <label className="block text-sm font-medium text-foreground/80 mb-2">
+            Purpose of Booking <span className="text-red-500">*</span>
           </label>
-          <select
-            value={guestDetails.purpose}
-            onChange={(e) => handleInputChange('purpose', e.target.value)}
-            required
-            className="w-full px-4 py-3 border border-foreground/20 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white text-sm"
-          >
-            <option value="">Select purpose</option>
-            {PURPOSE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <PresentationChartBarIcon className="absolute left-3 top-3 w-5 h-5 text-foreground/40" />
+            <textarea
+              value={guestDetails.purpose}
+              onChange={(e) => handleChange("purpose", e.target.value)}
+              placeholder="Please describe the purpose of your booking"
+              rows={3}
+              required
+              className="w-full pl-11 pr-4 py-2.5 border border-foreground/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none placeholder:text-foreground/30"
+            />
+          </div>
         </div>
 
-        {/* Number of Attendees - Dropdown */}
+        {/* Number of Attendees - Required */}
         <div>
-          <label className="block text-sm font-medium text-foreground/70 mb-2">
-            <div className="flex items-center gap-2">
-              <UsersIcon className="w-4 h-4" />
-              Number of Attendees <span className="text-red-500">*</span>
-            </div>
+          <label className="block text-sm font-medium text-foreground/80 mb-2">
+            Number of Attendees <span className="text-red-500">*</span>
           </label>
-          <select
-            value={guestDetails.numberOfAttendees}
-            onChange={(e) => handleInputChange('numberOfAttendees', parseInt(e.target.value))}
-            required
-            className="w-full px-4 py-3 border border-foreground/20 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white text-sm"
-          >
-            {getAttendeeOptions().map((count) => (
-              <option key={count} value={count}>
-                {count} {count === 1 ? 'person' : 'people'}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-foreground/50 mt-1 flex items-center gap-1">
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-            Room capacity: {room.capacity} people
+          <div className="relative">
+            <UsersIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
+            <input
+              type="number"
+              min="1"
+              max={room.capacity}
+              value={guestDetails.numberOfAttendees}
+              onChange={(e) =>
+                handleChange("numberOfAttendees", parseInt(e.target.value) || 1)
+              }
+              required
+              className="w-full pl-11 pr-4 py-2.5 border border-foreground/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            />
+          </div>
+          <p className="mt-1.5 text-xs text-foreground/50">
+            Max capacity: {room.capacity} people
           </p>
         </div>
       </div>
 
-      {/* Booking Summary */}
-      <div className="bg-linear-to-br from-primary/5 to-orange-50 rounded-xl p-4 border border-primary/20 shadow-sm">
-        <h4 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-          <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Booking Summary
-        </h4>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-foreground/60">Room:</span>
-            <span className="font-medium text-foreground">{room.name}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-foreground/60">Date:</span>
-            <span className="font-medium text-foreground">
-              {new Date(bookingDate).toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-foreground/60">Duration:</span>
-            <span className="font-medium text-foreground">{formatDuration(durationHours)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-foreground/60">Attendees:</span>
-            <span className="font-medium text-foreground">
-              {guestDetails.numberOfAttendees} {guestDetails.numberOfAttendees === 1 ? 'person' : 'people'}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-foreground/60">Hourly Rate:</span>
-            <span className="font-medium text-foreground">₱{room.hourlyRate.toFixed(2)}</span>
-          </div>
-          <div className="pt-2 border-t border-primary/20 flex justify-between items-center">
-            <span className="font-bold text-foreground">Total Amount:</span>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-primary">₱{totalAmount.toFixed(2)}</div>
-              <div className="text-xs text-foreground/50">
-                {durationHours} × ₱{room.hourlyRate.toFixed(2)}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Terms and Conditions */}
-      <div className="border rounded-lg p-4 bg-gray-50 border-foreground/20">
-        <h3 className="text-sm font-bold text-foreground mb-3 flex items-center">
-          <DocumentTextIcon className="w-4 h-4 mr-2 text-primary" />
-          Terms & Conditions
-        </h3>
-
-        <div className="space-y-2 mb-4">
-          <div className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-            <p className="text-xs text-foreground/70">
-              <span className="font-semibold">Final Booking:</span> Your booking is final upon confirmation
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-            <p className="text-xs text-foreground/70">
-              <span className="font-semibold">Cancellation Policy:</span> Cancellations should be made at least 2 days in advance
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-            <p className="text-xs text-foreground/70">
-              <span className="font-semibold">Changes:</span> Any changes to your booking must be communicated with our staff
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-            <p className="text-xs text-foreground/70">
-              <span className="font-semibold">Payment:</span> Payment can be made before or after your booked session
-            </p>
-          </div>
-        </div>
-
-        {/* Checkbox */}
+      <div className="pt-4 border-t border-foreground/10">
         <label className="flex items-start gap-3 cursor-pointer group">
           <input
             type="checkbox"
             checked={agreedToTerms}
             onChange={(e) => onTermsChange(e.target.checked)}
-            className="w-4 h-4 mt-0.5 text-primary border-foreground/30 rounded focus:ring-2 focus:ring-primary/20 cursor-pointer"
+            required
+            className="mt-1 w-4 h-4 text-primary border-foreground/30 rounded focus:ring-2 focus:ring-primary/20 cursor-pointer"
           />
-          <span className="text-sm font-medium text-foreground select-none">
-            I agree to these terms and conditions
+          <span className="text-sm text-foreground/70 group-hover:text-foreground transition-colors">
+            I agree to the{" "}
+            <a
+              href="/terms"
+              className="text-primary hover:underline font-medium"
+            >
+              Terms and Conditions
+            </a>{" "}
+            and confirm that this booking is final and all details provided are
+            accurate. I understand that cancellations or changes may be subject
+            to the cancellation policy.
           </span>
         </label>
       </div>
 
+      {/* Help Text */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-xs text-blue-800">
+          <strong>Note:</strong> A confirmation email will be sent to the
+          provided email address. Please ensure all details are correct before
+          proceeding.
+        </p>
+      </div>
     </div>
   );
 }
