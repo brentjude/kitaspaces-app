@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   EnvelopeIcon,
   PhoneIcon,
@@ -8,15 +9,19 @@ import {
   ShieldCheckIcon,
   CreditCardIcon,
   IdentificationIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { CustomerDetailInfo } from "@/types/customer-detail";
 import { format } from "date-fns";
+import RenewMembershipModal from "./RenewMembershipModal";
 
 interface CustomerInfoCardProps {
   customer: CustomerDetailInfo;
+  onRenewSuccess: () => void;
 }
 
-export default function CustomerInfoCard({ customer }: CustomerInfoCardProps) {
+export default function CustomerInfoCard({ customer, onRenewSuccess }: CustomerInfoCardProps) {
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
   const getRoleBadgeStyle = (role: string) => {
     switch (role.toLowerCase()) {
       case "admin":
@@ -38,10 +43,17 @@ export default function CustomerInfoCard({ customer }: CustomerInfoCardProps) {
         return "text-red-600";
       case "PENDING":
         return "text-yellow-600";
+      case "INACTIVE":
+        return "text-gray-500";
       default:
-        return "text-gray-600";
+        return "text-gray-500";
     }
   };
+
+  const canRenew =
+    customer.isRegistered &&
+    customer.membershipPlanId &&
+    (!customer.membershipStatus || customer.membershipStatus === 'EXPIRED' || customer.membershipStatus === 'INACTIVE');
 
   // ✅ Helper function to check if ID is in user format (YYYYNNN)
   const isUserIdFormat = (id: string) => {
@@ -56,6 +68,7 @@ export default function CustomerInfoCard({ customer }: CustomerInfoCardProps) {
     : (customer.userId || null); // For guest customers linked to users (or null if not linked)
 
   return (
+    <>
     <div className="bg-white rounded-xl shadow-sm border border-foreground/10 p-6">
       <div className="flex flex-col items-center text-center">
         {/* Avatar */}
@@ -144,31 +157,44 @@ export default function CustomerInfoCard({ customer }: CustomerInfoCardProps) {
           <h4 className="text-xs font-bold text-foreground/60 uppercase tracking-wider mb-3">
             Membership
           </h4>
-          <div className="bg-primary/10 rounded-lg p-4 border border-primary/20 flex justify-between items-center">
-            <div className="flex-1 min-w-0 mr-3">
-              <p className="font-bold text-foreground text-sm truncate">
-                {customer.membershipType}
-              </p>
-              <p className="text-xs text-foreground/60 mt-0.5">
-                Status:{" "}
-                <span
-                  className={`capitalize font-medium ${getMembershipStatusColor(
-                    customer.membershipStatus
-                  )}`}
-                >
-                  {customer.membershipStatus}
-                </span>
-              </p>
-              {customer.membershipEndDate && (
-                <p className="text-xs text-foreground/60 mt-1">
-                  Expires:{" "}
-                  {format(new Date(customer.membershipEndDate), "MMM dd, yyyy")}
+          <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
+            <div className="flex justify-between items-start">
+              <div className="flex-1 min-w-0 mr-3">
+                <p className="font-bold text-foreground text-sm truncate">
+                  {customer.membershipType}
                 </p>
-              )}
+                <p className="text-xs text-foreground/60 mt-0.5">
+                  Status:{" "}
+                  <span
+                    className={`capitalize font-medium ${getMembershipStatusColor(
+                      customer.membershipStatus
+                    )}`}
+                  >
+                    {customer.membershipStatus?.toLowerCase() ?? "—"}
+                  </span>
+                </p>
+                {customer.membershipEndDate && (
+                  <p className="text-xs text-foreground/60 mt-1">
+                    {customer.membershipStatus === "EXPIRED"
+                      ? "Expired: "
+                      : "Expires: "}
+                    {format(new Date(customer.membershipEndDate), "MMM dd, yyyy")}
+                  </p>
+                )}
+              </div>
+              <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-primary shadow-sm flex-shrink-0">
+                <CreditCardIcon className="w-5 h-5" />
+              </div>
             </div>
-            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-primary shadow-sm flex-shrink-0">
-              <CreditCardIcon className="w-5 h-5" />
-            </div>
+            {canRenew && (
+              <button
+                onClick={() => setIsRenewModalOpen(true)}
+                className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                <ArrowPathIcon className="w-3.5 h-3.5" />
+                Renew Membership
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -200,5 +226,22 @@ export default function CustomerInfoCard({ customer }: CustomerInfoCardProps) {
         </div>
       </div>
     </div>
+
+    {canRenew && customer.membershipPlanId && customer.membershipPlanPrice !== null && customer.membershipPlanDurationDays !== null && (
+      <RenewMembershipModal
+        isOpen={isRenewModalOpen}
+        userId={customer.id}
+        planId={customer.membershipPlanId}
+        planName={customer.membershipType ?? ''}
+        planPrice={customer.membershipPlanPrice}
+        planDurationDays={customer.membershipPlanDurationDays}
+        onClose={() => setIsRenewModalOpen(false)}
+        onSuccess={() => {
+          setIsRenewModalOpen(false);
+          onRenewSuccess();
+        }}
+      />
+    )}
+  </>
   );
 }

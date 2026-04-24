@@ -40,8 +40,9 @@ export default function MembersList({ members, onViewMember, onAddMember }: Memb
       )
   );
 
-  const getActiveMembership = (member: MemberWithDetails) => {
-    return member.memberships.find((m) => m.status === "ACTIVE");
+  const getMostRecentMembership = (member: MemberWithDetails) => {
+    // Return the most recent membership by startDate regardless of status
+    return member.memberships.length > 0 ? member.memberships[0] : undefined;
   };
 
   const getMembershipStatusBadge = (status: string) => {
@@ -194,7 +195,8 @@ export default function MembersList({ members, onViewMember, onAddMember }: Memb
             </thead>
             <tbody className="bg-white divide-y divide-foreground/5">
               {filteredMembers.map((member) => {
-                const activeMembership = getActiveMembership(member);
+                const recentMembership = getMostRecentMembership(member);
+                const activeMembership = member.memberships.find((m) => m.status === "ACTIVE");
                 return (
                   <tr
                     key={member.id}
@@ -218,13 +220,13 @@ export default function MembersList({ members, onViewMember, onAddMember }: Memb
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {activeMembership?.plan ? (
+                      {recentMembership?.plan ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                          {activeMembership.plan.name}
+                          {recentMembership.plan.name}
                         </span>
                       ) : (
                         <span className="text-xs text-foreground/40">
-                          No active plan
+                          No plan
                         </span>
                       )}
                     </td>
@@ -241,8 +243,8 @@ export default function MembersList({ members, onViewMember, onAddMember }: Memb
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {activeMembership
-                        ? getMembershipStatusBadge(activeMembership.status)
+                      {recentMembership
+                        ? getMembershipStatusBadge(recentMembership.status)
                         : getMembershipStatusBadge("INACTIVE")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
