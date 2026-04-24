@@ -15,6 +15,7 @@ import MyTickets from "./components/MyTickets";
 import RedemptionEvents from "./components/RedemptionEvents";
 import RedemptionPerks from "./components/RedemptionPerks";
 import PastEvents from "./components/PastEvents";
+import RenewMembershipModal from "./components/RenewMembershipModal";
 import {
   GiftIcon,
   TicketIcon,
@@ -42,6 +43,7 @@ export default function UserDashboardPage() {
   const [perksData, setPerksData] = useState<UserPerksData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -235,6 +237,13 @@ export default function UserDashboardPage() {
       <WelcomeSection
         data={dashboardData}
         upcomingEventsCount={upcomingEvents.length}
+        onRenewMembership={() => setIsRenewModalOpen(true)}
+      />
+
+      <RenewMembershipModal
+        isOpen={isRenewModalOpen}
+        onClose={() => setIsRenewModalOpen(false)}
+        onSuccess={loadDashboard}
       />
 
       {/* Tabs */}

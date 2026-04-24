@@ -10,11 +10,13 @@ import Link from "next/link";
 interface WelcomeSectionProps {
   data: DashboardData;
   upcomingEventsCount: number;
+  onRenewMembership: () => void;
 }
 
 export default function WelcomeSection({
   data,
   upcomingEventsCount,
+  onRenewMembership,
 }: WelcomeSectionProps) {
   const { user, membership, recentPayment } = data;
   const firstName = user.name.split(" ")[0];
@@ -84,7 +86,7 @@ export default function WelcomeSection({
           <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">
             Status
           </p>
-          {membership ? (
+          {membership && membership.status === 'ACTIVE' ? (
             <>
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -96,18 +98,28 @@ export default function WelcomeSection({
                 </p>
               )}
             </>
+          ) : membership && membership.status === 'PENDING' ? (
+            <>
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+                <p className="text-2xl font-bold text-gray-900">Pending</p>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Awaiting admin approval</p>
+            </>
           ) : (
             <>
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 bg-gray-400 rounded-full" />
-                <p className="text-2xl font-bold text-gray-900">Inactive</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {membership?.status === 'EXPIRED' ? 'Expired' : 'Inactive'}
+                </p>
               </div>
-              <Link
-                href="/membership"
-                className="text-sm text-primary hover:underline mt-1 inline-block"
+              <button
+                onClick={onRenewMembership}
+                className="mt-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors underline underline-offset-2"
               >
-                Get a membership →
-              </Link>
+                Renew membership →
+              </button>
             </>
           )}
         </div>
