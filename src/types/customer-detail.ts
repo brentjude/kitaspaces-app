@@ -17,6 +17,9 @@ export interface CustomerDetailInfo {
   membershipType: string | null;
   membershipStatus: string | null;
   membershipEndDate: Date | null;
+  membershipPlanId: string | null;
+  membershipPlanPrice: number | null;
+  membershipPlanDurationDays: number | null;
   stats: {
     totalEvents: number;
     totalPayments: number;

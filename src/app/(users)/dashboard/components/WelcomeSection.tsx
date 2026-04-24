@@ -98,7 +98,7 @@ export default function WelcomeSection({
                 </p>
               )}
             </>
-          ) : membership && membership.status === 'PENDING' ? (
+          ) : membership && membership.status === 'PENDING' && membership.paymentStatus !== 'FAILED' ? (
             <>
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
@@ -111,7 +111,7 @@ export default function WelcomeSection({
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 bg-gray-400 rounded-full" />
                 <p className="text-2xl font-bold text-gray-900">
-                  {membership?.status === 'EXPIRED' ? 'Expired' : 'Inactive'}
+                  {membership?.status === 'EXPIRED' ? 'Expired' : membership?.paymentStatus === 'FAILED' ? 'Payment Failed' : 'Inactive'}
                 </p>
               </div>
               <button

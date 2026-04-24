@@ -11,6 +11,7 @@ export interface DashboardData {
     startDate: Date;
     endDate: Date | null;
     planName: string | null;
+    paymentStatus: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | null;
   } | null;
   recentPayment: {
     amount: number;

@@ -25,7 +25,6 @@ export async function GET(
       where: { id },
       include: {
         memberships: {
-          where: { status: "ACTIVE" },
           include: { plan: true },
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -70,6 +69,9 @@ export async function GET(
         membershipType: activeMembership?.plan?.name || null,
         membershipStatus: activeMembership?.status || null,
         membershipEndDate: activeMembership?.endDate || null,
+        membershipPlanId: activeMembership?.planId || null,
+        membershipPlanPrice: activeMembership?.plan?.price ?? null,
+        membershipPlanDurationDays: activeMembership?.plan?.durationDays ?? null,
         stats: {
           totalEvents: user.eventRegistrations.length,
           totalPayments: user.payments.length,
@@ -123,6 +125,9 @@ export async function GET(
         membershipType: null,
         membershipStatus: null,
         membershipEndDate: null,
+        membershipPlanId: null,
+        membershipPlanPrice: null,
+        membershipPlanDurationDays: null,
         stats: {
           totalEvents: customer.eventRegistrations.length,
           totalPayments: customer.payments.length,

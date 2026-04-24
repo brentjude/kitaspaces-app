@@ -48,13 +48,22 @@ export async function POST(request: NextRequest) {
     // Check there is no already-pending membership for this user
     const existingPending = await prisma.membership.findFirst({
       where: { userId, status: 'PENDING' },
+      include: { payment: true },
     });
 
     if (existingPending) {
-      return NextResponse.json(
-        { success: false, error: 'You already have a pending membership renewal awaiting approval' },
-        { status: 400 }
-      );
+      // If the associated payment has FAILED, allow retry by cancelling the old record
+      if (existingPending.payment?.status === 'FAILED') {
+        await prisma.membership.update({
+          where: { id: existingPending.id },
+          data: { status: 'INACTIVE' },
+        });
+      } else {
+        return NextResponse.json(
+          { success: false, error: 'You already have a pending membership renewal awaiting approval' },
+          { status: 400 }
+        );
+      }
     }
 
     const paymentReference = await generatePaymentReference('membership');

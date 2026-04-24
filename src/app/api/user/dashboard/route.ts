@@ -16,23 +16,17 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // Fetch user with active membership
+    // Fetch user with most recent membership (any status)
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
         memberships: {
-          where: {
-            status: 'ACTIVE',
-            endDate: {
-              gte: new Date(),
-            },
-          },
           include: {
             plan: true,
             payment: true,
           },
           orderBy: {
-            endDate: 'desc',
+            createdAt: 'desc',
           },
           take: 1,
         },
@@ -58,6 +52,12 @@ export async function GET() {
     const activeMembership = user.memberships[0] || null;
     const recentPayment = user.payments[0] || null;
 
+    // Determine if membership is effectively active (ACTIVE status and not expired)
+    const isEffectivelyActive =
+      activeMembership?.status === 'ACTIVE' &&
+      activeMembership.endDate !== null &&
+      new Date(activeMembership.endDate) >= new Date();
+
     return NextResponse.json({
       success: true,
       data: {
@@ -69,12 +69,13 @@ export async function GET() {
         },
         membership: activeMembership ? {
           type: activeMembership.type,
-          status: activeMembership.status,
+          status: isEffectivelyActive ? 'ACTIVE' : activeMembership.status,
           startDate: activeMembership.startDate,
           endDate: activeMembership.endDate,
           planName: activeMembership.plan?.name || null,
+          paymentStatus: activeMembership.payment?.status ?? null,
         } : null,
-        recentPayment: recentPayment && !activeMembership ? {
+        recentPayment: recentPayment && !isEffectivelyActive ? {
           amount: recentPayment.amount,
           paidAt: recentPayment.paidAt,
           paymentMethod: recentPayment.paymentMethod,

@@ -243,7 +243,10 @@ export default function UserDashboardPage() {
       <RenewMembershipModal
         isOpen={isRenewModalOpen}
         onClose={() => setIsRenewModalOpen(false)}
-        onSuccess={loadDashboard}
+        onSuccess={() => {
+          setIsRenewModalOpen(false);
+          loadDashboard();
+        }}
       />
 
       {/* Tabs */}

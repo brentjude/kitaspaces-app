@@ -21,6 +21,7 @@ export default function CustomerDetailPage({
     activitiesPagination,
     loading,
     error,
+    refetch,
     setActivitiesPage,
   } = useCustomerDetail(resolvedParams.id);
 
@@ -79,7 +80,7 @@ export default function CustomerDetailPage({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column: Customer Info */}
             <div className="lg:col-span-1">
-              <CustomerInfoCard customer={customer} />
+              <CustomerInfoCard customer={customer} onRenewSuccess={refetch} />
             </div>
 
             {/* Right Column: Activity History */}

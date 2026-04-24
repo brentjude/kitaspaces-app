@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import {
   XMarkIcon,
-  CheckCircleIcon,
   CreditCardIcon,
   ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
@@ -58,8 +57,6 @@ export default function RenewMembershipModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [submittedReference, setSubmittedReference] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -102,8 +99,6 @@ export default function RenewMembershipModal({
     setProofImageUrl('');
     setNotes('');
     setError('');
-    setIsSuccess(false);
-    setSubmittedReference('');
     onClose();
   };
 
@@ -118,6 +113,11 @@ export default function RenewMembershipModal({
 
     if (paymentMethod !== 'CASH' && !referenceNumber.trim()) {
       setError('Please provide a payment reference number.');
+      return;
+    }
+
+    if ((paymentMethod === 'GCASH' || paymentMethod === 'BANK_TRANSFER') && !proofImageUrl) {
+      setError('Please upload proof of payment.');
       return;
     }
 
@@ -141,8 +141,6 @@ export default function RenewMembershipModal({
         throw new Error(result.error || 'Failed to submit renewal');
       }
 
-      setSubmittedReference(result.data.paymentReference);
-      setIsSuccess(true);
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit renewal');
@@ -177,29 +175,7 @@ export default function RenewMembershipModal({
           </button>
         </div>
 
-        {isSuccess ? (
-          /* Success State */
-          <div className="p-8 text-center space-y-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircleIcon className="w-9 h-9 text-green-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">Renewal Submitted!</h3>
-            <p className="text-gray-500 max-w-sm mx-auto">
-              Your membership renewal has been submitted and is awaiting admin approval. 
-              You will be notified once it is confirmed.
-            </p>
-            <div className="bg-gray-50 rounded-xl p-4 inline-block">
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Reference Number</p>
-              <p className="text-lg font-mono font-bold text-gray-900 mt-1">{submittedReference}</p>
-            </div>
-            <button
-              onClick={handleClose}
-              className="mt-4 px-6 py-2.5 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        ) : isLoadingPlans ? (
+        {isLoadingPlans ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
@@ -299,7 +275,7 @@ export default function RenewMembershipModal({
                   </p>
                 )}
                 {paymentSettings.qrCodeUrl && (
-                  <div className="relative w-32 h-32">
+                  <div className="relative w-80 h-80">
                     <Image
                       src={paymentSettings.qrCodeUrl}
                       alt="GCash QR Code"
@@ -347,7 +323,7 @@ export default function RenewMembershipModal({
             <ProofOfPaymentUpload
               value={proofImageUrl}
               onChange={setProofImageUrl}
-              label="Proof of Payment (Optional)"
+              label={paymentMethod === 'CASH' ? 'Proof of Payment (Optional)' : 'Proof of Payment *'}
               helpText="Upload a screenshot or photo of your payment confirmation"
             />
 
