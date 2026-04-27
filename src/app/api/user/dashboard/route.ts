@@ -69,7 +69,11 @@ export async function GET() {
         },
         membership: activeMembership ? {
           type: activeMembership.type,
-          status: isEffectivelyActive ? 'ACTIVE' : activeMembership.status,
+          status: isEffectivelyActive
+            ? 'ACTIVE'
+            : activeMembership.status === 'ACTIVE'
+              ? 'EXPIRED'
+              : activeMembership.status,
           startDate: activeMembership.startDate,
           endDate: activeMembership.endDate,
           planName: activeMembership.plan?.name || null,

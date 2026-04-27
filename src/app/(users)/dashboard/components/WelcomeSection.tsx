@@ -114,6 +114,11 @@ export default function WelcomeSection({
                   {membership?.status === 'EXPIRED' ? 'Expired' : membership?.paymentStatus === 'FAILED' ? 'Payment Failed' : 'Inactive'}
                 </p>
               </div>
+              {membership?.status === 'EXPIRED' && membership.endDate && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Expired {new Date(membership.endDate).toLocaleDateString()}
+                </p>
+              )}
               <button
                 onClick={onRenewMembership}
                 className="mt-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors underline underline-offset-2"
