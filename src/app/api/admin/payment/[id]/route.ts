@@ -6,7 +6,7 @@ import type { PaymentStatus } from "@/generated/prisma";
 import { MembershipPaymentApprovedEmail } from '@/app/components/email-template/MembershipPaymentApprovedEmail';
 import { render } from '@react-email/render';
 import { Resend } from 'resend';
-import { logAdminActivity } from '@/lib/activityLogger';
+import { logAdminActivity, logUserActivity } from '@/lib/activityLogger';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -207,58 +207,9 @@ export async function PATCH(
             console.info(
               `✅ Payment approval email sent to ${membership.user.email}`
             );
-
-            // Log email sent
-            await logAdminActivity(
-              session.user.id,
-              "ADMIN_PAYMENT_VERIFIED",
-              `Approved membership payment and sent confirmation email to ${membership.user.email}`,
-              {
-                referenceId: paymentId,
-                referenceType: "PAYMENT",
-                metadata: {
-                  paymentId,
-                  membershipId: membership.id,
-                  userId: membership.userId,
-                  userEmail: membership.user.email,
-                  planName: membership.plan.name,
-                  amount: existingPayment.amount,
-                  benefitsCount: benefits.length,
-                  emailSent: true,
-                },
-              }
-            );
           }
         } catch (emailError) {
           console.error("Failed to send payment approval email:", emailError);
-
-          // Log email failure
-          await logAdminActivity(
-            session.user.id,
-            "ADMIN_PAYMENT_VERIFIED",
-            `Approved membership payment but failed to send email to ${existingPayment.membership?.user?.email}`,
-            {
-              referenceId: paymentId,
-              referenceType: "PAYMENT",
-              metadata: {
-                paymentId,
-                membershipId: existingPayment.membership?.id,
-                userId: existingPayment.membership?.userId,
-                userEmail: existingPayment.membership?.user?.email,
-                error:
-                  emailError instanceof Error
-                    ? emailError.message
-                    : "Unknown error",
-                emailSent: false,
-              },
-              isSuccess: false,
-              errorMessage:
-                emailError instanceof Error
-                  ? emailError.message
-                  : "Failed to send email",
-            }
-          );
-
           // Don't fail the payment update if email fails
         }
       }
@@ -310,6 +261,33 @@ export async function PATCH(
             },
           }
         );
+
+        // Log payment completion on the user's activity log
+        if (status === "COMPLETED" && existingPayment.userId) {
+          await logUserActivity(
+            existingPayment.userId,
+            "PAYMENT_COMPLETED",
+            existingPayment.membership
+              ? `Membership payment approved for plan: ${existingPayment.membership.plan?.name ?? "Unknown Plan"}`
+              : existingPayment.eventRegistration
+                ? `Event registration payment approved: ${existingPayment.eventRegistration.event?.title ?? "Unknown Event"}`
+                : `Payment of ₱${existingPayment.amount} approved`,
+            {
+              referenceId: paymentId,
+              referenceType: "PAYMENT",
+              metadata: {
+                paymentId,
+                amount: existingPayment.amount,
+                paymentMethod: existingPayment.paymentMethod,
+                paymentReference: existingPayment.paymentReference,
+                membershipId: existingPayment.membership?.id ?? null,
+                planName: existingPayment.membership?.plan?.name ?? null,
+                eventRegistrationId: existingPayment.eventRegistration?.id ?? null,
+                approvedBy: session.user.id,
+              },
+            }
+          );
+        }
       }
     } else {
       // Customer payment logic (unchanged)

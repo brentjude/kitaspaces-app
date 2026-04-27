@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { PaymentMethod, MembershipType } from '@/generated/prisma';
 import { generatePaymentReference } from '@/lib/paymentReference';
+import { logUserActivity } from '@/lib/activityLogger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -105,6 +106,48 @@ export async function POST(request: NextRequest) {
 
       return { membership, payment };
     });
+
+    // Log membership renewal submission
+    await logUserActivity(
+      userId,
+      'MEMBERSHIP_RENEWAL',
+      `Submitted membership renewal for plan: ${plan.name}`,
+      {
+        referenceId: result.membership.id,
+        referenceType: 'MEMBERSHIP',
+        metadata: {
+          membershipId: result.membership.id,
+          planId: plan.id,
+          planName: plan.name,
+          planType: plan.type,
+          amount: plan.price,
+          durationDays: plan.durationDays,
+          paymentReference,
+        },
+        request,
+      }
+    );
+
+    // Log payment initiated
+    await logUserActivity(
+      userId,
+      'PAYMENT_INITIATED',
+      `Initiated payment of ₱${plan.price} for membership renewal (${plan.name})`,
+      {
+        referenceId: result.payment.id,
+        referenceType: 'PAYMENT',
+        metadata: {
+          paymentId: result.payment.id,
+          membershipId: result.membership.id,
+          amount: plan.price,
+          paymentMethod,
+          paymentReference,
+          referenceNumber: referenceNumber || null,
+          hasProofOfPayment: !!proofImageUrl,
+        },
+        request,
+      }
+    );
 
     return NextResponse.json({
       success: true,
