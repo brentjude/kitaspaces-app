@@ -53,6 +53,19 @@ export async function GET(
 
       const activeMembership = user.memberships[0];
 
+      // If membership is ACTIVE but endDate has passed, treat it as EXPIRED
+      const effectiveMembershipStatus = (() => {
+        if (!activeMembership) return null;
+        if (
+          activeMembership.status === 'ACTIVE' &&
+          activeMembership.endDate &&
+          new Date(activeMembership.endDate) < new Date()
+        ) {
+          return 'EXPIRED';
+        }
+        return activeMembership.status;
+      })();
+
       const customerInfo: CustomerDetailInfo = {
         id: user.id, // ✅ User ID (e.g., "2025001")
         name: user.name,
@@ -67,7 +80,7 @@ export async function GET(
         referralSource: user.referralSource,
         joinedDate: user.createdAt,
         membershipType: activeMembership?.plan?.name || null,
-        membershipStatus: activeMembership?.status || null,
+        membershipStatus: effectiveMembershipStatus,
         membershipEndDate: activeMembership?.endDate || null,
         membershipPlanId: activeMembership?.planId || null,
         membershipPlanPrice: activeMembership?.plan?.price ?? null,
