@@ -52,8 +52,11 @@ export default function EditEventModal({
     imageUrl: event.imageUrl || "",
     categoryId: event.categoryId || "",
     memberDiscount: event.memberDiscount || 0,
-    memberDiscountType: (event.memberDiscountType || "FIXED") as "FIXED" | "PERCENTAGE",
+    memberDiscountType: (event.memberDiscountType || "FIXED") as
+      | "FIXED"
+      | "PERCENTAGE",
     hasCustomerFreebies: event.hasCustomerFreebies ?? true,
+    hasReferral: event.hasReferral ?? false,
   });
 
   const [freebies, setFreebies] = useState<
@@ -85,7 +88,7 @@ export default function EditEventModal({
 
       if (data.success && data.data) {
         setCategories(
-          data.data.filter((cat: EventCategory) => cat.isActive !== false)
+          data.data.filter((cat: EventCategory) => cat.isActive !== false),
         );
       }
     } catch (err) {
@@ -113,8 +116,11 @@ export default function EditEventModal({
         imageUrl: event.imageUrl || "",
         categoryId: event.categoryId || "",
         memberDiscount: event.memberDiscount || 0,
-        memberDiscountType: (event.memberDiscountType || "FIXED") as "FIXED" | "PERCENTAGE",
+        memberDiscountType: (event.memberDiscountType || "FIXED") as
+          | "FIXED"
+          | "PERCENTAGE",
         hasCustomerFreebies: event.hasCustomerFreebies ?? true,
+        hasReferral: event.hasReferral ?? false,
       });
 
       setFreebies(
@@ -124,7 +130,7 @@ export default function EditEventModal({
           description: freebie.description || "",
           quantity: freebie.quantity,
           isNew: false,
-        }))
+        })),
       );
 
       setError("");
@@ -134,7 +140,7 @@ export default function EditEventModal({
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value, type } = e.target;
 
@@ -180,10 +186,10 @@ export default function EditEventModal({
   const updateFreebie = (
     id: string,
     field: "name" | "description" | "quantity",
-    value: string | number
+    value: string | number,
   ) => {
     setFreebies(
-      freebies.map((f) => (f.id === id ? { ...f, [field]: value } : f))
+      freebies.map((f) => (f.id === id ? { ...f, [field]: value } : f)),
     );
   };
 
@@ -211,13 +217,15 @@ export default function EditEventModal({
 
     try {
       const originalPrice = parseFloat(formData.price.toString());
-      const memberDiscount = parseFloat(formData.memberDiscount.toString()) || 0;
+      const memberDiscount =
+        parseFloat(formData.memberDiscount.toString()) || 0;
 
       // Calculate member discounted price
       let memberDiscountedPrice: number | null = null;
       if (!formData.isFree && memberDiscount > 0 && originalPrice > 0) {
         if (formData.memberDiscountType === "PERCENTAGE") {
-          memberDiscountedPrice = originalPrice - (originalPrice * memberDiscount) / 100;
+          memberDiscountedPrice =
+            originalPrice - (originalPrice * memberDiscount) / 100;
         } else {
           memberDiscountedPrice = originalPrice - memberDiscount;
         }
@@ -228,7 +236,7 @@ export default function EditEventModal({
         title: formData.title,
         description: formData.description,
         date: new Date(
-          `${formData.date}T${formData.startTime || "00:00"}`
+          `${formData.date}T${formData.startTime || "00:00"}`,
         ).toISOString(),
         startTime: formData.startTime || null,
         endTime: formData.endTime || null,
@@ -247,9 +255,11 @@ export default function EditEventModal({
             ? parseInt(formData.maxAttendees.toString())
             : null,
           memberDiscount: memberDiscount > 0 ? memberDiscount : null,
-          memberDiscountType: memberDiscount > 0 ? formData.memberDiscountType : null,
+          memberDiscountType:
+            memberDiscount > 0 ? formData.memberDiscountType : null,
           memberDiscountedPrice,
           hasCustomerFreebies: formData.hasCustomerFreebies,
+          hasReferral: formData.hasReferral,
           freebies: freebies
             .filter((f) => f.name.trim() !== "")
             .map((f) => ({
@@ -275,7 +285,9 @@ export default function EditEventModal({
 
       if (!response.ok) {
         throw new Error(
-          responseData.error || responseData.message || "Failed to update event"
+          responseData.error ||
+            responseData.message ||
+            "Failed to update event",
         );
       }
 
@@ -386,8 +398,8 @@ export default function EditEventModal({
                     {event.registrations?.length !== 1 ? "s" : ""}
                   </span>
                   . You can only edit the title, description, date, time,
-                  location, and category. Price, discounts, event settings, and freebies
-                  cannot be modified.
+                  location, and category. Price, discounts, event settings, and
+                  freebies cannot be modified.
                 </p>
               </div>
             </div>
@@ -476,7 +488,7 @@ export default function EditEventModal({
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(
                       categories.find((c) => c.id === formData.categoryId)
-                        ?.color || null
+                        ?.color || null,
                     )}`}
                   >
                     {categories.find((c) => c.id === formData.categoryId)
@@ -659,110 +671,114 @@ export default function EditEventModal({
               </div>
 
               {/* 🆕 Member Discount Section */}
-              {!formData.isFree && parseFloat(formData.price.toString()) > 0 && (
-                <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <svg
-                      className="w-4 h-4 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Member Discount (Optional)
-                  </h4>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-foreground/70 mb-1">
-                        Discount Type
-                      </label>
-                      <select
-                        name="memberDiscountType"
-                        value={formData.memberDiscountType}
-                        onChange={handleInputChange}
-                        className="w-full rounded-lg border border-foreground/20 px-3 py-2 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                      >
-                        <option value="FIXED">Fixed Amount (₱)</option>
-                        <option value="PERCENTAGE">Percentage (%)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-foreground/70 mb-1">
-                        Discount Value
-                      </label>
-                      <input
-                        type="number"
-                        name="memberDiscount"
-                        min="0"
-                        max={
-                          formData.memberDiscountType === "PERCENTAGE"
-                            ? "100"
-                            : undefined
-                        }
-                        step={
-                          formData.memberDiscountType === "PERCENTAGE"
-                            ? "1"
-                            : "0.01"
-                        }
-                        value={formData.memberDiscount}
-                        onChange={handleInputChange}
-                        className="w-full rounded-lg border border-foreground/20 px-3 py-2 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                        placeholder="0"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-foreground/70 mb-1">
-                        Member Price
-                      </label>
-                      <div className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm font-semibold text-blue-700">
-                        {(() => {
-                          const price = parseFloat(formData.price.toString()) || 0;
-                          const discount = parseFloat(formData.memberDiscount.toString()) || 0;
-                          if (discount === 0) return `₱${price.toFixed(2)}`;
-
-                          let memberPrice = price;
-                          if (formData.memberDiscountType === "PERCENTAGE") {
-                            memberPrice = price - (price * discount) / 100;
-                          } else {
-                            memberPrice = price - discount;
-                          }
-                          return `₱${Math.max(0, memberPrice).toFixed(2)}`;
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-
-                  {parseFloat(formData.memberDiscount.toString()) > 0 && (
-                    <p className="text-xs text-blue-700 mt-2 flex items-center gap-1">
+              {!formData.isFree &&
+                parseFloat(formData.price.toString()) > 0 && (
+                  <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                       <svg
-                        className="w-3 h-3"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+                        className="w-4 h-4 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
                         <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                          clipRule="evenodd"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      KITA Members will save{" "}
-                      {formData.memberDiscountType === "PERCENTAGE"
-                        ? `${formData.memberDiscount}%`
-                        : `₱${formData.memberDiscount}`}{" "}
-                      on this event
-                    </p>
-                  )}
-                </div>
-              )}
+                      Member Discount (Optional)
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-foreground/70 mb-1">
+                          Discount Type
+                        </label>
+                        <select
+                          name="memberDiscountType"
+                          value={formData.memberDiscountType}
+                          onChange={handleInputChange}
+                          className="w-full rounded-lg border border-foreground/20 px-3 py-2 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                        >
+                          <option value="FIXED">Fixed Amount (₱)</option>
+                          <option value="PERCENTAGE">Percentage (%)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-foreground/70 mb-1">
+                          Discount Value
+                        </label>
+                        <input
+                          type="number"
+                          name="memberDiscount"
+                          min="0"
+                          max={
+                            formData.memberDiscountType === "PERCENTAGE"
+                              ? "100"
+                              : undefined
+                          }
+                          step={
+                            formData.memberDiscountType === "PERCENTAGE"
+                              ? "1"
+                              : "0.01"
+                          }
+                          value={formData.memberDiscount}
+                          onChange={handleInputChange}
+                          className="w-full rounded-lg border border-foreground/20 px-3 py-2 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                          placeholder="0"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-foreground/70 mb-1">
+                          Member Price
+                        </label>
+                        <div className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm font-semibold text-blue-700">
+                          {(() => {
+                            const price =
+                              parseFloat(formData.price.toString()) || 0;
+                            const discount =
+                              parseFloat(formData.memberDiscount.toString()) ||
+                              0;
+                            if (discount === 0) return `₱${price.toFixed(2)}`;
+
+                            let memberPrice = price;
+                            if (formData.memberDiscountType === "PERCENTAGE") {
+                              memberPrice = price - (price * discount) / 100;
+                            } else {
+                              memberPrice = price - discount;
+                            }
+                            return `₱${Math.max(0, memberPrice).toFixed(2)}`;
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {parseFloat(formData.memberDiscount.toString()) > 0 && (
+                      <p className="text-xs text-blue-700 mt-2 flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        KITA Members will save{" "}
+                        {formData.memberDiscountType === "PERCENTAGE"
+                          ? `${formData.memberDiscount}%`
+                          : `₱${formData.memberDiscount}`}{" "}
+                        on this event
+                      </p>
+                    )}
+                  </div>
+                )}
 
               <div className="flex flex-col space-y-3 pt-2">
                 <label className="flex items-center cursor-pointer group">
@@ -924,7 +940,7 @@ export default function EditEventModal({
                             updateFreebie(
                               item.id,
                               "quantity",
-                              parseInt(e.target.value) || 1
+                              parseInt(e.target.value) || 1,
                             )
                           }
                         />
@@ -1010,9 +1026,10 @@ export default function EditEventModal({
                         Allow Walk-in Customers to Receive Freebies
                       </span>
                       <p className="text-xs text-foreground/60 leading-relaxed">
-                        When enabled, both registered members and walk-in customers
-                        will receive event freebies. When disabled, only registered
-                        members with accounts will receive freebies.
+                        When enabled, both registered members and walk-in
+                        customers will receive event freebies. When disabled,
+                        only registered members with accounts will receive
+                        freebies.
                       </p>
                     </label>
                   </div>
@@ -1031,7 +1048,8 @@ export default function EditEventModal({
                         />
                       </svg>
                       <span>
-                        Walk-in customers will not receive freebies for this event
+                        Walk-in customers will not receive freebies for this
+                        event
                       </span>
                     </div>
                   )}
@@ -1040,6 +1058,53 @@ export default function EditEventModal({
             </div>
           </>
         )}
+
+        {/* Referral System — always editable */}
+        <div className="bg-foreground/5 p-4 rounded-xl border border-foreground/10">
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="hasReferral"
+              checked={formData.hasReferral}
+              onChange={(e) =>
+                setFormData({ ...formData, hasReferral: e.target.checked })
+              }
+              className="mt-1 w-4 h-4 text-primary border-foreground/30 rounded focus:ring-primary focus:ring-2"
+            />
+            <label htmlFor="hasReferral" className="flex-1">
+              <span className="block text-sm font-semibold text-foreground mb-1">
+                Enable Referral System
+              </span>
+              <p className="text-xs text-foreground/60 leading-relaxed">
+                When enabled, referral codes can be created and shared for this
+                event. Manage them in the <strong>Referrals</strong> tab on the
+                event detail page.
+              </p>
+            </label>
+          </div>
+
+          {formData.hasReferral && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-primary bg-primary/10 rounded-lg px-3 py-2">
+              <svg
+                className="w-4 h-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>
+                Go to the <strong>Referrals</strong> tab on the event detail
+                page to add and manage referral codes.
+              </span>
+            </div>
+          )}
+        </div>
 
         {hasParticipants && (
           <div className="bg-foreground/5 p-4 rounded-xl border border-foreground/10">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   MagnifyingGlassIcon,
   UserPlusIcon,
-  EllipsisVerticalIcon,
+  EyeIcon,
   GiftIcon,
   UserGroupIcon,
   FunnelIcon,
@@ -156,6 +156,7 @@ type CombinedRegistration = {
     }>;
   }>;
   createdAt: Date;
+  referralCode?: string | null;
   data: RegistrationWithUser | CustomerRegistrationFull;
 };
 
@@ -200,7 +201,7 @@ export default function EventRegistrantsList({
         })),
         createdAt: reg.createdAt,
         registration: reg,
-      }))
+      })),
     ),
     // Customer registrations -> expand all pax
     ...event.customerRegistrations.flatMap((reg) =>
@@ -229,7 +230,7 @@ export default function EventRegistrantsList({
         })),
         createdAt: reg.createdAt,
         registration: reg,
-      }))
+      })),
     ),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
@@ -259,10 +260,10 @@ export default function EventRegistrantsList({
   const totalUserPax = allPaxRows.filter((p) => p.type === "user").length;
   const totalGuestPax = allPaxRows.filter((p) => p.type === "customer").length;
   const totalPaid = allPaxRows.filter(
-    (p) => p.paymentStatus === "COMPLETED"
+    (p) => p.paymentStatus === "COMPLETED",
   ).length;
   const totalPending = allPaxRows.filter(
-    (p) => p.paymentStatus === "PENDING"
+    (p) => p.paymentStatus === "PENDING",
   ).length;
 
   const handleViewPayment = (paxRow: PaxRow) => {
@@ -286,6 +287,10 @@ export default function EventRegistrantsList({
       numberOfPax: paxRow.numberOfPax,
       paymentStatus: paxRow.paymentStatus,
       payment: paxRow.payment,
+      referralCode:
+        paxRow.type === "user"
+          ? (reg as RegistrationWithUser).referralCode
+          : (reg as CustomerRegistrationFull).referralCode,
       pax:
         paxRow.type === "user"
           ? (reg as RegistrationWithUser).pax.map((p) => ({
@@ -417,7 +422,7 @@ export default function EventRegistrantsList({
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm border border-foreground/10 flex flex-col h-full max-h-[800px]">
+      <div className="bg-white rounded-xl shadow-sm border border-foreground/10 flex flex-col h-full max-h-200">
         {/* Header */}
         <div className="px-6 py-4 border-b border-foreground/10 shrink-0">
           <div className="flex items-center justify-between mb-3">
@@ -579,7 +584,7 @@ export default function EventRegistrantsList({
                         </div>
                         <div className="ml-3 min-w-0">
                           <div className="flex items-center gap-2">
-                            <div className="text-sm font-medium text-foreground truncate max-w-[180px]">
+                            <div className="text-sm font-medium text-foreground truncate max-w-45">
                               {paxRow.paxName}
                             </div>
                             {paxRow.isPrimaryPayer && (
@@ -604,7 +609,7 @@ export default function EventRegistrantsList({
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-foreground/60 truncate max-w-[180px]">
+                          <div className="text-xs text-foreground/60 truncate max-w-45">
                             {paxRow.paxEmail || "No email"}
                           </div>
                         </div>
@@ -642,10 +647,11 @@ export default function EventRegistrantsList({
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleViewPayment(paxRow)}
-                        className="text-foreground/40 hover:text-foreground/60 p-1 rounded hover:bg-foreground/5"
-                        title="View Payment Details"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-foreground/60 hover:text-primary rounded-lg hover:bg-primary/5 border border-foreground/10 hover:border-primary/20 transition-all"
+                        title="View Details"
                       >
-                        <EllipsisVerticalIcon className="w-4 h-4" />
+                        <EyeIcon className="w-3.5 h-3.5" />
+                        View
                       </button>
                     </td>
                   </tr>

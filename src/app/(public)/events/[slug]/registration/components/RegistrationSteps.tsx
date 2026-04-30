@@ -27,6 +27,7 @@ interface RegistrationStepsProps {
   paymentSettings: PaymentSettings | null;
   onCancel: () => void;
   onLoginRequest: () => void;
+  referralCode?: string;
 }
 
 export default function RegistrationSteps({
@@ -35,29 +36,34 @@ export default function RegistrationSteps({
   paymentSettings,
   onCancel,
   onLoginRequest,
+  referralCode,
 }: RegistrationStepsProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [memberId, setMemberId] = useState("");
+  const [referralInputCode, setReferralInputCode] = useState(
+    referralCode ?? "",
+  );
 
   const isMember = currentUser?.isMember || !!memberId;
-  
+
   // 🔧 FIX: Properly type narrow the memberDiscount check
   const hasMemberDiscount = Boolean(
-    !event.isFree && 
-    event.price > 0 && 
-    event.memberDiscount && 
-    event.memberDiscount > 0 && 
-    isMember
+    !event.isFree &&
+    event.price > 0 &&
+    event.memberDiscount &&
+    event.memberDiscount > 0 &&
+    isMember,
   );
-  
+
   // Calculate discounted price
   let pricePerAttendee = event.price;
   if (hasMemberDiscount && event.memberDiscount) {
     if (event.memberDiscountType === "PERCENTAGE") {
-      pricePerAttendee = event.price - (event.price * event.memberDiscount) / 100;
+      pricePerAttendee =
+        event.price - (event.price * event.memberDiscount) / 100;
     } else {
       pricePerAttendee = Math.max(0, event.price - event.memberDiscount);
     }
@@ -97,13 +103,16 @@ export default function RegistrationSteps({
 
       // Only validate freebie selections if eligible
       const canSelectFreebies = event.hasCustomerFreebies || isMember;
-      
+
       if (canSelectFreebies && event.freebies && event.freebies.length > 0) {
         for (const freebie of event.freebies) {
-          const hasOptions = freebie.description && freebie.description.includes(",");
+          const hasOptions =
+            freebie.description && freebie.description.includes(",");
 
           if (hasOptions && !attendee.selectedFreebies[freebie.id]) {
-            setError(`Please select an option for ${freebie.name} for ${attendee.name}`);
+            setError(
+              `Please select an option for ${freebie.name} for ${attendee.name}`,
+            );
             return false;
           }
         }
@@ -162,13 +171,14 @@ export default function RegistrationSteps({
               ([freebieId, selectedOption]) => ({
                 freebieId,
                 selectedOption,
-              })
+              }),
             ),
           })),
           paymentMethod: isFreeEvent ? undefined : formData.paymentMethod,
           paymentProofUrl: formData.paymentProofUrl || undefined,
           referenceNumber: formData.referenceNumber || undefined,
           memberId: memberId || undefined,
+          referralCode: referralInputCode.trim() || undefined,
         }),
       });
 
@@ -180,7 +190,7 @@ export default function RegistrationSteps({
 
       sessionStorage.setItem(
         "registrationConfirmation",
-        JSON.stringify(data.data)
+        JSON.stringify(data.data),
       );
 
       router.push(`/events/${event.slug}/registration/confirmation`);
@@ -281,6 +291,30 @@ export default function RegistrationSteps({
               originalPrice={event.price * formData.attendees.length}
             />
 
+            {event.hasReferral && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Referral Code
+                  <span className="ml-1 text-foreground/40 font-normal">
+                    (optional)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={referralInputCode}
+                  onChange={(e) =>
+                    setReferralInputCode(e.target.value.toUpperCase())
+                  }
+                  placeholder="Enter referral code (e.g. ABC123)"
+                  maxLength={6}
+                  className="w-full px-4 py-3 rounded-xl border border-foreground/20 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono uppercase"
+                />
+                <p className="text-xs text-foreground/50 mt-1">
+                  If someone referred you, enter their 6-character code above.
+                </p>
+              </div>
+            )}
+
             {!isFreeEvent && paymentSettings && (
               <PaymentSection
                 paymentMethod={formData.paymentMethod}
@@ -332,10 +366,10 @@ export default function RegistrationSteps({
             {isSubmitting
               ? "Processing..."
               : currentStep === 1
-              ? isFreeEvent
-                ? "Review & Confirm"
-                : "Proceed to Payment"
-              : "Confirm Registration"}
+                ? isFreeEvent
+                  ? "Review & Confirm"
+                  : "Proceed to Payment"
+                : "Confirm Registration"}
           </button>
         </div>
       </div>

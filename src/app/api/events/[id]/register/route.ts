@@ -19,11 +19,12 @@ interface RegistrationRequest {
   paymentProofUrl?: string;
   referenceNumber?: string;
   memberId?: string; // For walk-in customers to apply member discount
+  referralCode?: string;
 }
 
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: eventId } = await context.params;
@@ -31,13 +32,20 @@ export async function POST(
     const session = await getServerSession(authOptions);
     const body: RegistrationRequest = await request.json();
 
-    const { attendees, paymentMethod, paymentProofUrl, referenceNumber, memberId } = body;
+    const {
+      attendees,
+      paymentMethod,
+      paymentProofUrl,
+      referenceNumber,
+      memberId,
+      referralCode,
+    } = body;
 
     // Validate request
     if (!attendees || !Array.isArray(attendees) || attendees.length === 0) {
       return NextResponse.json(
         { error: "At least one attendee is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -59,6 +67,28 @@ export async function POST(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
+    // Validate referral code if provided
+    if (referralCode) {
+      if (!event.hasReferral) {
+        return NextResponse.json(
+          { error: "This event does not support referral codes" },
+          { status: 400 },
+        );
+      }
+      const referral = await prisma.eventReferral.findFirst({
+        where: { eventId: event.id, code: referralCode.trim().toUpperCase() },
+      });
+      if (!referral) {
+        return NextResponse.json(
+          {
+            error:
+              "Invalid referral code. Please check the code and try again.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Check if event is full
     const totalRegistrations =
       event.registrations.length + event.customerRegistrations.length;
@@ -69,7 +99,7 @@ export async function POST(
     ) {
       return NextResponse.json(
         { error: "Event is already full" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -77,7 +107,7 @@ export async function POST(
     if (new Date(event.date) < new Date()) {
       return NextResponse.json(
         { error: "Cannot register for past events" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -99,7 +129,7 @@ export async function POST(
         where: { id: memberId },
         select: { isMember: true },
       });
-      
+
       if (member?.isMember) {
         isMember = true;
         verifiedMemberId = memberId;
@@ -110,7 +140,7 @@ export async function POST(
     if (event.isMemberOnly && !isMember) {
       return NextResponse.json(
         { error: "This event is for members only" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -119,9 +149,15 @@ export async function POST(
     let discountAmount = 0;
     let discountApplied = false;
 
-    if (isMember && !event.isFree && event.price > 0 && event.memberDiscount && event.memberDiscount > 0) {
+    if (
+      isMember &&
+      !event.isFree &&
+      event.price > 0 &&
+      event.memberDiscount &&
+      event.memberDiscount > 0
+    ) {
       discountApplied = true;
-      
+
       if (event.memberDiscountType === "PERCENTAGE") {
         discountAmount = (event.price * event.memberDiscount) / 100;
         pricePerAttendee = event.price - discountAmount;
@@ -134,9 +170,7 @@ export async function POST(
 
     // Determine if payment is required
     const isFreeEvent =
-      event.price === 0 || 
-      event.isFree || 
-      pricePerAttendee === 0;
+      event.price === 0 || event.isFree || pricePerAttendee === 0;
 
     // 🆕 Validate freebies eligibility
     const canSelectFreebies = event.hasCustomerFreebies || isMember;
@@ -144,7 +178,8 @@ export async function POST(
     if (!canSelectFreebies) {
       // Check if any attendee selected freebies
       const hasFreebieSelections = attendees.some(
-        (attendee) => attendee.freebieSelections && attendee.freebieSelections.length > 0
+        (attendee) =>
+          attendee.freebieSelections && attendee.freebieSelections.length > 0,
       );
 
       if (hasFreebieSelections) {
@@ -152,7 +187,7 @@ export async function POST(
           {
             error: "Freebies are only available to members for this event",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -162,7 +197,7 @@ export async function POST(
       if (!paymentMethod) {
         return NextResponse.json(
           { error: "Payment method is required" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -173,7 +208,7 @@ export async function POST(
       ) {
         return NextResponse.json(
           { error: "Payment proof is required for online payments" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -184,7 +219,7 @@ export async function POST(
       ) {
         return NextResponse.json(
           { error: "Reference number is required for online payments" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -198,7 +233,7 @@ export async function POST(
     // 🆕 Build payment notes with discount info
     let paymentNotes = `Event registration: ${event.title}`;
     if (discountApplied) {
-      paymentNotes += ` | Member discount applied: ${event.memberDiscountType === 'PERCENTAGE' ? `${event.memberDiscount}%` : `₱${event.memberDiscount}`}`;
+      paymentNotes += ` | Member discount applied: ${event.memberDiscountType === "PERCENTAGE" ? `${event.memberDiscount}%` : `₱${event.memberDiscount}`}`;
       paymentNotes += ` | Original: ₱${originalTotalAmount.toFixed(2)}, Discounted: ₱${totalAmount.toFixed(2)}`;
       if (verifiedMemberId) {
         paymentNotes += ` | Member ID: ${verifiedMemberId}`;
@@ -236,7 +271,7 @@ export async function POST(
               paymentMethod: "FREE_MEMBERSHIP",
               status: "COMPLETED",
               paymentReference: paymentReferenceNumber,
-              notes: `Free event registration: ${event.title}${isMember ? ' (Member)' : ''}`,
+              notes: `Free event registration: ${event.title}${isMember ? " (Member)" : ""}`,
               paidAt: new Date(),
             },
           });
@@ -269,6 +304,9 @@ export async function POST(
             attendeeEmail: mainAttendee.email,
             numberOfPax,
             paymentId: paymentId || undefined,
+            referralCode: referralCode
+              ? referralCode.trim().toUpperCase()
+              : undefined,
           },
         });
 
@@ -339,7 +377,7 @@ export async function POST(
 
         if (existingRegistration) {
           throw new Error(
-            `${mainAttendee.name} is already registered for this event`
+            `${mainAttendee.name} is already registered for this event`,
           );
         }
 
@@ -355,7 +393,7 @@ export async function POST(
               paymentMethod: "FREE_MEMBERSHIP",
               status: "COMPLETED",
               paymentReference: paymentReferenceNumber,
-              notes: `Free event registration: ${event.title}${isMember ? ` (Member ID: ${verifiedMemberId})` : ''}`,
+              notes: `Free event registration: ${event.title}${isMember ? ` (Member ID: ${verifiedMemberId})` : ""}`,
               paidAt: new Date(),
             },
           });
@@ -388,6 +426,9 @@ export async function POST(
             attendeeEmail: mainAttendee.email,
             numberOfPax,
             paymentId: paymentId || undefined,
+            referralCode: referralCode
+              ? referralCode.trim().toUpperCase()
+              : undefined,
           },
         });
 
@@ -438,7 +479,9 @@ export async function POST(
         paymentReference: result.paymentReference,
         totalAmount: result.totalAmount,
         originalAmount: result.originalAmount,
-        discountAmount: discountApplied ? (result.originalAmount - result.totalAmount) : 0,
+        discountAmount: discountApplied
+          ? result.originalAmount - result.totalAmount
+          : 0,
         isMemberDiscountApplied: discountApplied,
         status: isFreeEvent ? "COMPLETED" : "PENDING",
         attendees: attendees.map((a) => ({
@@ -452,7 +495,7 @@ export async function POST(
           slug: event.slug,
         },
       },
-      message: `Registration ${isFreeEvent ? "confirmed" : "submitted"}!${discountApplied ? ` Member discount of ₱${(result.originalAmount - result.totalAmount).toFixed(2)} applied.` : ''}`,
+      message: `Registration ${isFreeEvent ? "confirmed" : "submitted"}!${discountApplied ? ` Member discount of ₱${(result.originalAmount - result.totalAmount).toFixed(2)} applied.` : ""}`,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -463,7 +506,7 @@ export async function POST(
             ? error.message
             : "Failed to process registration",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

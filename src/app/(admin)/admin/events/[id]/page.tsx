@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import EventDetailsCard from "./components/EventDetailsCard";
 import EventRegistrantsList from "./components/EventRegistrantsList";
+import EventDetailTabs from "./components/EventDetailTabs";
 
 interface EventDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -79,6 +80,7 @@ async function getEventDetails(eventId: string) {
           },
         },
       },
+      referrals: true,
     },
   });
 
@@ -128,7 +130,7 @@ export default async function EventDetailsPage({
   }
 
   const resolvedParams = await params;
-  
+
   // Fetch all data in parallel
   const [event, allUsers, paymentSettings] = await Promise.all([
     getEventDetails(resolvedParams.id),
@@ -142,8 +144,18 @@ export default async function EventDetailsPage({
 
   // Check if event has paid registrations
   const hasPaidRegistrations = event.registrations.some(
-    (reg) => reg.payment && reg.payment.status === "COMPLETED"
+    (reg) => reg.payment && reg.payment.status === "COMPLETED",
   );
+
+  // Collect all referral codes used across registrations
+  const referralUsageCodes: string[] = [
+    ...event.registrations
+      .map((r) => r.referralCode)
+      .filter((c): c is string => !!c),
+    ...event.customerRegistrations
+      .map((r) => r.referralCode)
+      .filter((c): c is string => !!c),
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,11 +178,17 @@ export default async function EventDetailsPage({
               hasPaidRegistrations={hasPaidRegistrations}
             />
 
-            {/* Right Column: Registrants List */}
-            <EventRegistrantsList 
-              event={event} 
-              allUsers={allUsers}
-              paymentSettings={paymentSettings}
+            {/* Right Column: Tabbed (Participants + Referrals) */}
+            <EventDetailTabs
+              event={event}
+              referralUsageCodes={referralUsageCodes}
+              participantsPanel={
+                <EventRegistrantsList
+                  event={event}
+                  allUsers={allUsers}
+                  paymentSettings={paymentSettings}
+                />
+              }
             />
           </div>
         </div>

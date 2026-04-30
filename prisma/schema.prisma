@@ -359,6 +359,9 @@ model Event {
 
   hasCustomerFreebies    Boolean  @default(true) // Toggle if walk-in customers get freebies
 
+  // Referral system
+  hasReferral Boolean @default(false)
+
   // Event category
   categoryId String?
   category   EventCategory? @relation(fields: [categoryId], references: [id])
@@ -376,6 +379,7 @@ model Event {
   registrations         EventRegistration[]
   customerRegistrations CustomerEventRegistration[]
   freebies              EventFreebie[]
+  referrals             EventReferral[]
 
   @@index([date])
   @@index([isFree])
@@ -405,6 +409,20 @@ model EventFreebie {
   @@map("event_freebies")
 }
 
+model EventReferral {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  code      String   @unique // 6-char alphanumeric, globally unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([code])
+  @@map("event_referrals")
+}
+
 model EventRegistration {
   id      String @id @default(cuid())
   userId  String
@@ -422,6 +440,9 @@ model EventRegistration {
   // Payment (if event is not free)
   paymentId String?  @unique
   payment   Payment? @relation(fields: [paymentId], references: [id])
+
+  // Referral tracking
+  referralCode String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -453,6 +474,9 @@ model CustomerEventRegistration {
   // Payment (if event is not free)
   paymentId String?          @unique
   payment   CustomerPayment? @relation(fields: [paymentId], references: [id])
+
+  // Referral tracking
+  referralCode String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

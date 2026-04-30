@@ -17,7 +17,13 @@ interface PaymentDetailsModalProps {
       isMember?: boolean;
     };
     numberOfPax: number;
-    paymentStatus: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "FREE" | null;
+    paymentStatus:
+      | "PENDING"
+      | "COMPLETED"
+      | "FAILED"
+      | "REFUNDED"
+      | "FREE"
+      | null;
     payment: Payment | CustomerPayment | null;
     pax: Array<{
       name: string;
@@ -33,7 +39,7 @@ interface PaymentDetailsModalProps {
       }>;
     }>;
     createdAt: Date;
-    data: unknown;
+    data: { referralCode?: string | null };
   };
   event: {
     id: string;
@@ -132,24 +138,25 @@ export default function PaymentDetailsModal({
           >
             Close
           </button>
-          {registration.payment && registration.payment.status === "PENDING" && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleUpdateStatus("FAILED")}
-                disabled={isUpdating}
-                className="px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                Mark as Failed
-              </button>
-              <button
-                onClick={() => handleUpdateStatus("COMPLETED")}
-                disabled={isUpdating}
-                className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-              >
-                Approve Payment
-              </button>
-            </div>
-          )}
+          {registration.payment &&
+            registration.payment.status === "PENDING" && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleUpdateStatus("FAILED")}
+                  disabled={isUpdating}
+                  className="px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  Mark as Failed
+                </button>
+                <button
+                  onClick={() => handleUpdateStatus("COMPLETED")}
+                  disabled={isUpdating}
+                  className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  Approve Payment
+                </button>
+              </div>
+            )}
         </>
       }
     >
@@ -172,12 +179,16 @@ export default function PaymentDetailsModal({
             </div>
             <div className="flex justify-between">
               <span className="text-foreground/60">Email:</span>
-              <span className="font-medium">{registration.mainGuest.email}</span>
+              <span className="font-medium">
+                {registration.mainGuest.email}
+              </span>
             </div>
             {registration.mainGuest.phone && (
               <div className="flex justify-between">
                 <span className="text-foreground/60">Phone:</span>
-                <span className="font-medium">{registration.mainGuest.phone}</span>
+                <span className="font-medium">
+                  {registration.mainGuest.phone}
+                </span>
               </div>
             )}
             <div className="flex justify-between">
@@ -209,6 +220,14 @@ export default function PaymentDetailsModal({
                 {new Date(registration.createdAt).toLocaleString()}
               </span>
             </div>
+            {registration.data.referralCode && (
+              <div className="flex justify-between">
+                <span className="text-foreground/60">Referral Code:</span>
+                <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                  {registration.data.referralCode}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -220,11 +239,17 @@ export default function PaymentDetailsModal({
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-blue-700">Regular Price (per person):</span>
-              <span className={hasMemberDiscount ? "line-through text-blue-600" : "font-bold text-blue-900"}>
+              <span
+                className={
+                  hasMemberDiscount
+                    ? "line-through text-blue-600"
+                    : "font-bold text-blue-900"
+                }
+              >
                 ₱{event.price.toFixed(2)}
               </span>
             </div>
-            
+
             {hasMemberDiscount && (
               <>
                 <div className="flex justify-between">

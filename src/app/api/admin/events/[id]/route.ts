@@ -33,6 +33,7 @@ interface UpdateEventBody {
   memberDiscountType?: "FIXED" | "PERCENTAGE" | null;
   memberDiscountedPrice?: number | null;
   hasCustomerFreebies?: boolean;
+  hasReferral?: boolean;
   freebies?: FreebieUpdate[];
 }
 
@@ -42,7 +43,7 @@ interface UpdateEventBody {
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -50,14 +51,14 @@ export async function GET(
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     if (session.user.role !== "ADMIN") {
       return NextResponse.json(
         { success: false, error: "Forbidden - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -86,13 +87,14 @@ export async function GET(
             paxFreebies: true,
           },
         },
+        referrals: true,
       },
     });
 
     if (!event) {
       return NextResponse.json(
         { success: false, error: "Event not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -108,7 +110,7 @@ export async function GET(
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -119,7 +121,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -127,14 +129,14 @@ export async function PATCH(
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     if (session.user.role !== "ADMIN") {
       return NextResponse.json(
         { success: false, error: "Forbidden - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -153,20 +155,20 @@ export async function PATCH(
       // 🆕 Log failed update - event not found
       await logAdminActivity(
         session.user.id,
-        'ADMIN_EVENT_UPDATED',
+        "ADMIN_EVENT_UPDATED",
         `Failed to update event: Event not found (ID: ${eventId})`,
         {
           referenceId: eventId,
-          referenceType: 'EVENT',
-          metadata: { eventId, error: 'Event not found' },
+          referenceType: "EVENT",
+          metadata: { eventId, error: "Event not found" },
           isSuccess: false,
-          errorMessage: 'Event not found',
-        }
+          errorMessage: "Event not found",
+        },
       );
 
       return NextResponse.json(
         { success: false, error: "Event not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -195,6 +197,7 @@ export async function PATCH(
       memberDiscountType?: string | null;
       memberDiscountedPrice?: number | null;
       hasCustomerFreebies?: boolean;
+      hasReferral?: boolean;
     }
 
     const updateData: EventUpdateData = {};
@@ -204,21 +207,30 @@ export async function PATCH(
       updateData.title = body.title;
       updateData.slug = generateEventSlug(body.title, eventId);
     }
-    if (body.description !== undefined && body.description !== existingEvent.description) {
-      changes.description = { from: existingEvent.description, to: body.description };
+    if (
+      body.description !== undefined &&
+      body.description !== existingEvent.description
+    ) {
+      changes.description = {
+        from: existingEvent.description,
+        to: body.description,
+      };
       updateData.description = body.description;
     }
     if (body.date !== undefined) {
       const newDate = new Date(body.date);
       if (newDate.getTime() !== existingEvent.date.getTime()) {
-        changes.date = { 
-          from: existingEvent.date.toISOString(), 
-          to: newDate.toISOString() 
+        changes.date = {
+          from: existingEvent.date.toISOString(),
+          to: newDate.toISOString(),
         };
         updateData.date = newDate;
       }
     }
-    if (body.startTime !== undefined && body.startTime !== existingEvent.startTime) {
+    if (
+      body.startTime !== undefined &&
+      body.startTime !== existingEvent.startTime
+    ) {
       changes.startTime = { from: existingEvent.startTime, to: body.startTime };
       updateData.startTime = body.startTime;
     }
@@ -226,7 +238,10 @@ export async function PATCH(
       changes.endTime = { from: existingEvent.endTime, to: body.endTime };
       updateData.endTime = body.endTime;
     }
-    if (body.location !== undefined && body.location !== existingEvent.location) {
+    if (
+      body.location !== undefined &&
+      body.location !== existingEvent.location
+    ) {
       changes.location = { from: existingEvent.location, to: body.location };
       updateData.location = body.location;
     }
@@ -238,58 +253,127 @@ export async function PATCH(
       changes.isFree = { from: existingEvent.isFree, to: body.isFree };
       updateData.isFree = body.isFree;
     }
-    if (body.isMemberOnly !== undefined && body.isMemberOnly !== existingEvent.isMemberOnly) {
-      changes.isMemberOnly = { from: existingEvent.isMemberOnly, to: body.isMemberOnly };
+    if (
+      body.isMemberOnly !== undefined &&
+      body.isMemberOnly !== existingEvent.isMemberOnly
+    ) {
+      changes.isMemberOnly = {
+        from: existingEvent.isMemberOnly,
+        to: body.isMemberOnly,
+      };
       updateData.isMemberOnly = body.isMemberOnly;
     }
-    if (body.categoryId !== undefined && body.categoryId !== existingEvent.categoryId) {
-      changes.categoryId = { from: existingEvent.categoryId, to: body.categoryId };
+    if (
+      body.categoryId !== undefined &&
+      body.categoryId !== existingEvent.categoryId
+    ) {
+      changes.categoryId = {
+        from: existingEvent.categoryId,
+        to: body.categoryId,
+      };
       updateData.categoryId = body.categoryId;
     }
-    if (body.isRedemptionEvent !== undefined && body.isRedemptionEvent !== existingEvent.isRedemptionEvent) {
-      changes.isRedemptionEvent = { from: existingEvent.isRedemptionEvent, to: body.isRedemptionEvent };
+    if (
+      body.isRedemptionEvent !== undefined &&
+      body.isRedemptionEvent !== existingEvent.isRedemptionEvent
+    ) {
+      changes.isRedemptionEvent = {
+        from: existingEvent.isRedemptionEvent,
+        to: body.isRedemptionEvent,
+      };
       updateData.isRedemptionEvent = body.isRedemptionEvent;
     }
-    if (body.redemptionLimit !== undefined && body.redemptionLimit !== existingEvent.redemptionLimit) {
-      changes.redemptionLimit = { from: existingEvent.redemptionLimit, to: body.redemptionLimit };
+    if (
+      body.redemptionLimit !== undefined &&
+      body.redemptionLimit !== existingEvent.redemptionLimit
+    ) {
+      changes.redemptionLimit = {
+        from: existingEvent.redemptionLimit,
+        to: body.redemptionLimit,
+      };
       updateData.redemptionLimit = body.redemptionLimit;
     }
-    if (body.maxAttendees !== undefined && body.maxAttendees !== existingEvent.maxAttendees) {
-      changes.maxAttendees = { from: existingEvent.maxAttendees, to: body.maxAttendees };
+    if (
+      body.maxAttendees !== undefined &&
+      body.maxAttendees !== existingEvent.maxAttendees
+    ) {
+      changes.maxAttendees = {
+        from: existingEvent.maxAttendees,
+        to: body.maxAttendees,
+      };
       updateData.maxAttendees = body.maxAttendees;
     }
-    if (body.imageUrl !== undefined && body.imageUrl !== existingEvent.imageUrl) {
+    if (
+      body.imageUrl !== undefined &&
+      body.imageUrl !== existingEvent.imageUrl
+    ) {
       changes.imageUrl = { from: existingEvent.imageUrl, to: body.imageUrl };
       updateData.imageUrl = body.imageUrl;
     }
 
     // 🆕 Track discount changes
     if (body.memberDiscount !== undefined) {
-      const newDiscount = body.memberDiscount && body.memberDiscount > 0 ? body.memberDiscount : null;
+      const newDiscount =
+        body.memberDiscount && body.memberDiscount > 0
+          ? body.memberDiscount
+          : null;
       if (newDiscount !== existingEvent.memberDiscount) {
-        changes.memberDiscount = { from: existingEvent.memberDiscount, to: newDiscount };
+        changes.memberDiscount = {
+          from: existingEvent.memberDiscount,
+          to: newDiscount,
+        };
         updateData.memberDiscount = newDiscount;
       }
     }
     if (body.memberDiscountType !== undefined) {
-      const newDiscountType = body.memberDiscount && body.memberDiscount > 0 ? body.memberDiscountType : null;
+      const newDiscountType =
+        body.memberDiscount && body.memberDiscount > 0
+          ? body.memberDiscountType
+          : null;
       if (newDiscountType !== existingEvent.memberDiscountType) {
-        changes.memberDiscountType = { from: existingEvent.memberDiscountType, to: newDiscountType };
+        changes.memberDiscountType = {
+          from: existingEvent.memberDiscountType,
+          to: newDiscountType,
+        };
         updateData.memberDiscountType = newDiscountType;
       }
     }
     if (body.memberDiscountedPrice !== undefined) {
-      const newDiscountedPrice = body.memberDiscount && body.memberDiscount > 0 ? body.memberDiscountedPrice : null;
+      const newDiscountedPrice =
+        body.memberDiscount && body.memberDiscount > 0
+          ? body.memberDiscountedPrice
+          : null;
       if (newDiscountedPrice !== existingEvent.memberDiscountedPrice) {
-        changes.memberDiscountedPrice = { from: existingEvent.memberDiscountedPrice, to: newDiscountedPrice };
+        changes.memberDiscountedPrice = {
+          from: existingEvent.memberDiscountedPrice,
+          to: newDiscountedPrice,
+        };
         updateData.memberDiscountedPrice = newDiscountedPrice;
       }
     }
 
     // 🆕 Track customer freebies changes
-    if (body.hasCustomerFreebies !== undefined && body.hasCustomerFreebies !== existingEvent.hasCustomerFreebies) {
-      changes.hasCustomerFreebies = { from: existingEvent.hasCustomerFreebies, to: body.hasCustomerFreebies };
+    if (
+      body.hasCustomerFreebies !== undefined &&
+      body.hasCustomerFreebies !== existingEvent.hasCustomerFreebies
+    ) {
+      changes.hasCustomerFreebies = {
+        from: existingEvent.hasCustomerFreebies,
+        to: body.hasCustomerFreebies,
+      };
       updateData.hasCustomerFreebies = body.hasCustomerFreebies;
+    }
+
+    // Track hasReferral changes
+    if (
+      body.hasReferral !== undefined &&
+      body.hasReferral !== existingEvent.hasReferral
+    ) {
+      changes.hasReferral = {
+        from: existingEvent.hasReferral,
+        to: body.hasReferral,
+      };
+      updateData.hasReferral = body.hasReferral;
     }
 
     // Handle freebies update if provided
@@ -303,7 +387,7 @@ export async function PATCH(
 
       // Find freebies to delete (existing but not in incoming)
       const freebiesToDelete = existingFreebieIds.filter(
-        (id) => !incomingFreebieIds.includes(id)
+        (id) => !incomingFreebieIds.includes(id),
       );
 
       if (freebiesToDelete.length > 0) {
@@ -333,12 +417,15 @@ export async function PATCH(
       for (const freebie of body.freebies) {
         if (freebie.id && !freebie.id.startsWith("new-")) {
           // Check if freebie was modified
-          const existingFreebie = existingEvent.freebies.find(f => f.id === freebie.id);
-          if (existingFreebie && (
-            existingFreebie.name !== freebie.name ||
-            existingFreebie.description !== freebie.description ||
-            existingFreebie.quantity !== freebie.quantity
-          )) {
+          const existingFreebie = existingEvent.freebies.find(
+            (f) => f.id === freebie.id,
+          );
+          if (
+            existingFreebie &&
+            (existingFreebie.name !== freebie.name ||
+              existingFreebie.description !== freebie.description ||
+              existingFreebie.quantity !== freebie.quantity)
+          ) {
             freebiesChanged = true;
           }
 
@@ -397,23 +484,22 @@ export async function PATCH(
     // 🆕 Log successful event update
     await logAdminActivity(
       session.user.id,
-      'ADMIN_EVENT_UPDATED',
+      "ADMIN_EVENT_UPDATED",
       `Updated event "${event.title}" (${event.slug})`,
       {
         referenceId: eventId,
-        referenceType: 'EVENT',
+        referenceType: "EVENT",
         metadata: {
           eventId,
           title: event.title,
           slug: event.slug,
-          changedFields: Object.keys(changes).join(', '),
+          changedFields: Object.keys(changes).join(", "),
           changeCount: Object.keys(changes).length,
           changesDetail: JSON.stringify(changes),
           freebiesChanged,
         },
-      }
+      },
     );
-
 
     return NextResponse.json({
       success: true,
@@ -429,15 +515,19 @@ export async function PATCH(
     if (session?.user) {
       await logAdminActivity(
         session.user.id,
-        'ADMIN_EVENT_UPDATED',
-        `Failed to update event (ID: ${eventId}): ${error instanceof Error ? error.message : 'Unknown error'}`,
+        "ADMIN_EVENT_UPDATED",
+        `Failed to update event (ID: ${eventId}): ${error instanceof Error ? error.message : "Unknown error"}`,
         {
           referenceId: eventId,
-          referenceType: 'EVENT',
-          metadata: { eventId, error: error instanceof Error ? error.message : 'Unknown error' },
+          referenceType: "EVENT",
+          metadata: {
+            eventId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
           isSuccess: false,
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        }
+          errorMessage:
+            error instanceof Error ? error.message : "Unknown error",
+        },
       );
     }
 
@@ -447,7 +537,7 @@ export async function PATCH(
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -458,7 +548,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -466,14 +556,14 @@ export async function DELETE(
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     if (session.user.role !== "ADMIN") {
       return NextResponse.json(
         { success: false, error: "Forbidden - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -497,20 +587,20 @@ export async function DELETE(
       // 🆕 Log failed deletion - event not found
       await logAdminActivity(
         session.user.id,
-        'ADMIN_EVENT_DELETED',
+        "ADMIN_EVENT_DELETED",
         `Failed to delete event: Event not found (ID: ${eventId})`,
         {
           referenceId: eventId,
-          referenceType: 'EVENT',
-          metadata: { eventId, error: 'Event not found' },
+          referenceType: "EVENT",
+          metadata: { eventId, error: "Event not found" },
           isSuccess: false,
-          errorMessage: 'Event not found',
-        }
+          errorMessage: "Event not found",
+        },
       );
 
       return NextResponse.json(
         { success: false, error: "Event not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -518,10 +608,11 @@ export async function DELETE(
     const eventTitle = existingEvent.title;
     const eventSlug = existingEvent.slug;
     const registrationCount = existingEvent.registrations.length;
-    const customerRegistrationCount = existingEvent.customerRegistrations.length;
+    const customerRegistrationCount =
+      existingEvent.customerRegistrations.length;
     const paxCount = existingEvent.registrations.reduce(
       (sum, reg) => sum + reg.pax.length,
-      0
+      0,
     );
     const freebiesCount = existingEvent.freebies.length;
 
@@ -600,11 +691,11 @@ export async function DELETE(
     // 🆕 Log successful event deletion
     await logAdminActivity(
       session.user.id,
-      'ADMIN_EVENT_DELETED',
+      "ADMIN_EVENT_DELETED",
       `Deleted event "${eventTitle}" (${eventSlug})`,
       {
         referenceId: eventId,
-        referenceType: 'EVENT',
+        referenceType: "EVENT",
         metadata: {
           eventId,
           title: eventTitle,
@@ -614,7 +705,7 @@ export async function DELETE(
           paxDeleted: paxCount,
           freebiesDeleted: freebiesCount,
         },
-      }
+      },
     );
 
     return NextResponse.json({
@@ -636,15 +727,19 @@ export async function DELETE(
     if (session?.user) {
       await logAdminActivity(
         session.user.id,
-        'ADMIN_EVENT_DELETED',
-        `Failed to delete event (ID: ${eventId}): ${error instanceof Error ? error.message : 'Unknown error'}`,
+        "ADMIN_EVENT_DELETED",
+        `Failed to delete event (ID: ${eventId}): ${error instanceof Error ? error.message : "Unknown error"}`,
         {
           referenceId: eventId,
-          referenceType: 'EVENT',
-          metadata: { eventId, error: error instanceof Error ? error.message : 'Unknown error' },
+          referenceType: "EVENT",
+          metadata: {
+            eventId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
           isSuccess: false,
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        }
+          errorMessage:
+            error instanceof Error ? error.message : "Unknown error",
+        },
       );
     }
 
@@ -654,7 +749,7 @@ export async function DELETE(
         error: "Failed to delete event",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
