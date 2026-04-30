@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PublicHeader from "@/app/components/Header";
 import { fetchPublicEventBySlug } from "@/lib/api/public";
@@ -23,6 +23,7 @@ type PublicEvent = Event & {
 export default function EventRegistrationPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const slug = params.slug as string;
   const { data: session } = useSession();
 
@@ -172,6 +173,7 @@ export default function EventRegistrationPage() {
             paymentSettings={paymentSettings}
             onCancel={handleCancel}
             onLoginRequest={handleLoginClick}
+            referralCode={searchParams.get("referralCode") ?? undefined}
           />
         )}
       </div>

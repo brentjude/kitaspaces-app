@@ -3,16 +3,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { PaymentStatus } from "@/generated/prisma";
-import { MembershipPaymentApprovedEmail } from '@/app/components/email-template/MembershipPaymentApprovedEmail';
-import { render } from '@react-email/render';
-import { Resend } from 'resend';
-import { logAdminActivity } from '@/lib/activityLogger';
+import { MembershipPaymentApprovedEmail } from "@/app/components/email-template/MembershipPaymentApprovedEmail";
+import { render } from "@react-email/render";
+import { Resend } from "resend";
+import { logAdminActivity, logUserActivity } from "@/lib/activityLogger";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -20,7 +20,7 @@ export async function PATCH(
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -42,7 +42,7 @@ export async function PATCH(
     if (!validStatuses.includes(status)) {
       return NextResponse.json(
         { success: false, error: "Invalid payment status" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -63,7 +63,7 @@ export async function PATCH(
       } else {
         return NextResponse.json(
           { success: false, error: "Payment not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
     }
@@ -86,7 +86,16 @@ export async function PATCH(
               },
             },
           },
-          eventRegistration: true,
+          eventRegistration: {
+            include: {
+              event: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          },
           user: true,
         },
       });
@@ -94,7 +103,7 @@ export async function PATCH(
       if (!existingPayment) {
         return NextResponse.json(
           { success: false, error: "Payment not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -189,12 +198,12 @@ export async function PATCH(
                 startDate: membership.startDate.toISOString(),
                 endDate: membership.endDate?.toISOString() || "",
                 benefits,
-              })
+              }),
             );
 
             // 🔧 FIX: Ensure emailHtml is a string
-            if (typeof emailHtml !== 'string') {
-              throw new Error('Email render did not return a string');
+            if (typeof emailHtml !== "string") {
+              throw new Error("Email render did not return a string");
             }
 
             await resend.emails.send({
@@ -205,60 +214,11 @@ export async function PATCH(
             });
 
             console.info(
-              `✅ Payment approval email sent to ${membership.user.email}`
-            );
-
-            // Log email sent
-            await logAdminActivity(
-              session.user.id,
-              "ADMIN_PAYMENT_VERIFIED",
-              `Approved membership payment and sent confirmation email to ${membership.user.email}`,
-              {
-                referenceId: paymentId,
-                referenceType: "PAYMENT",
-                metadata: {
-                  paymentId,
-                  membershipId: membership.id,
-                  userId: membership.userId,
-                  userEmail: membership.user.email,
-                  planName: membership.plan.name,
-                  amount: existingPayment.amount,
-                  benefitsCount: benefits.length,
-                  emailSent: true,
-                },
-              }
+              `✅ Payment approval email sent to ${membership.user.email}`,
             );
           }
         } catch (emailError) {
           console.error("Failed to send payment approval email:", emailError);
-
-          // Log email failure
-          await logAdminActivity(
-            session.user.id,
-            "ADMIN_PAYMENT_VERIFIED",
-            `Approved membership payment but failed to send email to ${existingPayment.membership?.user?.email}`,
-            {
-              referenceId: paymentId,
-              referenceType: "PAYMENT",
-              metadata: {
-                paymentId,
-                membershipId: existingPayment.membership?.id,
-                userId: existingPayment.membership?.userId,
-                userEmail: existingPayment.membership?.user?.email,
-                error:
-                  emailError instanceof Error
-                    ? emailError.message
-                    : "Unknown error",
-                emailSent: false,
-              },
-              isSuccess: false,
-              errorMessage:
-                emailError instanceof Error
-                  ? emailError.message
-                  : "Failed to send email",
-            }
-          );
-
           // Don't fail the payment update if email fails
         }
       }
@@ -287,29 +247,52 @@ export async function PATCH(
                 ? `Refunded payment for ${existingPayment.user.name}`
                 : `Updated payment status to ${status} for ${existingPayment.user.name}`;
 
-        await logAdminActivity(
-          session.user.id,
-          actionType,
-          actionDescription,
-          {
-            referenceId: paymentId,
-            referenceType: "PAYMENT",
-            metadata: {
-              paymentId,
-              userId: existingPayment.userId,
-              userName: existingPayment.user.name,
-              userEmail: existingPayment.user.email,
-              amount: existingPayment.amount,
-              previousStatus,
-              newStatus: status,
-              paymentMethod: existingPayment.paymentMethod,
-              paymentReference: existingPayment.paymentReference,
-              hasMembership: !!existingPayment.membership,
-              hasEventRegistration: !!existingPayment.eventRegistration,
-              notes: notes || null,
+        await logAdminActivity(session.user.id, actionType, actionDescription, {
+          referenceId: paymentId,
+          referenceType: "PAYMENT",
+          metadata: {
+            paymentId,
+            userId: existingPayment.userId,
+            userName: existingPayment.user.name,
+            userEmail: existingPayment.user.email,
+            amount: existingPayment.amount,
+            previousStatus,
+            newStatus: status,
+            paymentMethod: existingPayment.paymentMethod,
+            paymentReference: existingPayment.paymentReference,
+            hasMembership: !!existingPayment.membership,
+            hasEventRegistration: !!existingPayment.eventRegistration,
+            notes: notes || null,
+          },
+        });
+
+        // Log payment completion on the user's activity log
+        if (status === "COMPLETED" && existingPayment.userId) {
+          await logUserActivity(
+            existingPayment.userId,
+            "PAYMENT_COMPLETED",
+            existingPayment.membership
+              ? `Membership payment approved for plan: ${existingPayment.membership.plan?.name ?? "Unknown Plan"}`
+              : existingPayment.eventRegistration
+                ? `Event registration payment approved: ${existingPayment.eventRegistration.event?.title ?? "Unknown Event"}`
+                : `Payment of ₱${existingPayment.amount} approved`,
+            {
+              referenceId: paymentId,
+              referenceType: "PAYMENT",
+              metadata: {
+                paymentId,
+                amount: existingPayment.amount,
+                paymentMethod: existingPayment.paymentMethod,
+                paymentReference: existingPayment.paymentReference,
+                membershipId: existingPayment.membership?.id ?? null,
+                planName: existingPayment.membership?.plan?.name ?? null,
+                eventRegistrationId:
+                  existingPayment.eventRegistration?.id ?? null,
+                approvedBy: session.user.id,
+              },
             },
-          }
-        );
+          );
+        }
       }
     } else {
       // Customer payment logic (unchanged)
@@ -328,7 +311,7 @@ export async function PATCH(
       if (!existingPayment) {
         return NextResponse.json(
           { success: false, error: "Payment not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -386,28 +369,23 @@ export async function PATCH(
                 ? `Refunded customer payment for ${existingPayment.customer.name}`
                 : `Updated customer payment status to ${status} for ${existingPayment.customer.name}`;
 
-        await logAdminActivity(
-          session.user.id,
-          actionType,
-          actionDescription,
-          {
-            referenceId: paymentId,
-            referenceType: "PAYMENT",
-            metadata: {
-              paymentId,
-              customerId: existingPayment.customerId,
-              customerName: existingPayment.customer.name,
-              customerEmail: existingPayment.customer.email,
-              amount: existingPayment.amount,
-              previousStatus,
-              newStatus: status,
-              paymentMethod: existingPayment.paymentMethod,
-              paymentReference: existingPayment.paymentReference,
-              hasEventRegistration: !!existingPayment.eventRegistration,
-              notes: notes || null,
-            },
-          }
-        );
+        await logAdminActivity(session.user.id, actionType, actionDescription, {
+          referenceId: paymentId,
+          referenceType: "PAYMENT",
+          metadata: {
+            paymentId,
+            customerId: existingPayment.customerId,
+            customerName: existingPayment.customer.name,
+            customerEmail: existingPayment.customer.email,
+            amount: existingPayment.amount,
+            previousStatus,
+            newStatus: status,
+            paymentMethod: existingPayment.paymentMethod,
+            paymentReference: existingPayment.paymentReference,
+            hasEventRegistration: !!existingPayment.eventRegistration,
+            notes: notes || null,
+          },
+        });
       }
     }
 
@@ -436,7 +414,7 @@ export async function PATCH(
           isSuccess: false,
           errorMessage:
             error instanceof Error ? error.message : "Unknown error",
-        }
+        },
       );
     }
 
@@ -448,7 +426,7 @@ export async function PATCH(
             ? error.message
             : "Failed to update payment status",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -456,7 +434,7 @@ export async function PATCH(
 // GET and DELETE methods remain the same...
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -464,7 +442,7 @@ export async function GET(
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -565,7 +543,7 @@ export async function GET(
 
     return NextResponse.json(
       { success: false, error: "Payment not found" },
-      { status: 404 }
+      { status: 404 },
     );
   } catch (error) {
     console.error("Error fetching payment:", error);
@@ -575,14 +553,14 @@ export async function GET(
         error:
           error instanceof Error ? error.message : "Failed to fetch payment",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -590,7 +568,7 @@ export async function DELETE(
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -601,7 +579,7 @@ export async function DELETE(
     if (!type || (type !== "user" && type !== "customer")) {
       return NextResponse.json(
         { success: false, error: "Payment type is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -618,7 +596,7 @@ export async function DELETE(
       if (!payment) {
         return NextResponse.json(
           { success: false, error: "Payment not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -632,7 +610,7 @@ export async function DELETE(
             error:
               "Cannot delete completed payment linked to active registration or membership",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -658,7 +636,7 @@ export async function DELETE(
             hasMembership: !!payment.membership,
             hasEventRegistration: !!payment.eventRegistration,
           },
-        }
+        },
       );
     } else {
       const payment = await prisma.customerPayment.findUnique({
@@ -672,7 +650,7 @@ export async function DELETE(
       if (!payment) {
         return NextResponse.json(
           { success: false, error: "Payment not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -683,7 +661,7 @@ export async function DELETE(
             error:
               "Cannot delete completed payment linked to active registration",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -708,7 +686,7 @@ export async function DELETE(
             paymentMethod: payment.paymentMethod,
             hasEventRegistration: !!payment.eventRegistration,
           },
-        }
+        },
       );
     }
 
@@ -736,7 +714,7 @@ export async function DELETE(
           isSuccess: false,
           errorMessage:
             error instanceof Error ? error.message : "Unknown error",
-        }
+        },
       );
     }
 
@@ -746,7 +724,7 @@ export async function DELETE(
         error:
           error instanceof Error ? error.message : "Failed to delete payment",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

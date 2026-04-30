@@ -55,8 +55,9 @@ export default function CreateEventModal({
     memberDiscount: "0",
     memberDiscountType: "FIXED" as "FIXED" | "PERCENTAGE",
     hasCustomerFreebies: true,
+    hasReferral: false,
   });
-const [freebies, setFreebies] = useState<Freebie[]>([]);
+  const [freebies, setFreebies] = useState<Freebie[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -72,7 +73,7 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
 
       if (data.success && data.data) {
         setCategories(
-          data.data.filter((cat: EventCategory) => cat.isActive !== false)
+          data.data.filter((cat: EventCategory) => cat.isActive !== false),
         );
       }
     } catch (error) {
@@ -85,7 +86,7 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value, type } = e.target;
 
@@ -138,10 +139,10 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
   const updateFreebie = (
     id: string,
     field: keyof Freebie,
-    value: string | number
+    value: string | number,
   ) => {
     setFreebies(
-      freebies.map((f) => (f.id === id ? { ...f, [field]: value } : f))
+      freebies.map((f) => (f.id === id ? { ...f, [field]: value } : f)),
     );
   };
 
@@ -199,6 +200,7 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
           memberDiscount > 0 ? formData.memberDiscountType : null,
         memberDiscountedPrice,
         hasCustomerFreebies: formData.hasCustomerFreebies,
+        hasReferral: formData.hasReferral,
         freebies: freebies
           .filter((f) => f.name.trim() !== "")
           .map((f) => ({
@@ -222,7 +224,7 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
         throw new Error(
           data.details ||
             data.error ||
-            `HTTP ${response.status}: Failed to create event`
+            `HTTP ${response.status}: Failed to create event`,
         );
       }
 
@@ -245,6 +247,7 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
         memberDiscount: "0",
         memberDiscountType: "FIXED",
         hasCustomerFreebies: true,
+        hasReferral: false,
       });
       setFreebies([]);
       setError(null);
@@ -447,7 +450,7 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(
                       categories.find((c) => c.id === formData.categoryId)
-                        ?.color || null
+                        ?.color || null,
                     )}`}
                   >
                     {categories.find((c) => c.id === formData.categoryId)
@@ -619,8 +622,16 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
               </div>
               {parseFloat(formData.price) === 0 && (
                 <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="w-3 h-3"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   This event is free to attend
                 </p>
@@ -712,8 +723,7 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
                   <div className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm font-semibold text-blue-700">
                     {(() => {
                       const price = parseFloat(formData.price) || 0;
-                      const discount =
-                        parseFloat(formData.memberDiscount) || 0;
+                      const discount = parseFloat(formData.memberDiscount) || 0;
                       if (discount === 0) return `₱${price.toFixed(2)}`;
 
                       let memberPrice = price;
@@ -912,7 +922,7 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
                         updateFreebie(
                           item.id,
                           "quantity",
-                          parseInt(e.target.value) || 1
+                          parseInt(e.target.value) || 1,
                         )
                       }
                     />
@@ -1023,6 +1033,55 @@ const [freebies, setFreebies] = useState<Freebie[]>([]);
                   </span>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Referral System */}
+        <div className="bg-foreground/5 p-4 rounded-xl border border-foreground/10">
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="hasReferral"
+              name="hasReferral"
+              checked={formData.hasReferral}
+              onChange={(e) =>
+                setFormData({ ...formData, hasReferral: e.target.checked })
+              }
+              className="mt-1 w-4 h-4 text-primary border-foreground/30 rounded focus:ring-primary focus:ring-2"
+            />
+            <label htmlFor="hasReferral" className="flex-1">
+              <span className="block text-sm font-semibold text-foreground mb-1">
+                Enable Referral System
+              </span>
+              <p className="text-xs text-foreground/60 leading-relaxed">
+                When enabled, you can create referral codes for this event.
+                Referral codes and links can be managed from the event detail
+                page after the event is created.
+              </p>
+            </label>
+          </div>
+
+          {formData.hasReferral && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-primary bg-primary/10 rounded-lg px-3 py-2">
+              <svg
+                className="w-4 h-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>
+                After creating the event, go to the event detail page and open
+                the <strong>Referrals</strong> tab to add referral codes and
+                copy shareable links.
+              </span>
             </div>
           )}
         </div>

@@ -32,6 +32,7 @@ interface CreateEventBody {
   memberDiscountType?: "FIXED" | "PERCENTAGE" | null;
   memberDiscountedPrice?: number | string | null;
   hasCustomerFreebies?: boolean;
+  hasReferral?: boolean;
   freebies?: FreebieInput[];
 }
 
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
       memberDiscountType,
       memberDiscountedPrice,
       hasCustomerFreebies,
+      hasReferral,
       freebies = [],
     } = body;
 
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
           metadata: { title, error: "Missing required fields" },
           isSuccess: false,
           errorMessage: "Title, description, and date are required",
-        }
+        },
       );
 
       return NextResponse.json(
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
           error: "Missing required fields",
           details: "Title, description, and date are required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -111,7 +113,7 @@ export async function POST(request: Request) {
             metadata: { title, categoryId, error: "Invalid category" },
             isSuccess: false,
             errorMessage: `Category with ID ${categoryId} not found`,
-          }
+          },
         );
 
         return NextResponse.json(
@@ -120,7 +122,7 @@ export async function POST(request: Request) {
             error: "Invalid category",
             details: `Category with ID ${categoryId} not found`,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -142,7 +144,7 @@ export async function POST(request: Request) {
           metadata: { title, date, error: "Invalid date format" },
           isSuccess: false,
           errorMessage: error instanceof Error ? error.message : "Invalid date",
-        }
+        },
       );
 
       return NextResponse.json(
@@ -151,7 +153,7 @@ export async function POST(request: Request) {
           error: "Invalid date",
           details: "Please provide a valid date in ISO format",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -212,6 +214,7 @@ export async function POST(request: Request) {
             ? parsedMemberDiscountedPrice
             : null,
         hasCustomerFreebies: hasCustomerFreebies ?? true,
+        hasReferral: hasReferral ?? false,
       },
     });
 
@@ -274,7 +277,7 @@ export async function POST(request: Request) {
           freebiesCount: freebies.length,
           categoryId: categoryId || null,
         },
-      }
+      },
     );
 
     return NextResponse.json({
@@ -299,7 +302,7 @@ export async function POST(request: Request) {
           isSuccess: false,
           errorMessage:
             error instanceof Error ? error.message : "Unknown error",
-        }
+        },
       );
     }
 
@@ -309,7 +312,7 @@ export async function POST(request: Request) {
         error: "Failed to create event",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -325,7 +328,7 @@ export async function GET() {
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -374,7 +377,7 @@ export async function GET() {
     console.error("Error fetching events:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch events" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

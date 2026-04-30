@@ -87,8 +87,15 @@ export default function EventDetailPage() {
       return;
     }
 
-    // Otherwise, go to registration
-    router.push(`/events/${slug}/registration`);
+    // Otherwise, go to registration (forward referralCode if event has referrals)
+    const referralCode = event.hasReferral
+      ? new URLSearchParams(window.location.search).get("referralCode")
+      : null;
+    router.push(
+      referralCode
+        ? `/events/${slug}/registration?referralCode=${referralCode}`
+        : `/events/${slug}/registration`,
+    );
   };
 
   if (loading) {
@@ -299,7 +306,7 @@ export default function EventDetailPage() {
                   {event.category && (
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(
-                        event.category.color
+                        event.category.color,
                       )}`}
                     >
                       {event.category.icon && (
@@ -395,11 +402,13 @@ export default function EventDetailPage() {
 
               {/* Freebies Section */}
               {hasFreebies && event.freebies && (
-                <div className={`rounded-2xl p-6 border-2 ${
-                  event.hasCustomerFreebies 
-                    ? 'bg-orange-50 border-orange-200' 
-                    : 'bg-blue-50 border-blue-200'
-                }`}>
+                <div
+                  className={`rounded-2xl p-6 border-2 ${
+                    event.hasCustomerFreebies
+                      ? "bg-orange-50 border-orange-200"
+                      : "bg-blue-50 border-blue-200"
+                  }`}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                       {event.hasCustomerFreebies ? (
@@ -414,7 +423,7 @@ export default function EventDetailPage() {
                         </>
                       )}
                     </h3>
-                    
+
                     {/* Availability Badge */}
                     {event.hasCustomerFreebies ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
@@ -433,11 +442,25 @@ export default function EventDetailPage() {
                   {!event.hasCustomerFreebies && (
                     <div className="mb-4 bg-blue-100 border border-blue-200 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <svg className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        <svg
+                          className="w-4 h-4 text-blue-600 shrink-0 mt-0.5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                         <p className="text-xs text-blue-900">
-                          <strong className="font-semibold">Members Only:</strong> These exclusive perks are reserved for KITA Spaces members. {!isMember && "Become a member to unlock these benefits!"}
+                          <strong className="font-semibold">
+                            Members Only:
+                          </strong>{" "}
+                          These exclusive perks are reserved for KITA Spaces
+                          members.{" "}
+                          {!isMember &&
+                            "Become a member to unlock these benefits!"}
                         </p>
                       </div>
                     </div>
@@ -448,7 +471,11 @@ export default function EventDetailPage() {
                       <div className="flex items-start gap-2">
                         <CheckCircleIcon className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
                         <p className="text-xs text-green-900">
-                          <strong className="font-semibold">Available to All:</strong> Every attendee can select from these perks during registration!
+                          <strong className="font-semibold">
+                            Available to All:
+                          </strong>{" "}
+                          Every attendee can select from these perks during
+                          registration!
                         </p>
                       </div>
                     </div>
@@ -461,14 +488,18 @@ export default function EventDetailPage() {
                         key={freebie.id}
                         className={`p-4 rounded-lg border ${
                           event.hasCustomerFreebies
-                            ? 'bg-white border-orange-200 hover:border-orange-300'
-                            : 'bg-white border-blue-200 hover:border-blue-300'
+                            ? "bg-white border-orange-200 hover:border-orange-300"
+                            : "bg-white border-blue-200 hover:border-blue-300"
                         } transition-colors`}
                       >
                         <div className="flex items-start">
-                          <CheckCircleIcon className={`w-5 h-5 mt-0.5 mr-2 shrink-0 ${
-                            event.hasCustomerFreebies ? 'text-primary' : 'text-blue-500'
-                          }`} />
+                          <CheckCircleIcon
+                            className={`w-5 h-5 mt-0.5 mr-2 shrink-0 ${
+                              event.hasCustomerFreebies
+                                ? "text-primary"
+                                : "text-blue-500"
+                            }`}
+                          />
                           <div className="flex-1">
                             <p className="font-semibold text-foreground">
                               {freebie.name}
@@ -478,11 +509,13 @@ export default function EventDetailPage() {
                                 {freebie.description}
                               </p>
                             )}
-                            <span className={`inline-block mt-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                              event.hasCustomerFreebies
-                                ? 'bg-orange-200 text-orange-900'
-                                : 'bg-blue-200 text-blue-900'
-                            }`}>
+                            <span
+                              className={`inline-block mt-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                event.hasCustomerFreebies
+                                  ? "bg-orange-200 text-orange-900"
+                                  : "bg-blue-200 text-blue-900"
+                              }`}
+                            >
                               ×{freebie.quantity}
                             </span>
                           </div>
@@ -492,11 +525,22 @@ export default function EventDetailPage() {
                   </div>
 
                   <div className="mt-3 text-xs text-foreground/50 italic flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     <span>
-                      Each attendee can select from available perks during registration
+                      Each attendee can select from available perks during
+                      registration
                     </span>
                   </div>
                 </div>
@@ -534,7 +578,9 @@ export default function EventDetailPage() {
                       </div>
 
                       {/* Member Price Display */}
-                      {hasMemberDiscount && memberPrice !== null && memberPrice > 0 ? (
+                      {hasMemberDiscount &&
+                      memberPrice !== null &&
+                      memberPrice > 0 ? (
                         <div className="mt-3">
                           {isMember ? (
                             <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
@@ -544,7 +590,10 @@ export default function EventDetailPage() {
                                   Your Member Price:
                                 </span>
                                 <div className="bg-primary text-white text-xs font-bold px-2 py-0.5 rounded">
-                                  SAVE {event.memberDiscountType === 'PERCENTAGE' ? `${event.memberDiscount}%` : `₱${event.memberDiscount?.toFixed(2)}`}
+                                  SAVE{" "}
+                                  {event.memberDiscountType === "PERCENTAGE"
+                                    ? `${event.memberDiscount}%`
+                                    : `₱${event.memberDiscount?.toFixed(2)}`}
                                 </div>
                               </div>
                               <div className="text-2xl font-bold text-primary">
@@ -558,7 +607,9 @@ export default function EventDetailPage() {
                                   Member Price:
                                 </span>
                                 <div className="bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded">
-                                  {event.memberDiscountType === 'PERCENTAGE' ? `${event.memberDiscount}% OFF` : `₱${event.memberDiscount?.toFixed(2)} OFF`}
+                                  {event.memberDiscountType === "PERCENTAGE"
+                                    ? `${event.memberDiscount}% OFF`
+                                    : `₱${event.memberDiscount?.toFixed(2)} OFF`}
                                 </div>
                               </div>
                               <div className="text-2xl font-bold text-green-700">
